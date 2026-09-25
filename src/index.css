@@ -1,1 +1,67 @@
 @import "tailwindcss";
+
+/*
+  Tokeny projektu. Wyzerowanie domyślnych kolorów i cieni Tailwinda (`initial`)
+  sprawia, że klasy typu `text-gray-500` czy `shadow-lg` po prostu nie istnieją —
+  w kodzie da się użyć wyłącznie palety z briefu.
+*/
+@theme {
+  --color-*: initial;
+  --color-paper: #faf7f2;
+  --color-surface: #ffffff;
+  --color-ink: #1b2420;
+  --color-ink-muted: #5e6a64;
+  --color-line: #e7e1d6;
+  --color-pine: #1f5e4b;
+  --color-pine-soft: #e3efe9;
+  --color-ember: #e0703a;
+  --color-ember-soft: #fbe9de;
+  --color-alert: #d2362b;
+  --color-alert-soft: #fce6e3;
+  --color-sky: #3a7ca5;
+  --color-amber: #c98a12;
+
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Cienie w ciepłym, brązowawym odcieniu zamiast neutralnej czerni. */
+  --shadow-*: initial;
+  --shadow-card: 0 1px 2px rgb(74 52 30 / 0.06), 0 4px 16px -4px rgb(74 52 30 / 0.08);
+  --shadow-raised: 0 2px 4px rgb(74 52 30 / 0.08), 0 12px 32px -8px rgb(74 52 30 / 0.2);
+
+  --default-transition-duration: 200ms;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-pine);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
