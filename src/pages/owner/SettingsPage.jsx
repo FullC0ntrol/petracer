@@ -1,15 +1,19 @@
 import { useNavigate } from 'react-router'
 import { LogOut } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader.jsx'
-import { setLoggedIn } from '../../dev/devStore.js'
+import Button from '../../components/ui/Button.jsx'
 import SketchBox from '../../dev/SketchBox.jsx'
+import { useAuth } from '../../hooks/useAuth.js'
 
 export default function SettingsPage() {
+  const { logout } = useAuth()
   const navigate = useNavigate()
 
-  function handleLogout() {
-    setLoggedIn(false)
-    navigate('/')
+  // Najpierw wychodzimy z panelu, potem kasujemy sesję. W odwrotnej kolejności RequireAuth
+  // zdążyłby zauważyć brak użytkownika i przerzucić nas na /login zamiast na stronę główną.
+  async function handleLogout() {
+    navigate('/', { replace: true })
+    await logout()
   }
 
   return (
@@ -19,14 +23,9 @@ export default function SettingsPage() {
         <SketchBox label="Konto: e-mail, imię" hint="Etap 7" className="h-28" />
         <SketchBox label="Powiadomienia (przełączniki)" className="h-36" />
         <SketchBox label="Dane kontaktowe widoczne dla znalazcy" className="h-36" />
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-line bg-surface px-5 font-semibold text-alert transition-colors hover:bg-alert-soft"
-        >
-          <LogOut size={18} aria-hidden="true" />
+        <Button variant="danger" size="lg" icon={LogOut} onClick={handleLogout}>
           Wyloguj się
-        </button>
+        </Button>
       </div>
     </div>
   )

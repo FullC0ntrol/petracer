@@ -5,6 +5,7 @@ import PublicLayout from './components/layout/PublicLayout.jsx'
 import RequireAuth from './components/layout/RequireAuth.jsx'
 import RootLayout from './components/layout/RootLayout.jsx'
 import VetLayout from './components/layout/VetLayout.jsx'
+import UiGalleryPage from './pages/dev/UiGalleryPage.jsx'
 import LocationSentPage from './pages/finder/LocationSentPage.jsx'
 import ShareLocationPage from './pages/finder/ShareLocationPage.jsx'
 import TagPage from './pages/finder/TagPage.jsx'
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
           { path: 'login', element: <LoginPage /> },
           { path: 'login/sprawdz-poczte', element: <CheckEmailPage /> },
           { path: 'auth/verify', element: <AuthVerifyPage /> },
+          { path: 'dev/ui', element: <UiGalleryPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

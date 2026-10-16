@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { Plus } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader.jsx'
+import Button from '../../components/ui/Button.jsx'
 import SketchBox from '../../dev/SketchBox.jsx'
 
 export default function WalksPage() {
@@ -10,13 +11,9 @@ export default function WalksPage() {
         title="Spacery"
         description="Dystans i czas z ostatnich tygodni."
         action={
-          <Link
-            to="/spacery/nowy"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-pine px-4 font-semibold text-surface transition-colors hover:bg-pine/90"
-          >
-            <Plus size={18} aria-hidden="true" />
+          <Button to="/spacery/nowy" icon={Plus}>
             Nowy spacer
-          </Link>
+          </Button>
         }
       />
       <div className="space-y-6">

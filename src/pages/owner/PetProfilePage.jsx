@@ -1,11 +1,21 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Pencil, QrCode, Siren, Stethoscope } from 'lucide-react'
+import Tabs from '../../components/ui/Tabs.jsx'
 import SketchBox from '../../dev/SketchBox.jsx'
 
-const TABS = ['Informacje', 'Zdrowie', 'Aktywność', 'Tag']
+const TABS = [
+  { id: 'info', label: 'Informacje' },
+  { id: 'health', label: 'Zdrowie' },
+  { id: 'activity', label: 'Aktywność' },
+  { id: 'tag', label: 'Tag' },
+]
 
 export default function PetProfilePage() {
   const { id } = useParams()
+  // Na razie aktywna zakładka żyje tylko w stanie komponentu; docelowo trafi do adresu (?tab=…).
+  const [activeTab, setActiveTab] = useState('info')
+  const activeLabel = TABS.find((tab) => tab.id === activeTab).label
 
   const shortcuts = [
     { to: `/zwierzeta/${id}/zaginiecie`, label: 'Zaginięcie', icon: Siren },
@@ -31,17 +41,9 @@ export default function PetProfilePage() {
         ))}
       </nav>
 
-      <div className="flex gap-2 overflow-x-auto border-b border-line">
-        {TABS.map((tab, index) => (
-          <span
-            key={tab}
-            className={`px-3 py-2 text-sm font-semibold whitespace-nowrap ${index === 0 ? 'border-b-2 border-pine text-pine' : 'text-ink-muted'}`}
-          >
-            {tab}
-          </span>
-        ))}
-      </div>
-      <SketchBox label="Treść aktywnej zakładki" className="h-64" />
+      <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} label="Sekcje profilu">
+        <SketchBox label={`Treść zakładki: ${activeLabel}`} className="h-64" />
+      </Tabs>
     </div>
   )
 }

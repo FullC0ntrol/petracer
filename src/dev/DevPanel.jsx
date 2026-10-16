@@ -1,15 +1,48 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { RotateCcw, Wrench, X } from 'lucide-react'
-import { DEMO_TAGS, resetDevState, setLoggedIn, toggleLostMode, useDevState } from './devStore.js'
+import { requestMagicLink } from '../api/auth.js'
+import { devSetLostMode, getDevOverview, resetDemoData } from '../api/dev.js'
+import Button from '../components/ui/Button.jsx'
+import Toggle from '../components/ui/Toggle.jsx'
+import { useAuth } from '../hooks/useAuth.js'
+
+const DEMO_EMAIL = 'maciej@pettrace.pl'
+const OPEN_KEY = 'pettrace:dev-panel-open'
+const DEV_LINK_CLASSES = 'flex justify-between rounded-lg px-2 py-1.5 transition-colors hover:bg-pine-soft'
+
+function readIsOpen() {
+  try {
+    return sessionStorage.getItem(OPEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeIsOpen(isOpen) {
+  try {
+    sessionStorage.setItem(OPEN_KEY, isOpen ? '1' : '0')
+  } catch {
+    // Bez sessionStorage panel po prostu zamknie się po przeładowaniu.
+  }
+}
+
+/*
+  Ekrany pobierają dane raz, przy wejściu na stronę. Po zmianie danych z panelu (Lost Mode, reset)
+  najprościej przeładować stronę, żeby wszystko wczytało się od nowa. To narzędzie deweloperskie,
+  więc taka „siekiera” jest w porządku; panel zapamiętuje w sessionStorage, że był otwarty.
+*/
+function reloadPage() {
+  window.location.reload()
+}
 
 // Panel renderowany tylko w `npm run dev` (patrz RootLayout) — pozwala w kilka sekund
 // przejść przez wszystkie warianty routingu kontekstowego.
 export default function DevPanel() {
-  const [isOpen, setIsOpen] = useState(false)
-  const { isLoggedIn, lostTagIds } = useDevState()
+  const [isOpen, setIsOpen] = useState(readIsOpen)
 
   useEffect(() => {
+    writeIsOpen(isOpen)
     if (!isOpen) return
     const closeOnEscape = (event) => event.key === 'Escape' && setIsOpen(false)
     window.addEventListener('keydown', closeOnEscape)
@@ -29,80 +62,96 @@ export default function DevPanel() {
         DEV
       </button>
 
-      {isOpen && (
-        <section
-          id="dev-panel"
-          aria-label="Panel deweloperski"
-          className="w-72 space-y-4 rounded-2xl border border-line bg-surface p-4 text-sm shadow-raised"
-        >
-          <DevSwitch label="Zalogowany jako Maciej" checked={isLoggedIn} onChange={() => setLoggedIn(!isLoggedIn)} />
-
-          <div>
-            <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Otwórz tag</h2>
-            <ul className="space-y-1">
-              {DEMO_TAGS.map((tag) => (
-                <li key={tag.tagId}>
-                  <Link
-                    to={`/t/${tag.tagId}`}
-                    className="flex justify-between rounded-lg px-2 py-1.5 transition-colors hover:bg-pine-soft"
-                  >
-                    <span>{tag.petName ?? 'Nieaktywny'}</span>
-                    <span className="font-mono text-xs text-ink-muted">{tag.tagId}</span>
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <Link to="/vet/DEMO-SHARE" className="block rounded-lg px-2 py-1.5 transition-colors hover:bg-pine-soft">
-                  Widok weterynarza
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Lost Mode</h2>
-            <div className="space-y-2">
-              {DEMO_TAGS.filter((tag) => tag.isActive).map((tag) => (
-                <DevSwitch
-                  key={tag.tagId}
-                  label={tag.petName}
-                  checked={lostTagIds.includes(tag.tagId)}
-                  onChange={() => toggleLostMode(tag.tagId)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={resetDevState}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 font-semibold transition-colors hover:bg-alert-soft hover:text-alert"
-          >
-            <RotateCcw size={14} aria-hidden="true" />
-            Resetuj dane
-          </button>
-        </section>
-      )}
+      {isOpen && <DevPanelContent />}
     </div>
   )
 }
 
-// Prosty przełącznik tylko na potrzeby panelu — docelowy Toggle powstanie w UI kicie (etap 2).
-function DevSwitch({ label, checked, onChange }) {
+// Osobny komponent: montuje się przy każdym otwarciu panelu, więc zawsze pokazuje świeże dane.
+function DevPanelContent() {
+  const { user, login, logout } = useAuth()
+  const [isBusy, setIsBusy] = useState(false)
+  const tags = getDevOverview()
+
+  // Logowanie idzie tą samą drogą co w aplikacji (magic link → weryfikacja), tylko bez klikania.
+  async function handleLoginChange(shouldBeLoggedIn) {
+    setIsBusy(true)
+    if (shouldBeLoggedIn) {
+      const { devToken } = await requestMagicLink(DEMO_EMAIL)
+      await login(devToken)
+    } else {
+      await logout()
+    }
+    setIsBusy(false)
+  }
+
+  function handleLostChange(petId, isLost) {
+    devSetLostMode(petId, isLost)
+    reloadPage()
+  }
+
+  function handleReset() {
+    resetDemoData()
+    reloadPage()
+  }
+
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3">
-      <span>{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={onChange}
-        className={`relative h-6 w-10 rounded-full transition-colors ${checked ? 'bg-pine' : 'bg-line'}`}
-      >
-        <span
-          className={`absolute top-1 left-1 size-4 rounded-full bg-surface shadow-card transition-transform ${checked ? 'translate-x-4' : ''}`}
-        />
-      </button>
-    </label>
+    <section
+      id="dev-panel"
+      aria-label="Panel deweloperski"
+      className="w-72 space-y-4 rounded-2xl border border-line bg-surface p-4 text-sm shadow-raised"
+    >
+      <Toggle
+        label={user ? `Zalogowany: ${user.name}` : 'Zalogowany'}
+        description={user ? undefined : DEMO_EMAIL}
+        checked={Boolean(user)}
+        onChange={handleLoginChange}
+        disabled={isBusy}
+      />
+
+      <div>
+        <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Otwórz</h2>
+        <ul className="space-y-1">
+          {tags.map((tag) => (
+            <li key={tag.tagId}>
+              <Link to={`/t/${tag.tagId}`} className={DEV_LINK_CLASSES}>
+                <span>{tag.petName ?? 'Nieaktywny'}</span>
+                <span className="font-mono text-xs text-ink-muted">{tag.tagId}</span>
+              </Link>
+            </li>
+          ))}
+          <li>
+            <Link to="/vet/DEMO-SHARE" className={DEV_LINK_CLASSES}>
+              Widok weterynarza
+            </Link>
+          </li>
+          <li>
+            <Link to="/dev/ui" className={DEV_LINK_CLASSES}>
+              Galeria UI
+            </Link>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Lost Mode</h2>
+        <div className="space-y-2">
+          {tags
+            .filter((tag) => tag.petId)
+            .map((tag) => (
+              <Toggle
+                key={tag.tagId}
+                label={tag.petName}
+                checked={tag.isLost}
+                onChange={(isLost) => handleLostChange(tag.petId, isLost)}
+              />
+            ))}
+        </div>
+      </div>
+
+      <Button variant="danger" size="sm" icon={RotateCcw} fullWidth onClick={handleReset}>
+        Resetuj dane
+      </Button>
+    </section>
   )
 }

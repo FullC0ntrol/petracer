@@ -1,12 +1,21 @@
-import { Link, NavLink } from 'react-router'
+import { NavLink } from 'react-router'
 import { Plus } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth.js'
+import Button from '../ui/Button.jsx'
 import Logo from './Logo.jsx'
 import { OWNER_NAV_ITEMS } from './ownerNav.js'
 
 export default function Sidebar() {
+  const { user } = useAuth()
+
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-line bg-surface p-6 lg:flex">
-      <Logo to="/panel" />
+      <div className="space-y-3">
+        <Logo to="/panel" />
+        <p className="text-sm text-ink-muted">
+          Zalogowano jako <span className="font-semibold text-ink">{user.name}</span>
+        </p>
+      </div>
 
       <nav aria-label="Nawigacja główna">
         <ul className="space-y-1">
@@ -28,13 +37,9 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      <Link
-        to="/spacery/nowy"
-        className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-ember px-4 py-3 font-semibold text-ink shadow-card transition-colors hover:bg-ember/90"
-      >
-        <Plus size={18} aria-hidden="true" />
+      <Button to="/spacery/nowy" variant="accent" size="lg" icon={Plus} className="mt-auto">
         Rozpocznij spacer
-      </Link>
+      </Button>
     </aside>
   )
 }
