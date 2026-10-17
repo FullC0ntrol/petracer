@@ -207,5 +207,14 @@ export function createSeed() {
     // Tabele „techniczne” logowania — puste na starcie, wypełniają je funkcje z `api/auth.js`.
     magicLinks: [],
     sessions: [],
+
+    // Szybkie zapisy po zeskanowaniu zawieszki (karmienie). Spacery z `walks` warstwa mock
+    // też pokazuje jako aktywności — patrz `mocks/db.js`.
+    activities: [
+      { id: 'a-01', petId: 'luna', type: 'feeding', occurredAt: at(-1, 8, 5), source: 'quick_tap' },
+      { id: 'a-02', petId: 'luna', type: 'feeding', occurredAt: at(-2, 18, 40), source: 'quick_tap' },
+      { id: 'a-03', petId: 'luna', type: 'feeding', occurredAt: at(-3, 8, 10), source: 'quick_tap' },
+      { id: 'a-04', petId: 'mruczek', type: 'feeding', occurredAt: at(-3, 19, 0), source: 'quick_tap' },
+    ],
   }
 }

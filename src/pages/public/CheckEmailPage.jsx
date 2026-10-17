@@ -28,22 +28,25 @@ export default function CheckEmailPage() {
         <h1 className="text-2xl font-bold tracking-tight">Sprawdź pocztę</h1>
         <p className="text-ink-muted">
           Wysłaliśmy link do logowania na <strong className="text-ink">{state.email}</strong>. Kliknij go, aby przejść
-          do panelu. Link jest ważny 15 minut.
+          do panelu. Link jest ważny 15 minut i działa tylko raz.
         </p>
       </div>
-      {/* Backendu (i e-maila) jeszcze nie ma, więc link „z e-maila” otwieramy przyciskiem.
-          Widoczny także w wersji zbudowanej, bo bez niego nie da się zalogować w prototypie. */}
-      <Link
-        to={`/auth/verify?token=${state.devToken}`}
-        className="inline-flex min-h-12 items-center rounded-xl border-2 border-dashed border-amber px-5 font-semibold text-ink transition-colors hover:bg-ember-soft"
-      >
-        [DEV] Symuluj kliknięcie w link
-      </Link>
-      <p className="text-sm text-ink-muted">
-        Zły adres?{' '}
-        <Link to="/login" className="font-semibold text-pine underline-offset-4 hover:underline">
-          Wpisz inny
+      {/* `devLink` zwraca tylko tryb mock i serwer uruchomiony w trybie deweloperskim. W produkcji
+          link przychodzi wyłącznie e-mailem, więc ten przycisk się nie pojawi. */}
+      {state.devLink && (
+        <Link
+          to={state.devLink}
+          className="inline-flex min-h-12 items-center rounded-xl border-2 border-dashed border-amber px-5 font-semibold text-ink transition-colors hover:bg-ember-soft"
+        >
+          [DEV] Symuluj kliknięcie w link
         </Link>
+      )}
+      <p className="text-sm text-ink-muted">
+        Nie widzisz wiadomości? Zajrzyj do folderu spam albo{' '}
+        <Link to="/login" className="font-semibold text-pine underline-offset-4 hover:underline">
+          wyślij link ponownie
+        </Link>
+        .
       </p>
     </div>
   )

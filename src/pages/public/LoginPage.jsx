@@ -13,16 +13,18 @@ export default function LoginPage() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  // Input kontrolowany: wartość pola żyje w stanie, a pole tylko ją pokazuje i zgłasza zmiany.
+  // Inputy kontrolowane: wartość pola żyje w stanie, a pole tylko ją pokazuje i zgłasza zmiany.
   const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
   const [error, setError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // RequireAuth zapisał tu stronę, na którą użytkownik próbował wejść przed zalogowaniem.
+  // Serwer dopisze ją do linku w mailu (?next=…), więc powrót zadziała nawet w innej karcie.
   const from = location.state?.from
-  const redirectTo = from ? from.pathname + from.search : null
+  const next = from ? from.pathname + from.search : null
 
-  if (user) return <Navigate to={redirectTo ?? '/panel'} replace />
+  if (user) return <Navigate to={next ?? '/panel'} replace />
 
   async function handleSubmit(event) {
     // Bez tego przeglądarka wysłałaby formularz „po staremu” i przeładowała całą stronę.
@@ -37,8 +39,8 @@ export default function LoginPage() {
     setError(null)
     setIsSubmitting(true)
     try {
-      const result = await requestMagicLink(email, redirectTo)
-      navigate('/login/sprawdz-poczte', { state: { email: result.email, devToken: result.devToken } })
+      const result = await requestMagicLink(email, { name, next })
+      navigate('/login/sprawdz-poczte', { state: { email: result.email, devLink: result.devLink } })
     } catch (requestError) {
       setError(requestError.message)
       setIsSubmitting(false)
@@ -59,10 +61,18 @@ export default function LoginPage() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={error}
-          hint="Konto demo: maciej@pettrace.pl. Inny adres założy nowe, puste konto."
+          hint="Konto demo: maciej@pettrace.pl. Inny adres założy nowe konto."
+        />
+        <Input
+          label="Imię (opcjonalnie)"
+          name="name"
+          autoComplete="given-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          hint="Tylko przy pierwszym logowaniu — możesz je później zmienić w ustawieniach."
         />
         <Button type="submit" size="lg" fullWidth disabled={isSubmitting}>
-          {isSubmitting ? 'Wysyłam…' : 'Wyślij magic link'}
+          {isSubmitting ? 'Wysyłam…' : 'Wyślij link do logowania'}
         </Button>
       </Card>
     </div>

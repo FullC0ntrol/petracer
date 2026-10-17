@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:http": "vite --mode http",
     "build": "vite build",
+    "build:http": "vite build --mode http",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -20,7 +22,6 @@
     "react-dom": "^19.2.8",
     "react-leaflet": "^5.0.0",
     "react-router": "^7.18.4",
-    "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {

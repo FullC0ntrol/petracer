@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { RotateCcw, Wrench, X } from 'lucide-react'
 import { requestMagicLink } from '../api/auth.js'
-import { devSetLostMode, getDevOverview, resetDemoData } from '../api/dev.js'
+import { devSetLostMode, getDevOverview, resetDemoData } from '../api/mock/dev.js'
+import { API_MODE } from '../api/mode.js'
 import Button from '../components/ui/Button.jsx'
 import Toggle from '../components/ui/Toggle.jsx'
 import { useAuth } from '../hooks/useAuth.js'
@@ -10,6 +11,13 @@ import { useAuth } from '../hooks/useAuth.js'
 const DEMO_EMAIL = 'maciej@pettrace.pl'
 const OPEN_KEY = 'pettrace:dev-panel-open'
 const DEV_LINK_CLASSES = 'flex justify-between rounded-lg px-2 py-1.5 transition-colors hover:bg-pine-soft'
+
+// Zawieszki z danych przykładowych — te same w trybie mock (seed.js) i http (server/sql/seed.sql).
+const DEMO_TAGS = [
+  { code: 'LUNA-7K2Q', petName: 'Luna' },
+  { code: 'MRCZ-4P9D', petName: 'Mruczek' },
+  { code: 'XXXX-0000', petName: null },
+]
 
 function readIsOpen() {
   try {
@@ -28,7 +36,7 @@ function writeIsOpen(isOpen) {
 }
 
 /*
-  Ekrany pobierają dane raz, przy wejściu na stronę. Po zmianie danych z panelu (Lost Mode, reset)
+  Ekrany pobierają dane raz, przy wejściu na stronę. Po zmianie danych z panelu (tryb zaginięcia, reset)
   najprościej przeładować stronę, żeby wszystko wczytało się od nowa. To narzędzie deweloperskie,
   więc taka „siekiera” jest w porządku; panel zapamiętuje w sessionStorage, że był otwarty.
 */
@@ -59,7 +67,7 @@ export default function DevPanel() {
         className="inline-flex items-center gap-1.5 rounded-full bg-ink/85 px-3 py-1.5 text-xs font-bold tracking-wide text-paper shadow-raised transition-colors hover:bg-ink"
       >
         {isOpen ? <X size={14} aria-hidden="true" /> : <Wrench size={14} aria-hidden="true" />}
-        DEV
+        DEV · {API_MODE}
       </button>
 
       {isOpen && <DevPanelContent />}
@@ -71,16 +79,24 @@ export default function DevPanel() {
 function DevPanelContent() {
   const { user, login, logout } = useAuth()
   const [isBusy, setIsBusy] = useState(false)
-  const tags = getDevOverview()
+  const [error, setError] = useState(null)
+  const isMock = API_MODE === 'mock'
+  const tags = isMock ? getDevOverview() : DEMO_TAGS
 
   // Logowanie idzie tą samą drogą co w aplikacji (magic link → weryfikacja), tylko bez klikania.
   async function handleLoginChange(shouldBeLoggedIn) {
     setIsBusy(true)
-    if (shouldBeLoggedIn) {
-      const { devToken } = await requestMagicLink(DEMO_EMAIL)
-      await login(devToken)
-    } else {
-      await logout()
+    setError(null)
+    try {
+      if (shouldBeLoggedIn) {
+        const { devLink } = await requestMagicLink(DEMO_EMAIL)
+        if (!devLink) throw new Error('Serwer nie zwrócił linku (działa w trybie produkcyjnym?).')
+        await login(new URL(devLink, window.location.origin).searchParams.get('token'))
+      } else {
+        await logout()
+      }
+    } catch (loginError) {
+      setError(loginError.message)
     }
     setIsBusy(false)
   }
@@ -108,23 +124,19 @@ function DevPanelContent() {
         onChange={handleLoginChange}
         disabled={isBusy}
       />
+      {error && <p className="text-xs font-medium text-alert">{error}</p>}
 
       <div>
         <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Otwórz</h2>
         <ul className="space-y-1">
           {tags.map((tag) => (
-            <li key={tag.tagId}>
-              <Link to={`/t/${tag.tagId}`} className={DEV_LINK_CLASSES}>
+            <li key={tag.code}>
+              <Link to={`/t/${tag.code}`} className={DEV_LINK_CLASSES}>
                 <span>{tag.petName ?? 'Nieaktywny'}</span>
-                <span className="font-mono text-xs text-ink-muted">{tag.tagId}</span>
+                <span className="font-mono text-xs text-ink-muted">{tag.code}</span>
               </Link>
             </li>
           ))}
-          <li>
-            <Link to="/vet/DEMO-SHARE" className={DEV_LINK_CLASSES}>
-              Widok weterynarza
-            </Link>
-          </li>
           <li>
             <Link to="/dev/ui" className={DEV_LINK_CLASSES}>
               Galeria UI
@@ -133,25 +145,33 @@ function DevPanelContent() {
         </ul>
       </div>
 
-      <div>
-        <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Lost Mode</h2>
-        <div className="space-y-2">
-          {tags
-            .filter((tag) => tag.petId)
-            .map((tag) => (
-              <Toggle
-                key={tag.tagId}
-                label={tag.petName}
-                checked={tag.isLost}
-                onChange={(isLost) => handleLostChange(tag.petId, isLost)}
-              />
-            ))}
-        </div>
-      </div>
-
-      <Button variant="danger" size="sm" icon={RotateCcw} fullWidth onClick={handleReset}>
-        Resetuj dane
-      </Button>
+      {isMock ? (
+        <>
+          <div>
+            <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Tryb zaginięcia</h2>
+            <div className="space-y-2">
+              {tags
+                .filter((tag) => tag.petId && tag.isActive)
+                .map((tag) => (
+                  <Toggle
+                    key={tag.code}
+                    label={tag.petName}
+                    checked={tag.isLost}
+                    onChange={(isLost) => handleLostChange(tag.petId, isLost)}
+                  />
+                ))}
+            </div>
+          </div>
+          <Button variant="danger" size="sm" icon={RotateCcw} fullWidth onClick={handleReset}>
+            Resetuj dane
+          </Button>
+        </>
+      ) : (
+        <p className="text-xs text-ink-muted">
+          Tryb http: tryb zaginięcia przełączasz w profilu zwierzęcia, a dane resetujesz poleceniem{' '}
+          <code className="font-mono">npm run db:reset</code> w folderze <code className="font-mono">server/</code>.
+        </p>
+      )}
     </section>
   )
 }

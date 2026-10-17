@@ -3,11 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router'
 import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
+import { safeRedirect } from '../../lib/redirect.js'
 
-// Tu trafia kliknięcie w link z e-maila: /auth/verify?token=…
+// Tu trafia kliknięcie w link z e-maila: /auth/verify?token=…&next=/strona-sprzed-logowania
 export default function AuthVerifyPage() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
+  const next = safeRedirect(searchParams.get('next'))
   const { login } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState(null)
@@ -24,11 +26,11 @@ export default function AuthVerifyPage() {
     if (hasStarted.current) return
     hasStarted.current = true
 
-    login(token).then(
-      (redirectTo) => navigate(redirectTo ?? '/panel', { replace: true }),
+    login(token ?? '').then(
+      () => navigate(next ?? '/panel', { replace: true }),
       (loginError) => setError(loginError.message),
     )
-  }, [login, token, navigate])
+  }, [login, token, next, navigate])
 
   if (error) {
     return (

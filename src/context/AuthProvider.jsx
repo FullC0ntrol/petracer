@@ -19,6 +19,8 @@ export default function AuthProvider({ children }) {
       .then((currentUser) => {
         if (!ignore) setUser(currentUser)
       })
+      // Brak połączenia z serwerem traktujemy jak brak sesji — strony publiczne nadal działają.
+      .catch(() => {})
       .finally(() => {
         if (!ignore) setIsLoading(false)
       })
@@ -33,16 +35,16 @@ export default function AuthProvider({ children }) {
     () => ({
       user,
       isLoading,
-      // Zwraca ścieżkę, na którą trzeba wrócić po zalogowaniu (albo null).
       async login(token) {
         const result = await verifyToken(token)
         setUser(result.user)
-        return result.redirectTo
       },
       async logout() {
         await apiLogout()
         setUser(null)
       },
+      // Po zapisaniu ustawień (imię, telefon) — żeby sidebar i inne miejsca od razu pokazały nowe dane.
+      updateUser: setUser,
     }),
     [user, isLoading],
   )
