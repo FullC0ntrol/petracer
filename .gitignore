@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Konfiguracja z sekretami — nigdy do repozytorium
+.env
+server/.env

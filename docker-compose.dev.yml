@@ -1,0 +1,30 @@
+# Sama baza danych do pracy lokalnej: frontend (`npm run dev:http`) i API (`npm run dev` w server/)
+# uruchamiasz zwykłymi poleceniami, a PostgreSQL działa w Dockerze.
+#
+#   docker compose -f docker-compose.dev.yml up -d     # start bazy w tle
+#   docker compose -f docker-compose.dev.yml down      # zatrzymanie (dane zostają na wolumenie)
+#   docker compose -f docker-compose.dev.yml down -v   # zatrzymanie i usunięcie danych
+name: petrace-dev
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: petrace
+      POSTGRES_PASSWORD: petrace
+      POSTGRES_DB: petrace
+    ports:
+      # Port 5434 na komputerze, a nie standardowy 5432 — żeby nie kolidować z PostgreSQL
+      # zainstalowanym bezpośrednio w systemie (częste na Windowsie).
+      - "5434:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Pliki z tego katalogu PostgreSQL uruchamia sam, ale tylko przy pierwszym starcie pustej bazy.
+      - ./server/sql/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U petrace -d petrace"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  db-data:
