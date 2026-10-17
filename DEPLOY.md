@@ -437,7 +437,7 @@ Zbuduj i uruchom wszystkie usługi (plik `.env` nie jest potrzebny — działaj�
 docker compose up --build
 ```
 
-Otwórz w przeglądarce `http://localhost:8080`. Link logowania znajdziesz w logach w tym samym terminalu albo poleceniem:
+Otwórz w przeglądarce `http://localhost:8080` i zaloguj się kontem `maciej@pettrace.pl` przyciskiem „[DEV] Symuluj kliknięcie w link” (działa tylko na `localhost`). Ten sam link jest też w logach — bierz zawsze **ostatni**, bo każdy działa tylko raz i 15 minut:
 
 ```bash
 docker compose logs api

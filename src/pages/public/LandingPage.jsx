@@ -1,6 +1,8 @@
+import { MessageSquareText, Phone, Smartphone } from 'lucide-react'
+import HeroIllustration from '../../components/landing/HeroIllustration.jsx'
+import HowItWorksStep from '../../components/landing/HowItWorksStep.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
-import SketchBox from '../../dev/SketchBox.jsx'
 
 export default function LandingPage() {
   return (
@@ -15,24 +17,30 @@ export default function LandingPage() {
           </h1>
           <p className="text-lg text-ink-muted">
             Znalazca przykłada telefon do tagu i od razu widzi, jak się z Tobą skontaktować — bez instalowania
-            aplikacji. Ty masz w jednym miejscu spacery, szczepienia i leki.
+            aplikacji. Ty jednym dotknięciem zapisujesz karmienie i spacery.
           </p>
           <Button to="/login" variant="accent" size="lg">
             Zaloguj się
           </Button>
         </div>
-        <SketchBox label="Ilustracja: telefon + tag na obroży" hint="Etap 8" className="aspect-square md:aspect-4/3" />
+        <HeroIllustration />
       </section>
 
       <section aria-labelledby="how-it-works">
         <h2 id="how-it-works" className="mb-4 text-2xl font-bold tracking-tight">
           Jak działa tag
         </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <SketchBox label="1. Znalazca skanuje tag" className="h-32" />
-          <SketchBox label="2. Widzi profil i kontakt" className="h-32" />
-          <SketchBox label="3. Wysyła Ci lokalizację" className="h-32" />
-        </div>
+        <ol className="grid gap-4 sm:grid-cols-3">
+          <HowItWorksStep number={1} icon={Smartphone} title="Znalazca skanuje tag">
+            Przykłada telefon do zawieszki albo robi zdjęcie kodu QR. Strona otwiera się w przeglądarce.
+          </HowItWorksStep>
+          <HowItWorksStep number={2} icon={Phone} title="Widzi profil i kontakt">
+            Imię zwierzęcia, ważne informacje o zdrowiu i przycisk „Zadzwoń do opiekuna”.
+          </HowItWorksStep>
+          <HowItWorksStep number={3} icon={MessageSquareText} title="Wysyła Ci lokalizację">
+            Gdy zwierzę jest oznaczone jako zaginione, znalazca jednym przyciskiem wysyła Ci SMS z mapą.
+          </HowItWorksStep>
+        </ol>
       </section>
     </div>
   )

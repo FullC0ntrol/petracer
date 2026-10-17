@@ -19,27 +19,32 @@ function required(name, fallbackForDev) {
   throw new Error(`Brak wymaganej zmiennej środowiskowej ${name}.`)
 }
 
+const appUrl = required('APP_URL', 'http://localhost:5173').replace(/\/$/, '')
+// Aplikacja działa na własnym komputerze (npm run dev albo lokalny Docker), a nie na prawdziwej domenie.
+const isLocalApp = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(appUrl)
+
 /*
   Bezpiecznik: wartości domyślne z docker-compose.yml są wygodne na własnym komputerze,
   ale na prawdziwej domenie oznaczałyby sekret znany każdemu, kto przeczytał repozytorium.
 */
-function assertSafeSecret(jwtSecret, appUrl) {
-  const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(appUrl)
-  if (isProduction && !isLocal && (jwtSecret.includes('change-me') || jwtSecret.length < 32)) {
+function assertSafeSecret(jwtSecret) {
+  if (isProduction && !isLocalApp && (jwtSecret.includes('change-me') || jwtSecret.length < 32)) {
     throw new Error('JWT_SECRET jest domyślny albo za krótki. Ustaw w .env losowy sekret: openssl rand -hex 32')
   }
   return jwtSecret
 }
 
-const appUrl = required('APP_URL', 'http://localhost:5173').replace(/\/$/, '')
-
 export const config = {
   isProduction,
   port: Number(process.env.PORT ?? 3000),
   databaseUrl: required('DATABASE_URL', 'postgres://petrace:petrace@localhost:5434/petrace'),
-  jwtSecret: assertSafeSecret(required('JWT_SECRET', 'dev-only-secret-change-me'), appUrl),
+  jwtSecret: assertSafeSecret(required('JWT_SECRET', 'dev-only-secret-change-me')),
   // Publiczny adres aplikacji — z niego budujemy link w mailu.
   appUrl,
+  // Link logowania także w odpowiedzi API (przycisk „[DEV] Symuluj kliknięcie w link”): poza produkcją
+  // albo gdy aplikacja działa na localhost. Na prawdziwej domenie nigdy — każdy mógłby wtedy
+  // zalogować się na cudze konto, znając tylko adres e-mail.
+  exposeDevLink: !isProduction || isLocalApp,
   // Ciasteczko `Secure` (tylko HTTPS). Domyślnie włączone w produkcji. Przeglądarki traktują
   // http://localhost jako bezpieczny, więc lokalny Docker działa także z `true`.
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProduction,

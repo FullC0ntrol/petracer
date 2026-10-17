@@ -61,7 +61,7 @@ Otwórz `http://localhost:5173`. Link logowania pojawia się w konsoli serwera, 
 docker compose up --build
 ```
 
-Otwórz `http://localhost:8080`. Serwer działa w trybie produkcyjnym, więc link logowania jest tylko w logach: `docker compose logs api`. Zatrzymanie: `docker compose down` (z usunięciem danych: `down -v`).
+Otwórz `http://localhost:8080`. Logowanie: e-mail `maciej@pettrace.pl` → przycisk „[DEV] Symuluj kliknięcie w link” (pojawia się tylko, gdy aplikacja działa na `localhost`; na prawdziwej domenie link przychodzi wyłącznie mailem). Zatrzymanie: `docker compose down` (z usunięciem danych: `down -v`).
 
 ### Polecenia
 

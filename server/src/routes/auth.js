@@ -74,8 +74,8 @@ authRouter.post('/request-link', limitByIp, limitByEmail, async (req, res) => {
   await sendLoginLink(email, `${config.appUrl}${path}`)
 
   // Odpowiedź jest taka sama dla nowego i istniejącego konta — z niej nie da się sprawdzić,
-  // czy ktoś ma konto. `devLink` tylko poza produkcją: przycisk „[DEV] Symuluj kliknięcie w link”.
-  res.json({ email, ...(config.isProduction ? {} : { devLink: path }) })
+  // czy ktoś ma konto. `devLink` tylko lokalnie (config.exposeDevLink): przycisk „[DEV] Symuluj kliknięcie w link”.
+  res.json({ email, ...(config.exposeDevLink ? { devLink: path } : {}) })
 })
 
 /*

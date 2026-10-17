@@ -149,7 +149,7 @@ plan/               specyfikacja (źródło prawdy)
 - Bezpieczeństwo: token logowania z `crypto.randomBytes`, w bazie skrót SHA-256, 15 min, jednorazowy (atomowy `UPDATE`);
   sesja JWT 30 dni w ciasteczku `httpOnly`, `SameSite=Lax`, `Secure` w produkcji; limit `/auth/request-link`;
   `findOwnPet` w każdej trasie `/pets/:id/…`; kody zawieszek 8 znaków `XXXX-XXXX` bez `0/O/1/I/L`.
-- Bez SMTP link logowania jest wypisywany w konsoli serwera. `devLink` w odpowiedzi tylko poza produkcją.
+- Bez SMTP link logowania jest wypisywany w konsoli serwera. `devLink` w odpowiedzi tylko poza produkcją albo gdy `APP_URL` to localhost (`config.exposeDevLink`).
 - Każdy ekran obsługuje stany: ładowanie, pusty, błąd, sukces.
 
 Dane przykładowe (te same w obu trybach): Maciej (`maciej@pettrace.pl`, telefon ustawiony), **Luna** (pies,
@@ -172,8 +172,10 @@ Lokalnie: `docker compose up --build` → `http://localhost:8080`.
 Nie zmieniaj wyglądu, klas, propsów ani zachowania: `index.html`, `vite.config.js`, `eslint.config.js`,
 `src/main.jsx`, `src/index.css`, `src/components/layout/*` (RootLayout, PublicLayout, FinderLayout, VetLayout,
 PageHeader, Logo, Sidebar, BottomNav, OwnerLayout, ownerNav.js), istniejące `src/components/ui/*` i `fieldClasses.js`,
-`src/lib/cn.js`, `src/pages/dev/UiGalleryPage.jsx`, `src/pages/public/LandingPage.jsx`, `NotFoundPage.jsx`,
+`src/lib/cn.js`, `src/pages/dev/UiGalleryPage.jsx`, `src/pages/public/NotFoundPage.jsx`,
 `src/mocks/seed.js`, etapy 0–13 w `PLAN_PRZEPISYWANIA.md`.
+
+`LandingPage.jsx` był zamrożony, ale na prośbę autora szkice zastąpiono ilustracją i krokami (`components/landing/`).
 
 Dozwolone dopiski: trasy w `router.jsx`, proxy i PWA w `vite.config.js`, providery w `main.jsx`, nowe kolekcje
 w `seed.js`, link apple-touch w `index.html`. `RequireAuth.jsx` nie jest zamrożony. Potrzebny nowy komponent UI —
