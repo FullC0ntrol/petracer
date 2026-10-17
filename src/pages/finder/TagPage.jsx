@@ -1,110 +1,67 @@
 import { useParams } from 'react-router'
-import { TriangleAlert } from 'lucide-react'
 import { resolveTag } from '../../api/tags.js'
-import Button from '../../components/ui/Button.jsx'
+import FoundView from '../../components/finder/FoundView.jsx'
+import InactiveTagView from '../../components/finder/InactiveTagView.jsx'
+import LostView from '../../components/finder/LostView.jsx'
+import OwnerQuickLog from '../../components/finder/OwnerQuickLog.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
-import SketchBox from '../../dev/SketchBox.jsx'
 import { useAsync } from '../../hooks/useAsync.js'
 import { useAuth } from '../../hooks/useAuth.js'
 
 /*
-  Routing kontekstowy: ten sam adres /t/:tagId (zapisany na fizycznym tagu) pokazuje
-  różne widoki zależnie od sytuacji. Kolejność warunków ma znaczenie — pierwszy pasujący wygrywa:
-    1. tag nieznany / nieaktywny     → nie ma czego pokazać
-    2. skanuje zalogowany właściciel → szybki zapis (nawet gdy zwierzę jest w Lost Mode,
-       bo właściciel go właśnie znalazł i np. wyłączy alarm)
-    3. zwierzę w Lost Mode           → widok alarmowy
-    4. pozostałe                     → publiczny profil
-  Dane i flagę `isOwner` daje `resolveTag` — o tym, kto skanuje, decyduje „serwer” na podstawie sesji.
+  Routing kontekstowy: ten sam adres /t/:tagId (zapisany na zawieszce) pokazuje różne widoki.
+  O wariancie decyduje SERWER (decyzja D6) — strona tylko wyświetla to, co dostała:
+    inactive → „Ten tag nie jest aktywny”
+    owner    → szybki zapis karmienia / spaceru
+    lost     → widok alarmowy z SMS-em z lokalizacją
+    found    → profil podstawowy z przyciskiem „Zadzwoń”
+  Kolejność warunków i ich uzasadnienie: server/src/routes/tags.js.
 */
 export default function TagPage() {
   const { tagId } = useParams()
-  const { user } = useAuth()
-  // `user?.id` w zależnościach: po zalogowaniu / wylogowaniu (np. z panelu DEV) pytamy ponownie,
-  // bo zmienia się odpowiedź na pytanie „czy to właściciel”.
-  const { data: tag, error, isLoading } = useAsync(() => resolveTag(tagId), [tagId, user?.id])
+  const { user, isLoading: isAuthLoading } = useAuth()
 
-  if (isLoading) {
+  // Czekamy, aż wiadomo, kto jest zalogowany. Inaczej strona zapytałaby serwer dwa razy
+  // (raz „anonimowo”, raz po wczytaniu sesji) i zapisała w historii dwa skany.
+  if (isAuthLoading) return <Loading />
+
+  // `key`: po zalogowaniu albo wylogowaniu (np. z panelu DEV) pytamy serwer od nowa,
+  // bo zmienia się odpowiedź na pytanie „czy skanuje właściciel”.
+  return <TagContent key={user?.id ?? 'anonymous'} code={tagId} />
+}
+
+function TagContent({ code }) {
+  const { data: tag, error, isLoading, reload } = useAsync(() => resolveTag(code), [code])
+
+  if (isLoading) return <Loading />
+  if (error) {
     return (
-      <div className="grid place-items-center pt-16">
-        <Spinner size="lg" showLabel label="Sprawdzam tag…" />
+      <div role="alert" className="space-y-4 pt-10 text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Nie udało się wczytać zawieszki</h1>
+        <p className="text-ink-muted">{error.message}</p>
+        <button type="button" onClick={reload} className="font-semibold text-pine underline underline-offset-4">
+          Spróbuj ponownie
+        </button>
       </div>
     )
   }
-  if (error) return <ErrorView message={error.message} />
-  if (!tag.isActive) return <InactiveTagView tagId={tag.tagId} />
-  if (tag.isOwner) return <QuickTapView pet={tag.pet} />
-  if (tag.pet.isLost) return <LostView pet={tag.pet} />
-  return <FoundView pet={tag.pet} />
+
+  switch (tag.variant) {
+    case 'owner':
+      return <OwnerQuickLog pet={tag.pet} />
+    case 'lost':
+      return <LostView code={tag.code} pet={tag.pet} phone={tag.phone} message={tag.message} />
+    case 'found':
+      return <FoundView pet={tag.pet} phone={tag.phone} />
+    default:
+      return <InactiveTagView code={tag.code} />
+  }
 }
 
-function ErrorView({ message }) {
+function Loading() {
   return (
-    <div role="alert" className="space-y-4 pt-10 text-center">
-      <h1 className="text-2xl font-bold tracking-tight">Nie udało się wczytać tagu</h1>
-      <p className="text-ink-muted">{message} Sprawdź połączenie z internetem i zeskanuj tag ponownie.</p>
-    </div>
-  )
-}
-
-function InactiveTagView({ tagId }) {
-  return (
-    <div className="space-y-4 pt-10 text-center">
-      <h1 className="text-2xl font-bold tracking-tight">Tag nieaktywny</h1>
-      <p className="text-ink-muted">
-        Tag <span className="font-mono text-ink">{tagId}</span> nie jest przypisany do żadnego zwierzęcia.
-      </p>
-      <SketchBox label="Co zrobić dalej (np. zaprowadź do weterynarza — sprawdzi chip)" hint="Etap 5" />
-    </div>
-  )
-}
-
-function QuickTapView({ pet }) {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">Cześć, {pet.name}!</h1>
-      <p className="text-ink-muted">Szybki zapis — co właśnie robicie?</p>
-      <div className="grid grid-cols-2 gap-3">
-        {['Spacer', 'Karmienie', 'Lek', 'Tylko sprawdzam'].map((action) => (
-          <SketchBox key={action} label={action} className="h-24" />
-        ))}
-      </div>
-      <Button to={`/zwierzeta/${pet.id}`} variant="ghost" fullWidth>
-        Przejdź do profilu
-      </Button>
-    </div>
-  )
-}
-
-function LostView({ pet }) {
-  return (
-    <div className="space-y-4">
-      <header className="rounded-2xl bg-alert p-5 text-surface">
-        <p className="flex items-center gap-2 text-sm font-bold tracking-wide uppercase">
-          <TriangleAlert size={18} aria-hidden="true" />
-          Zaginął
-        </p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">{pet.name} — pomóż mi wrócić do domu</h1>
-      </header>
-      <SketchBox label="Duże zdjęcie + komunikat właściciela" hint="Etap 5" className="aspect-square" />
-      <Button to="lokalizacja" variant="alert" size="xl" fullWidth>
-        Wyślij moją lokalizację
-      </Button>
-      <SketchBox label="Zadzwoń do właściciela" className="min-h-14" />
-    </div>
-  )
-}
-
-function FoundView({ pet }) {
-  return (
-    <div className="space-y-4">
-      <SketchBox label={`Duże zdjęcie: ${pet.name}`} hint="Etap 5" className="aspect-square" />
-      <h1 className="text-center text-3xl font-extrabold tracking-tight">Cześć, jestem {pet.name}!</h1>
-      <Button to="lokalizacja" size="xl" fullWidth>
-        Wyślij lokalizację właścicielowi
-      </Button>
-      <SketchBox label="Zadzwoń do właściciela" className="min-h-14" />
-      <SketchBox label="Ważne informacje (alergie, leki)" className="min-h-14" />
+    <div className="grid place-items-center pt-16">
+      <Spinner size="lg" showLabel label="Sprawdzam zawieszkę…" />
     </div>
   )
 }

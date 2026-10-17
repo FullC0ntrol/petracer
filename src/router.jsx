@@ -6,7 +6,6 @@ import RequireAuth from './components/layout/RequireAuth.jsx'
 import RootLayout from './components/layout/RootLayout.jsx'
 import VetLayout from './components/layout/VetLayout.jsx'
 import UiGalleryPage from './pages/dev/UiGalleryPage.jsx'
-import LocationSentPage from './pages/finder/LocationSentPage.jsx'
 import ShareLocationPage from './pages/finder/ShareLocationPage.jsx'
 import TagPage from './pages/finder/TagPage.jsx'
 import DashboardPage from './pages/owner/DashboardPage.jsx'
@@ -17,7 +16,6 @@ import PetTagPage from './pages/owner/PetTagPage.jsx'
 import SchedulePage from './pages/owner/SchedulePage.jsx'
 import SettingsPage from './pages/owner/SettingsPage.jsx'
 import VetSharePage from './pages/owner/VetSharePage.jsx'
-import WalkDetailsPage from './pages/owner/WalkDetailsPage.jsx'
 import WalkNewPage from './pages/owner/WalkNewPage.jsx'
 import WalksPage from './pages/owner/WalksPage.jsx'
 import AuthVerifyPage from './pages/public/AuthVerifyPage.jsx'
@@ -53,7 +51,6 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <TagPage /> },
           { path: 'lokalizacja', element: <ShareLocationPage /> },
-          { path: 'wyslano', element: <LocationSentPage /> },
         ],
       },
       {
@@ -75,7 +72,6 @@ export const router = createBrowserRouter([
               { path: 'zwierzeta/:id/tag', element: <PetTagPage /> },
               { path: 'spacery', element: <WalksPage /> },
               { path: 'spacery/nowy', element: <WalkNewPage /> },
-              { path: 'spacery/:id', element: <WalkDetailsPage /> },
               { path: 'harmonogram', element: <SchedulePage /> },
               { path: 'ustawienia', element: <SettingsPage /> },
             ],

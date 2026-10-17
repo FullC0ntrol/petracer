@@ -1,32 +1,24 @@
-import { Link } from 'react-router'
 import { Plus } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader.jsx'
 import Button from '../../components/ui/Button.jsx'
 import SketchBox from '../../dev/SketchBox.jsx'
 
+// Priorytet 2 (UC10): ręcznie wpisane spacery i podsumowanie z 7 dni. Na razie szkic.
 export default function WalksPage() {
   return (
     <>
       <PageHeader
         title="Spacery"
-        description="Dystans i czas z ostatnich tygodni."
+        description="Spacery z ostatnich 7 dni."
         action={
           <Button to="/spacery/nowy" icon={Plus}>
-            Nowy spacer
+            Dodaj spacer
           </Button>
         }
       />
       <div className="space-y-6">
-        <SketchBox label="Wykres tygodniowy (recharts)" hint="Etap 6" className="h-56" />
-        <section aria-labelledby="walk-list">
-          <h2 id="walk-list" className="mb-3 text-lg font-semibold">
-            Ostatnie spacery
-          </h2>
-          <Link to="/spacery/demo-1" className="block rounded-2xl">
-            <SketchBox label="Spacer: Błonia · 3,2 km" className="h-20" />
-          </Link>
-          <SketchBox label="Kolejne spacery…" className="mt-3 h-40" />
-        </section>
+        <SketchBox label="Podsumowanie z 7 dni: liczba spacerów, łączny czas i dystans" hint="Priorytet 2" className="h-32" />
+        <SketchBox label="Lista spacerów: zwierzę, data, czas trwania, dystans" hint="Priorytet 2" className="h-56" />
       </div>
     </>
   )

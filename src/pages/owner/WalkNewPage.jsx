@@ -1,22 +1,16 @@
 import PageHeader from '../../components/layout/PageHeader.jsx'
 import SketchBox from '../../dev/SketchBox.jsx'
 
+// Priorytet 2 (UC10): ręczny wpis spaceru. Śledzenia GPS nie robimy (decyzja D11). Na razie szkic.
 export default function WalkNewPage() {
   return (
-    <>
-      <PageHeader title="Spacer na żywo" />
-      <div className="space-y-4">
-        <SketchBox label="Mapa z bieżącą trasą" hint="Etap 6" className="h-[50dvh]" />
-        <div className="grid grid-cols-3 gap-3">
-          <SketchBox label="Czas" />
-          <SketchBox label="Dystans" />
-          <SketchBox label="Tempo" />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <SketchBox label="Start / pauza" className="min-h-14" />
-          <SketchBox label="Zakończ" className="min-h-14" />
-        </div>
-      </div>
-    </>
+    <div className="max-w-2xl">
+      <PageHeader title="Nowy spacer" />
+      <SketchBox
+        label="Formularz: zwierzę, data i godzina, czas trwania, dystans (opcjonalnie)"
+        hint="Priorytet 2"
+        className="h-72"
+      />
+    </div>
   )
 }
