@@ -64,7 +64,6 @@ Biblioteki: `express`, `pg`, `nodemailer`, `jsonwebtoken`, `cookie-parser`, `dot
 ```mermaid
 erDiagram
   users ||--o{ pets : "posiada"
-  users ||--o{ login_tokens : "loguje się"
   pets ||--o| tags : "ma"
   tags ||--o{ tag_scans : "rejestruje"
   pets ||--o{ activities : "ma"
@@ -79,7 +78,8 @@ erDiagram
   }
   login_tokens {
     uuid id PK
-    uuid user_id FK
+    text email
+    text name
     text token_hash
     timestamptz expires_at
     timestamptz used_at
@@ -132,6 +132,8 @@ Uwagi:
 - `activities.type`: `feeding` albo `walk`; `source`: `quick_tap` (po skanie) albo `manual` (formularz).
 - `tags.pet_id` jest unikalne: jedno zwierzę ma jeden aktywny tag.
 - Tokeny (`login_tokens`, `vet_shares`) są przechowywane jako hash SHA-256, nigdy w czystej postaci.
+- `login_tokens` nie ma klucza obcego do `users`: token zapamiętuje e-mail (i imię podane przy pierwszym
+  logowaniu), a konto powstaje dopiero po kliknięciu w link (UC1). Adres z literówką nie zostawia w bazie konta.
 - Zdjęcia zwierząt: priorytet 2 (wymaga przechowywania plików). Do tego czasu awatar z inicjałami.
 
 ## API
@@ -142,7 +144,7 @@ Wszystkie adresy zaczynają się od `/api`. 🔒 = wymaga zalogowania.
 | Metoda | Adres | Co robi | Funkcja w `client/src/api` |
 |---|---|---|---|
 | POST | `/auth/request-link` | tworzy token, wysyła e-mail | `requestMagicLink` |
-| POST | `/auth/verify` | sprawdza token, ustawia ciasteczko sesji | `verifyToken` |
+| POST | `/auth/verify` | sprawdza token, zakłada konto, jeśli go nie ma, ustawia ciasteczko sesji | `verifyToken` |
 | GET | `/auth/me` 🔒 | zwraca zalogowanego użytkownika | `getCurrentUser` |
 | POST | `/auth/logout` 🔒 | usuwa ciasteczko | `logout` |
 | PATCH | `/me` 🔒 | zmienia imię i telefon | `updateSettings` |

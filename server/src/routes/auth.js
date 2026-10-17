@@ -43,27 +43,18 @@ const limitByEmail = rateLimit({
 
 /*
   POST /api/auth/request-link  { email, name?, next? }
-  Magic link służy też do rejestracji: nieznany e-mail od razu zakłada konto. Konto powstaje
-  już tutaj, bo token w bazie musi wskazywać użytkownika (login_tokens.user_id).
+  Magic link służy też do rejestracji, ale tutaj konta jeszcze NIE zakładamy. Token zapamiętuje
+  e-mail i imię, a konto powstanie dopiero w /verify, gdy ktoś udowodni, że ma dostęp do skrzynki.
 */
 authRouter.post('/request-link', limitByIp, limitByEmail, async (req, res) => {
   const email = parseEmail(req.body.email)
   const name = parseOptionalName(req.body.name)
 
-  // INSERT … ON CONFLICT: „dodaj, a jeśli taki e-mail już jest, nic nie zmieniaj”.
-  // RETURNING zwraca wiersz, ale przy konflikcie z DO NOTHING nie zwraca nic — stąd drugi SELECT.
-  await query(
-    `INSERT INTO users (email, name) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING`,
-    [email, name || email.split('@')[0]],
-  )
-  const { rows } = await query('SELECT id FROM users WHERE email = $1', [email])
-  const userId = rows[0].id
-
   const token = generateToken()
   await query(
-    `INSERT INTO login_tokens (user_id, token_hash, expires_at)
-     VALUES ($1, $2, now() + make_interval(mins => $3))`,
-    [userId, hashToken(token), LINK_TTL_MINUTES],
+    `INSERT INTO login_tokens (email, name, token_hash, expires_at)
+     VALUES ($1, $2, $3, now() + make_interval(mins => $4))`,
+    [email, name, hashToken(token), LINK_TTL_MINUTES],
   )
 
   const params = new URLSearchParams({ token })
@@ -83,20 +74,30 @@ authRouter.post('/request-link', limitByIp, limitByEmail, async (req, res) => {
   Jedno zapytanie UPDATE … WHERE used_at IS NULL AND expires_at > now() jednocześnie sprawdza
   token i oznacza go jako użyty. Dzięki temu dwa równoczesne kliknięcia nie zalogują dwa razy:
   baza zmieni wiersz tylko raz, a drugie zapytanie nie znajdzie już nieużytego tokenu.
+  Dopiero tu, po udanej weryfikacji, zakładamy konto, jeśli to pierwsze logowanie (UC1).
 */
 authRouter.post('/verify', async (req, res) => {
   const token = typeof req.body.token === 'string' ? req.body.token : ''
   const { rows } = await query(
     `UPDATE login_tokens SET used_at = now()
      WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()
-     RETURNING user_id`,
+     RETURNING email, name`,
     [hashToken(token)],
   )
   if (!rows[0]) throw new HttpError(400, 'Ten link jest nieprawidłowy, wygasł albo został już użyty. Poproś o nowy.')
+  const { email, name } = rows[0]
 
-  const userResult = await query('SELECT id, email, name, phone FROM users WHERE id = $1', [rows[0].user_id])
-  setSessionCookie(res, rows[0].user_id)
-  res.json({ user: toUser(userResult.rows[0]) })
+  // INSERT … ON CONFLICT: „dodaj, a jeśli taki e-mail już jest, nic nie zmieniaj” — istniejące konto
+  // zachowuje swoje imię. RETURNING przy konflikcie z DO NOTHING nie zwraca nic, stąd osobny SELECT.
+  await query(`INSERT INTO users (email, name) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING`, [
+    email,
+    name || email.split('@')[0],
+  ])
+  const userResult = await query('SELECT id, email, name, phone FROM users WHERE email = $1', [email])
+  const user = userResult.rows[0]
+
+  setSessionCookie(res, user.id)
+  res.json({ user: toUser(user) })
 })
 
 /*

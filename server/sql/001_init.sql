@@ -15,9 +15,13 @@ CREATE TABLE users (
 
 -- Jednorazowe linki logowania. Trzymamy tylko skrót SHA-256 tokenu: ktoś, kto wykradnie
 -- kopię bazy, nie zaloguje się, bo ze skrótu nie da się odtworzyć linku.
+-- Token pamięta e-mail, a nie id użytkownika: konto powstaje dopiero po kliknięciu w link
+-- (POST /api/auth/verify), więc adres z literówką nie zostawia w bazie pustego konta.
+-- `name` to imię z formularza, użyte tylko przy zakładaniu nowego konta.
 CREATE TABLE login_tokens (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  email      text NOT NULL,
+  name       text NOT NULL DEFAULT '',
   token_hash text NOT NULL UNIQUE,
   expires_at timestamptz NOT NULL,
   used_at    timestamptz

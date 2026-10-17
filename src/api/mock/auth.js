@@ -22,15 +22,16 @@ export async function requestMagicLink(email, { name = '', next = null } = {}) {
   if (!EMAIL_PATTERN.test(normalizedEmail)) throw apiError(400, 'Wpisz poprawny adres e-mail.')
 
   const db = getDb()
-  // Magic link służy też do rejestracji: nieznany e-mail zakłada konto.
-  let user = db.users.find((item) => item.email === normalizedEmail)
-  if (!user) {
-    user = { id: crypto.randomUUID(), email: normalizedEmail, name: name.trim() || normalizedEmail.split('@')[0], phone: '' }
-    db.users.push(user)
-  }
-
+  // Magic link służy też do rejestracji, ale konta jeszcze nie zakładamy: token pamięta e-mail
+  // i imię, a konto powstanie w verifyToken — dopiero gdy ktoś kliknie link ze swojej skrzynki.
   const token = crypto.randomUUID()
-  db.loginTokens.push({ token, userId: user.id, expiresAt: new Date(Date.now() + LINK_TTL_MS).toISOString(), usedAt: null })
+  db.loginTokens.push({
+    token,
+    email: normalizedEmail,
+    name: name.trim(),
+    expiresAt: new Date(Date.now() + LINK_TTL_MS).toISOString(),
+    usedAt: null,
+  })
   saveDb(db)
 
   const params = new URLSearchParams({ token })
@@ -54,12 +55,20 @@ export async function verifyToken(token) {
 
   // Link jest jednorazowy — drugie kliknięcie w ten sam e-mail już nie zaloguje.
   link.usedAt = new Date().toISOString()
+
+  // Pierwsze logowanie zakłada konto. Istniejące konto zostaje bez zmian (także imię).
+  let user = db.users.find((item) => item.email === link.email)
+  if (!user) {
+    user = { id: crypto.randomUUID(), email: link.email, name: link.name || link.email.split('@')[0], phone: '' }
+    db.users.push(user)
+  }
+
   const sessionToken = crypto.randomUUID()
-  db.sessions.push({ token: sessionToken, userId: link.userId, createdAt: new Date().toISOString() })
+  db.sessions.push({ token: sessionToken, userId: user.id, createdAt: new Date().toISOString() })
   saveDb(db)
   setAuthToken(sessionToken)
 
-  return { user: toUser(db.users.find((user) => user.id === link.userId)) }
+  return { user: toUser(user) }
 }
 
 export async function getCurrentUser() {

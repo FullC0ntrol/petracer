@@ -412,6 +412,8 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
     na razie lista imion jako linki do `/zwierzeta/:id`, zamiast `ErrorState` zwykły akapit z błędem
     i przyciskiem „Spróbuj ponownie”. **Pomiń** `RecentScans` i `Notice` o telefonie. W nagłówku zamiast
     `Cześć, {user.name}` na razie „Twoje zwierzęta” (`useAuth` jeszcze nie ma).
+  - `src/router.jsx` — trasa `panel` (z etapu 3 już istnieje jako placeholder): zamień jej `element`
+    na `<DashboardPage />` i dodaj import. Bez tego strona nie pojawi się w przeglądarce.
 - **Czego się uczę:** localStorage i JSON, `try/catch`, referencje a kopia (`structuredClone`), Promise,
   `setTimeout`, `async`/`await`, `useEffect` z zależnościami i sprzątaniem, wyścig zapytań (flaga `ignore`).
 - **Gotowe, gdy:** `/panel` pokazuje spinner ok. 0,3 s, a potem „Luna, Mruczek”. Gdy tymczasowo dopiszesz
@@ -446,10 +448,11 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
     (nie ma jeszcze `useAuth`) i **bez** `DemoLogin`. `next` na razie `null`.
   - `src/pages/public/CheckEmailPage.jsx` — cały plik.
 - **Czego się uczę:** input kontrolowany, `onSubmit` + `preventDefault`, `noValidate`, blokowanie przycisku
-  w trakcie wysyłki, `useNavigate` ze `state`, jednorazowy token z datą ważności, `URLSearchParams`.
+  w trakcie wysyłki, `useNavigate` ze `state`, jednorazowy token z datą ważności, `URLSearchParams`,
+  dlaczego prośba o link jeszcze **nie** zakłada konta (token pamięta e-mail, konto powstanie po kliknięciu).
 - **Gotowe, gdy:** pusty i błędny e-mail pokazują błąd pod polem; poprawny prowadzi na `/login/sprawdz-poczte`
-  z Twoim adresem; w Local Storage w `loginTokens` jest nowy token z `expiresAt` za 15 minut; odświeżenie
-  strony „Sprawdź pocztę” pokazuje „Wróć do logowania”.
+  z Twoim adresem; w Local Storage w `loginTokens` jest nowy token z Twoim e-mailem i `expiresAt` za 15 minut,
+  a nowy adres **nie** pojawia się w `users`; odświeżenie strony „Sprawdź pocztę” pokazuje „Wróć do logowania”.
 - **Commit:** `feat(auth): formularz prośby o link do logowania`
 
 ## Sesja 17: Klikam link i jestem zalogowany · ~2 h
@@ -468,9 +471,11 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
   - `src/pages/owner/DashboardPage.jsx` — nagłówek „Cześć, {user.name}”.
 - **Czego się uczę:** Context (`createContext`, `useContext`), prop drilling, własny hook, `useMemo`,
   stan „jeszcze nie wiadomo” (`isLoading`), `useSearchParams`, podwójny efekt w `StrictMode` i `useRef`
-  jako zabezpieczenie, sesja jako token w localStorage (i dlaczego prawdziwy serwer zrobi to inaczej).
+  jako zabezpieczenie, sesja jako token w localStorage (i dlaczego prawdziwy serwer zrobi to inaczej),
+  rejestracja przy pierwszym logowaniu (konto zakłada `verifyToken`, gdy e-maila nie ma w `users`).
 - **Gotowe, gdy:** po kliknięciu linku jesteś na `/panel` z „Cześć, Maciej”; po odświeżeniu nadal jesteś
-  zalogowany; ponowne otwarcie tego samego linku pokazuje „Nie udało się zalogować”; w konsoli brak błędów
+  zalogowany; ponowne otwarcie tego samego linku pokazuje „Nie udało się zalogować”; link dla nowego adresu
+  z imieniem „Ola” zakłada konto (widać je w `users`) i wita „Cześć, Ola”; w konsoli brak błędów
   mimo `StrictMode`.
 - **Commit:** `feat(auth): weryfikacja linku i kontekst zalogowanego użytkownika`
 
@@ -855,11 +860,12 @@ aplikacji, które już przeniosłeś — to normalne, że reszta jeszcze nie.
     Pozostałe funkcje na razie `export const verifyToken = mock.verifyToken` itd. (przeczytaj komentarz
     w prototypowym `api/auth.js` — dlaczego osobna linijka na funkcję).
 - **Czego się uczę:** middleware i ich kolejność, obsługa błędów w Expressie 5, walidacja po stronie serwera,
-  `crypto.randomBytes`, hash SHA-256 (dlaczego w bazie nie ma samego tokenu), `INSERT … ON CONFLICT`,
+  `crypto.randomBytes`, hash SHA-256 (dlaczego w bazie nie ma samego tokenu), `make_interval`,
   `fetch` i `response.ok`, tryby Vite (`--mode`), tree shaking.
 - **Gotowe, gdy:** `npm run dev:http` → `/login` → e-mail → strona „Sprawdź pocztę”, a w konsoli serwera jest
-  link; w tabeli `login_tokens` jest wiersz z `token_hash` **innym** niż token z linku; błędny e-mail
-  pokazuje komunikat z serwera; `npm run dev` (mock) działa jak wcześniej.
+  link; w tabeli `login_tokens` jest wiersz z Twoim e-mailem i `token_hash` **innym** niż token z linku,
+  a w `users` nowego adresu jeszcze nie ma; błędny e-mail pokazuje komunikat z serwera; `npm run dev` (mock)
+  działa jak wcześniej.
 - **Commit:** `feat(auth): prośba o link logowania obsługiwana przez serwer`
 
 ## Sesja 42: Logowanie przez serwer — ciasteczko sesji · ~2–3 h
@@ -876,8 +882,10 @@ aplikacji, które już przeniosłeś — to normalne, że reszta jeszcze nie.
     przełącz je w fasadzie.
   - (opcjonalnie) `src/dev/DevPanel.jsx` — gałąź dla trybu http i `API_MODE` z `src/api/mode.js`.
 - **Czego się uczę:** JWT (nagłówek, dane, podpis), ciasteczko `httpOnly` / `Secure` / `SameSite` (D8),
-  `UPDATE … RETURNING` jako atomowe „sprawdź i zużyj”, dlaczego `/auth/me` zwraca `{ user: null }` zamiast 401.
-- **Gotowe, gdy:** po kliknięciu linku z konsoli serwera trafiasz do panelu — lista zwierząt pokaże
+  `UPDATE … RETURNING` jako atomowe „sprawdź i zużyj”, `INSERT … ON CONFLICT DO NOTHING` (konto przy
+  pierwszym logowaniu), dlaczego `/auth/me` zwraca `{ user: null }` zamiast 401.
+- **Gotowe, gdy:** link dla nowego adresu zakłada wiersz w `users` dopiero po kliknięciu; po kliknięciu linku
+  z konsoli serwera trafiasz do panelu — lista zwierząt pokaże
   „Sesja wygasła”, bo `getPets` jest jeszcze z mocka, który nie zna ciasteczka serwera (naprawisz w sesji 43); w DevTools → Application → Cookies `petrace_session` ma `HttpOnly`; ponowny link daje błąd;
   odświeżenie nie wylogowuje; „Wyloguj się” usuwa ciasteczko.
 - **Commit:** `feat(auth): sesja w ciasteczku httpOnly i logowanie przez serwer`

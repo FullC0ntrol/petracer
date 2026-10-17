@@ -11,12 +11,24 @@ import { useAuth } from '../hooks/useAuth.js'
 const DEMO_EMAIL = 'maciej@pettrace.pl'
 const OPEN_KEY = 'pettrace:dev-panel-open'
 const DEV_LINK_CLASSES = 'flex justify-between rounded-lg px-2 py-1.5 transition-colors hover:bg-pine-soft'
+const DEV_PILL_CLASSES = 'rounded-full bg-line/70 px-2.5 py-1 text-xs font-semibold transition-colors hover:bg-pine-soft'
+const DEV_HEADING_CLASSES = 'mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase'
 
-// Zawieszki z danych przykładowych — te same w trybie mock (seed.js) i http (server/sql/seed.sql).
+// Zawieszki z danych przykładowych w trybie http (server/sql/seed.sql). W trybie mock panel czyta je
+// z localStorage (getDevOverview), bo tam zwierzęta mają inne id ('luna' zamiast UUID).
 const DEMO_TAGS = [
-  { code: 'LUNA-7K2Q', petName: 'Luna' },
-  { code: 'MRCZ-4P9D', petName: 'Mruczek' },
-  { code: 'XXXX-0000', petName: null },
+  { code: 'LUNA-7K2Q', petId: '00000000-0000-4000-8000-0000000000a1', petName: 'Luna', isActive: true },
+  { code: 'MRCZ-4P9D', petId: '00000000-0000-4000-8000-0000000000a2', petName: 'Mruczek', isActive: true },
+  { code: 'XXXX-0000', petId: null, petName: null, isActive: false },
+]
+
+// Skróty do stron, żeby przy testach nie klikać za każdym razem przez menu.
+const PAGE_LINKS = [
+  { to: '/login', label: 'Logowanie' },
+  { to: '/panel', label: 'Panel' },
+  { to: '/zwierzeta/nowe', label: 'Dodaj zwierzę' },
+  { to: '/ustawienia', label: 'Ustawienia' },
+  { to: '/dev/ui', label: 'Galeria UI' },
 ]
 
 function readIsOpen() {
@@ -82,6 +94,7 @@ function DevPanelContent() {
   const [error, setError] = useState(null)
   const isMock = API_MODE === 'mock'
   const tags = isMock ? getDevOverview() : DEMO_TAGS
+  const demoPets = tags.filter((tag) => tag.petId && tag.isActive)
 
   // Logowanie idzie tą samą drogą co w aplikacji (magic link → weryfikacja), tylko bez klikania.
   async function handleLoginChange(shouldBeLoggedIn) {
@@ -115,7 +128,7 @@ function DevPanelContent() {
     <section
       id="dev-panel"
       aria-label="Panel deweloperski"
-      className="w-72 space-y-4 rounded-2xl border border-line bg-surface p-4 text-sm shadow-raised"
+      className="max-h-[70dvh] w-72 space-y-4 overflow-y-auto rounded-2xl border border-line bg-surface p-4 text-sm shadow-raised"
     >
       <Toggle
         label={user ? `Zalogowany: ${user.name}` : 'Zalogowany'}
@@ -127,7 +140,41 @@ function DevPanelContent() {
       {error && <p className="text-xs font-medium text-alert">{error}</p>}
 
       <div>
-        <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Otwórz</h2>
+        <h2 className={DEV_HEADING_CLASSES}>Strony</h2>
+        <ul className="space-y-1">
+          {PAGE_LINKS.map((page) => (
+            <li key={page.to}>
+              <Link to={page.to} className={DEV_LINK_CLASSES}>
+                <span>{page.label}</span>
+                <span className="font-mono text-xs text-ink-muted">{page.to}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Profile działają tylko po zalogowaniu na konto demo — inne konto dostanie 404 (cudze zwierzę). */}
+      <div>
+        <h2 className={DEV_HEADING_CLASSES}>Zwierzęta demo</h2>
+        <ul className="space-y-1">
+          {demoPets.map((tag) => (
+            <li key={tag.petId} className="flex items-center justify-between gap-2 px-2">
+              <span>{tag.petName}</span>
+              <span className="flex gap-1">
+                <Link to={`/zwierzeta/${tag.petId}`} className={DEV_PILL_CLASSES}>
+                  Profil
+                </Link>
+                <Link to={`/zwierzeta/${tag.petId}/tag`} className={DEV_PILL_CLASSES}>
+                  Zawieszka
+                </Link>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className={DEV_HEADING_CLASSES}>Skanuj zawieszkę</h2>
         <ul className="space-y-1">
           {tags.map((tag) => (
             <li key={tag.code}>
@@ -137,29 +184,22 @@ function DevPanelContent() {
               </Link>
             </li>
           ))}
-          <li>
-            <Link to="/dev/ui" className={DEV_LINK_CLASSES}>
-              Galeria UI
-            </Link>
-          </li>
         </ul>
       </div>
 
       {isMock ? (
         <>
           <div>
-            <h2 className="mb-2 text-xs font-bold tracking-wide text-ink-muted uppercase">Tryb zaginięcia</h2>
+            <h2 className={DEV_HEADING_CLASSES}>Tryb zaginięcia</h2>
             <div className="space-y-2">
-              {tags
-                .filter((tag) => tag.petId && tag.isActive)
-                .map((tag) => (
-                  <Toggle
-                    key={tag.code}
-                    label={tag.petName}
-                    checked={tag.isLost}
-                    onChange={(isLost) => handleLostChange(tag.petId, isLost)}
-                  />
-                ))}
+              {demoPets.map((tag) => (
+                <Toggle
+                  key={tag.code}
+                  label={tag.petName}
+                  checked={tag.isLost}
+                  onChange={(isLost) => handleLostChange(tag.petId, isLost)}
+                />
+              ))}
             </div>
           </div>
           <Button variant="danger" size="sm" icon={RotateCcw} fullWidth onClick={handleReset}>
