@@ -93,3 +93,23 @@ export async function updateSettings({ name = '', phone = '' }) {
   saveDb(db)
   return toUser(updated)
 }
+
+// Konto demo z danych przykładowych — odpowiednik GET/POST /api/auth/demo (server/src/routes/auth.js).
+const DEMO_EMAIL = 'maciej@pettrace.pl'
+
+export async function getDemoLogin() {
+  return { enabled: true, email: DEMO_EMAIL }
+}
+
+export async function loginAsDemo() {
+  await delay()
+  const db = getDb()
+  const user = db.users.find((item) => item.email === DEMO_EMAIL)
+  if (!user) throw apiError(404, 'Konto demo nie istnieje. Zresetuj dane w panelu DEV.')
+
+  const sessionToken = crypto.randomUUID()
+  db.sessions.push({ token: sessionToken, userId: user.id, createdAt: new Date().toISOString() })
+  saveDb(db)
+  setAuthToken(sessionToken)
+  return { user: toUser(user) }
+}

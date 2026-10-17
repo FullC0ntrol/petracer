@@ -8,6 +8,8 @@ import * as mock from './mock/auth.js'
     getCurrentUser()                        → user | null           GET  /api/auth/me
     logout()                                                        POST /api/auth/logout
     updateSettings({ name, phone })         → user                  PATCH /api/me
+    getDemoLogin()                          → { enabled, email }    GET  /api/auth/demo
+    loginAsDemo()                           → { user }              POST /api/auth/demo
 
   Każdy plik w api/ wygląda tak samo: wybiera implementację według trybu (src/api/mode.js)
   i eksportuje jej funkcje. Strony importują stąd i nie wiedzą, czy rozmawiają z localStorage,
@@ -25,3 +27,5 @@ export const verifyToken = useHttp ? http.verifyToken : mock.verifyToken
 export const getCurrentUser = useHttp ? http.getCurrentUser : mock.getCurrentUser
 export const logout = useHttp ? http.logout : mock.logout
 export const updateSettings = useHttp ? http.updateSettings : mock.updateSettings
+export const getDemoLogin = useHttp ? http.getDemoLogin : mock.getDemoLogin
+export const loginAsDemo = useHttp ? http.loginAsDemo : mock.loginAsDemo

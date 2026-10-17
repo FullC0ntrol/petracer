@@ -20,3 +20,11 @@ export async function logout() {
 export function updateSettings(settings) {
   return request('PATCH', '/me', settings)
 }
+
+export function getDemoLogin() {
+  return request('GET', '/auth/demo')
+}
+
+export function loginAsDemo() {
+  return request('POST', '/auth/demo')
+}

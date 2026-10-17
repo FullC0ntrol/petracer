@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
-import { requestMagicLink } from '../../api/auth.js'
+import { PawPrint } from 'lucide-react'
+import { getDemoLogin, requestMagicLink } from '../../api/auth.js'
 import PageHeader from '../../components/layout/PageHeader.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Card from '../../components/ui/Card.jsx'
 import Input from '../../components/ui/Input.jsx'
+import { useAsync } from '../../hooks/useAsync.js'
 import { useAuth } from '../../hooks/useAuth.js'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -75,6 +77,48 @@ export default function LoginPage() {
           {isSubmitting ? 'Wysyłam…' : 'Wyślij link do logowania'}
         </Button>
       </Card>
+      <DemoLogin />
     </div>
+  )
+}
+
+/*
+  Wejście na konto demonstracyjne bez maila — do pokazu i testów. Serwer mówi, czy jest włączone
+  (DEMO_LOGIN), i loguje wyłącznie na konto demo. Po zalogowaniu `user` w kontekście się zmienia,
+  a `<Navigate>` na górze LoginPage sam przenosi do panelu.
+*/
+function DemoLogin() {
+  const { loginAsDemo } = useAuth()
+  const { data } = useAsync(getDemoLogin, [])
+  const [error, setError] = useState(null)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+
+  if (!data?.enabled) return null
+
+  async function handleClick() {
+    setError(null)
+    setIsLoggingIn(true)
+    try {
+      await loginAsDemo()
+    } catch (loginError) {
+      setError(loginError.message)
+      setIsLoggingIn(false)
+    }
+  }
+
+  return (
+    <Card className="mt-4 space-y-3 text-center">
+      <p className="text-sm text-ink-muted">
+        Chcesz tylko obejrzeć aplikację? Wejdź na konto demonstracyjne z Luną i Mruczkiem.
+      </p>
+      <Button variant="secondary" size="lg" icon={PawPrint} fullWidth onClick={handleClick} disabled={isLoggingIn}>
+        {isLoggingIn ? 'Loguję…' : 'Wejdź na konto demo'}
+      </Button>
+      {error && (
+        <p role="alert" className="text-sm font-medium text-alert">
+          {error}
+        </p>
+      )}
+    </Card>
   )
 }

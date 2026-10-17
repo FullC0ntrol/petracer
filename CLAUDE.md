@@ -149,6 +149,8 @@ plan/               specyfikacja (źródło prawdy)
 - Bezpieczeństwo: token logowania z `crypto.randomBytes`, w bazie skrót SHA-256, 15 min, jednorazowy (atomowy `UPDATE`);
   sesja JWT 30 dni w ciasteczku `httpOnly`, `SameSite=Lax`, `Secure` w produkcji; limit `/auth/request-link`;
   `findOwnPet` w każdej trasie `/pets/:id/…`; kody zawieszek 8 znaków `XXXX-XXXX` bez `0/O/1/I/L`.
+- Konto demo bez maila: `GET/POST /api/auth/demo` (przycisk na `/login`), tylko na `maciej@pettrace.pl`, włączane
+  `DEMO_LOGIN=true` (domyślnie tylko na localhost).
 - Bez SMTP link logowania jest wypisywany w konsoli serwera. `devLink` w odpowiedzi tylko poza produkcją albo gdy `APP_URL` to localhost (`config.exposeDevLink`).
 - Każdy ekran obsługuje stany: ładowanie, pusty, błąd, sukces.
 

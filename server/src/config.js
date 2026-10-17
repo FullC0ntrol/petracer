@@ -49,6 +49,9 @@ export const config = {
   // http://localhost jako bezpieczny, więc lokalny Docker działa także z `true`.
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProduction,
   seedDemoData: process.env.SEED_DEMO_DATA === 'true',
+  // Przycisk „Wejdź na konto demo” na stronie logowania (routes/auth.js). Domyślnie włączony tylko lokalnie.
+  demoLogin: process.env.DEMO_LOGIN ? process.env.DEMO_LOGIN === 'true' : isLocalApp,
+  demoEmail: 'maciej@pettrace.pl',
   // Ilu pośredników (reverse proxy) stoi przed API: 1 = sam Caddy, 2 = nginx + Caddy.
   trustProxyHops: Number(process.env.TRUST_PROXY_HOPS ?? 1),
   smtp: {

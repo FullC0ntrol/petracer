@@ -186,6 +186,7 @@ Najważniejsze wartości w `.env`:
 | `SEED_DEMO_DATA` | `false` (na pokaz możesz dać `true` — patrz niżej) |
 | `COOKIE_SECURE` | `true` |
 | `SMTP_*` | na razie puste — link logowania będzie w logach (krok 7) |
+| `DEMO_LOGIN` | `true`, jeśli chcesz przycisk „Wejdź na konto demo” (pokaz, testy; wymaga `SEED_DEMO_DATA=true`) |
 
 > **Hasło do bazy ustawiasz raz.** PostgreSQL zapisuje je przy pierwszym uruchomieniu. Późniejsza zmiana `POSTGRES_PASSWORD` w `.env` nie zmieni hasła w bazie i API przestanie się łączyć.
 

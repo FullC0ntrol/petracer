@@ -112,3 +112,22 @@ authRouter.post('/logout', (req, res) => {
   clearSessionCookie(res)
   res.status(204).end()
 })
+
+/*
+  Wejście na konto demonstracyjne jednym przyciskiem — do pokazu i testów, gdy nie ma jeszcze poczty.
+  Włącza je DEMO_LOGIN=true. Loguje WYŁĄCZNIE na konto demo z danych przykładowych, więc nikt
+  nie dostanie się w ten sposób na cudze konto. Na prawdziwym, publicznym serwerze wyłącz.
+*/
+authRouter.get('/demo', (req, res) => {
+  res.json({ enabled: config.demoLogin, email: config.demoLogin ? config.demoEmail : null })
+})
+
+authRouter.post('/demo', async (req, res) => {
+  if (!config.demoLogin) throw new HttpError(404, 'Logowanie na konto demo jest wyłączone.')
+  const { rows } = await query('SELECT id, email, name, phone FROM users WHERE email = $1', [config.demoEmail])
+  if (!rows[0]) {
+    throw new HttpError(404, 'Konto demo nie istnieje. Uruchom serwer z SEED_DEMO_DATA=true na pustej bazie.')
+  }
+  setSessionCookie(res, rows[0].id)
+  res.json({ user: toUser(rows[0]) })
+})

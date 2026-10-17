@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getCurrentUser, logout as apiLogout, verifyToken } from '../api/auth.js'
+import { getCurrentUser, loginAsDemo as apiLoginAsDemo, logout as apiLogout, verifyToken } from '../api/auth.js'
 import { AuthContext } from './AuthContext.js'
 
 /*
@@ -37,6 +37,10 @@ export default function AuthProvider({ children }) {
       isLoading,
       async login(token) {
         const result = await verifyToken(token)
+        setUser(result.user)
+      },
+      async loginAsDemo() {
+        const result = await apiLoginAsDemo()
         setUser(result.user)
       },
       async logout() {
