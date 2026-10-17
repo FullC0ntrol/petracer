@@ -367,833 +367,686 @@ skanów są z ostatnich dni.
 **README:** sekcja „Model danych”: lista encji i ich pól + relacje (np. `pet.ownerId → user.id`, `tag.petId → pet.id`).
 **Commit:** `Dodaj model danych i dane przykładowe`
 
-### Etap 14 — „Baza” w localStorage ★★★ · ~1 h
-*Nowe pojęcia:* **Promise, `async`/`await`**, `setTimeout`, `JSON.stringify`/`parse`, `try/catch`,
-`structuredClone` (głęboka kopia), błąd z kodem HTTP.
-*Wzór:* `petracer/src/mocks/db.js` (bez funkcji `fromSeed` — Twoje dane już mają właściwy kształt),
-`api/errors.js`, `delay` w `api/mock/client.js`.
+# Od sesji 14: plastry funkcji
 
-1. [ ] Utwórz foldery: `src/api/`, `src/api/mock/`
-2. [ ] Utwórz `mocks/db.js`: `getDb()` (wczytanie z `localStorage`, a jeśli pusto, to z `createSeed()`;
-       zwraca kopię), `saveDb(db)`, `resetDb()`.
-3. [ ] Utwórz `api/errors.js`: `apiError(status, message)` — błąd z kodem jak w HTTP (400, 401, 404).
-4. [ ] Utwórz `api/mock/client.js`: na razie tylko `delay()` (200–500 ms).
+Od tego miejsca jednostką pracy nie jest plik, tylko **jedna funkcja widoczna dla użytkownika** (plaster,
+ang. *feature slice*). W każdej sesji przepisujesz z prototypu **tylko te kawałki plików**, których ta funkcja
+potrzebuje — nawet jeśli plik w prototypie jest większy. Resztę pliku dopiszesz w sesji, która jej potrzebuje.
+Po każdej sesji masz coś, co działa i co możesz pokazać.
 
-**Sprawdź:** w konsoli wywołaj `getDb()`, potem `saveDb` z jakąś zmianą: w DevTools → Application → Local Storage
-pojawi się wpis, a zmiana zostaje po odświeżeniu. Sprawdź też, że zmiana obiektu zwróconego przez `getDb()`
-**bez** `saveDb` niczego nie zmienia.
-**README:** Architektura → schemat warstw i dlaczego komponenty nie widzą `mocks/`.
-**Commit:** `Dodaj bazę mock w localStorage z opóźnieniem odpowiedzi`
+**Jak czytać sesję:**
+- **Cel** — jedno zdanie: co użytkownik może zrobić po tej sesji.
+- **Źródło w prototypie** — pliki z `petracer/` i *dokładnie* które części. „Cały plik” znaczy cały;
+  w przeciwnym razie przepisujesz tylko wymienione funkcje / komponenty.
+- **Czego się uczę** — nowe pojęcia. Przed sesją napisz „sesja N”, wytłumaczę je na Twoim kodzie.
+- **Gotowe, gdy** — konkretny test w przeglądarce (albo w terminalu). Dopóki nie przechodzi, sesja trwa.
+- **Commit** — w stylu `typ(obszar): opis`: `feat` nowa funkcja, `refactor` przebudowa bez zmiany działania,
+  `chore` konfiguracja, `docs` dokumentacja.
 
-### Etap 15 — API logowania (mock) ★★★ · ~1,5 h
-*Nowe pojęcia:* `find`/`filter`, `throw`, jednorazowy token, sesja, open redirect, **fasada**
-(jeden plik, który ukrywa, skąd są dane).
-*Wzór:* `petracer/src/api/mock/client.js` (funkcje sesji), `api/mock/auth.js` (bez `updateSettings`),
-`lib/redirect.js`, komentarz na górze `api/auth.js`.
+**Zasady, które obowiązują w każdej sesji:**
+- Strony importują tylko z `src/api/` (fasady), nigdy z `api/mock/`, `api/http/` ani `mocks/`.
+- Każda lista / ekran z danymi ma cztery stany: ładowanie, błąd, pusto, dane.
+- Przed commitem: `npm run lint`, `npm run build`, konsola przeglądarki bez błędów.
+- Po commicie dopisz w README w „Dzienniku” 2–3 zdania: co działa i czego się nauczyłeś.
+- Gdy sesja okaże się za długa, przerwij po dowolnym punkcie „Źródła” — każdy jest osobnym kawałkiem.
 
-Pliki w `api/mock/` udają serwer. Strony nie importują ich bezpośrednio, tylko przez **fasadę** `api/auth.js`.
-Na razie fasada po prostu przekazuje funkcje dalej:
-`export { requestMagicLink, verifyToken, getCurrentUser, logout } from './mock/auth.js'`.
-W części I dopiszesz drugą implementację (`api/http/`) i fasada będzie wybierać jedną z nich.
-
-1. [ ] **Zedytuj** `api/mock/client.js`: token sesji w `localStorage` (`getAuthToken`, `setAuthToken`,
-       `clearAuthToken`), `findSessionUser(db)`, `requireUser(db)` (rzuca 401), `toUser`.
-2. [ ] Utwórz `lib/redirect.js`: `safeRedirect(path)` — tylko ścieżki `/…`, nigdy `//…`.
-3. [ ] Utwórz `api/mock/auth.js`: `requestMagicLink(email, { name, next })` zwraca `{ email, devLink }`,
-       `verifyToken`, `getCurrentUser`, `logout`. Nieznany e-mail zakłada konto, token jest jednorazowy
-       i ważny 15 minut.
-4. [ ] Utwórz fasadę `api/auth.js` z komentarzem: jakie funkcje, co zwracają, jaki endpoint będą wołać
-       (to specyfikacja backendu).
-
-**Sprawdź (konsola):** `const a = await import('/src/api/auth.js')`, potem
-`const { devLink } = await a.requestMagicLink('maciej@pettrace.pl')`. Token wyciągniesz z `devLink`
-(`new URL(devLink, location.origin).searchParams.get('token')`). `verifyToken(token)` zwraca Macieja,
-drugi raz z tym samym tokenem rzuca błąd. `getCurrentUser()` po odświeżeniu strony nadal zwraca Macieja.
-**Commit:** `Dodaj API logowania na danych przykładowych`
-
-### Etap 16 — API zwierząt (mock) ★★ · ~1 h
-*Nowe pojęcia:* aktualizacje bez mutacji (`{ ...pet, ...zmiany }`), lista dozwolonych pól,
-„cudze = nieistniejące” (404 zamiast 403), dane wyliczane przy odczycie (kod zawieszki dołączany do zwierzęcia).
-*Wzór:* `petracer/src/api/mock/pets.js` (bez `setLostMode` — dojdzie w etapie 34), `findOwnPet` i `toPet`
-w `api/mock/client.js`, komentarz w `api/pets.js`.
-
-1. [ ] **Zedytuj** `api/mock/client.js`: `findOwnPet(db, user, id)` i `toPet(db, pet)` (zwierzę bez `ownerId`,
-       za to z `tagCode` aktywnej zawieszki — tak jak zrobi to `LEFT JOIN` w SQL).
-2. [ ] Utwórz `api/mock/pets.js`: `getPets`, `getPetById`, `createPet`, `updatePet` z walidacją
-       (imię wymagane, waga 0–200 kg, data urodzenia nie z przyszłości).
-3. [ ] Utwórz fasadę `api/pets.js`.
-
-**Sprawdź (konsola):** `getPets()` bez logowania rzuca błąd 401. Po zalogowaniu (jak w etapie 15) zwraca
-2 zwierzęta z `tagCode`, a `getPetById('nie-ma')` rzuca 404. Po `updatePet` i odświeżeniu strony zmiana nadal
-jest widoczna.
-**README:** Architektura → lista funkcji API z kodami błędów (to będzie przyszła specyfikacja backendu).
-**Commit:** `Dodaj API zwierząt na danych przykładowych`
-
-
-### Etap 17 — AuthContext ★★★★ · ~1,5 h
-*Nowe pojęcia:* **Context** (`createContext`, `useContext`), prop drilling, **własny hook**, `useMemo`,
-stan „jeszcze nie wiadomo” (`isLoading`).
-*Wzór:* `petracer/src/context/AuthContext.js`, `AuthProvider.jsx`, `hooks/useAuth.js`.
-
-1. [ ] Utwórz foldery: `src/context/`, `src/hooks/`
-2. [ ] Utwórz `context/AuthContext.js`: samo `createContext(null)`. Osobny plik, bo `.jsx` z komponentem
-       powinien eksportować tylko komponenty.
-3. [ ] Utwórz `context/AuthProvider.jsx`: trzyma `user` i `isLoading`, przy starcie pyta `getCurrentUser()`
-       (błąd połączenia = brak sesji), udostępnia `login(token)`, `logout()` i `updateUser(user)`.
-4. [ ] Utwórz `hooks/useAuth.js`: `useContext` + czytelny błąd, gdy brakuje providera.
-5. [ ] **Zedytuj** `src/main.jsx`: owiń `RouterProvider` w `AuthProvider`.
-6. [ ] **Zedytuj** `Sidebar.jsx`: pod logo pokaż imię zalogowanego użytkownika.
-
-**Sprawdź:** zaloguj się z konsoli (jak w etapie 15), odśwież stronę, a w sidebarze na `/panel` pojawi się imię.
-**README:** Struktura → `context/`, `hooks/`. Dziennik → po co Context.
-**Commit:** `Dodaj kontekst autoryzacji i hook useAuth`
-
-### Etap 18 — Hook do ładowania danych ★★★★ · ~1,5 h
-*Nowe pojęcia:* **`useEffect` z zależnościami**, wyścig zapytań (flaga `ignore`), stany ładowanie/błąd/pusto/dane.
-*Wzór:* `petracer/src/hooks/useAsync.js`, funkcja `PetList` w `pages/owner/DashboardPage.jsx`.
-
-1. [ ] Utwórz `hooks/useAsync.js`: `useAsync(funkcja, zależności)` zwraca `{ data, error, isLoading, reload }`.
-2. [ ] Utwórz folder `src/pages/owner/` i plik `DashboardPage.jsx`: nagłówek „Cześć, {imię}” i lista
-       zwierząt z `getPets()` w 4 stanach: `Spinner`, błąd z „Spróbuj ponownie”, `EmptyState`, lista imion
-       (linki do profilu).
-3. [ ] **Zedytuj** `src/router.jsx`: `/panel` → `DashboardPage` zamiast placeholdera.
-
-**Sprawdź:** `/panel` pokazuje najpierw spinner, a potem „Luna, Mruczek”. Wymuś błąd w API
-(tymczasowo `throw` w `getPets`), a pojawi się komunikat i działający przycisk „Spróbuj ponownie”.
-**Commit:** `Dodaj hook useAsync i pierwszą wersję panelu`
-
-### Etap 19 — Ochrona tras ★★ · ~0,5 h
-*Nowe pojęcia:* **`<Navigate>`**, `replace`, `state` w nawigacji.
-*Wzór:* `petracer/src/components/layout/RequireAuth.jsx`.
-
-1. [ ] Utwórz `components/layout/RequireAuth.jsx`: spinner, dopóki `isLoading`, przekierowanie na `/login`
-       z `state: { from: location }`, gdy brak użytkownika.
-2. [ ] **Zedytuj** `src/router.jsx`: owiń grupę właściciela w `RequireAuth`.
-
-**Sprawdź:** po wylogowaniu (konsola) wejście na `/panel` przenosi na `/login`. Zalogowany odświeża `/ustawienia`
-i **zostaje** na `/ustawienia` (to sprawdza obsługę `isLoading`).
-**README:** Trasy → kolumna „wymaga logowania”.
-**Commit:** `Dodaj ochronę tras panelu właściciela`
-
-### Etap 20 — Formularz logowania ★★★ · ~1,5 h
-*Nowe pojęcia:* **input kontrolowany**, **`onSubmit` + `preventDefault`**, **`useNavigate`** ze `state`,
-`noValidate`, blokowanie przycisku podczas wysyłki.
-*Wzór:* `petracer/src/pages/public/LoginPage.jsx`, `CheckEmailPage.jsx`.
-
-1. [ ] Utwórz `pages/public/LoginPage.jsx`: formularz (`Card as="form"`), pola e-mail i imię (opcjonalne,
-       przy pierwszym logowaniu), walidacja, `requestMagicLink(email, { name, next })`, przejście na
-       `/login/sprawdz-poczte` z e-mailem i `devLink` w `state`. `next` bierzesz z `location.state.from`
-       (zapisał go `RequireAuth`). Zalogowanego od razu przekieruj.
-2. [ ] Utwórz `pages/public/CheckEmailPage.jsx`: adres z `state`, przycisk „[DEV] Symuluj kliknięcie w link”
-       **tylko gdy** jest `devLink` (prawdziwy serwer w produkcji go nie zwróci) i osobny widok, gdy `state`
-       jest puste (odświeżenie strony).
-3. [ ] **Zedytuj** `src/router.jsx`: podmień placeholdery.
-
-**Sprawdź:** pusty lub błędny e-mail pokazuje błąd pod polem, a poprawny prowadzi na `/login/sprawdz-poczte`
-z Twoim adresem. Przycisk jest zablokowany w trakcie wysyłki. Odświeżenie tej strony pokazuje „Wróć do logowania”.
-**Commit:** `Dodaj formularz logowania magic link`
-
-### Etap 21 — Weryfikacja linku i wylogowanie ★★★ · ~1 h
-*Nowe pojęcia:* **`useSearchParams`**, efekt jednorazowy, podwójny efekt w `StrictMode` i `useRef` jako zabezpieczenie.
-*Wzór:* `petracer/src/pages/public/AuthVerifyPage.jsx`, `handleLogout` w `pages/owner/SettingsPage.jsx`.
-
-1. [ ] Utwórz `pages/public/AuthVerifyPage.jsx`: odczyt `?token=` i `?next=` (przez `safeRedirect`),
-       `login(token)`, przejście na `next` (a domyślnie na `/panel`), widok błędu dla zużytego lub złego tokenu.
-       Powrót jest zapisany w linku (`next`), a nie w pamięci przeglądarki — dzięki temu zadziała też link
-       otwarty z maila w nowej karcie.
-2. [ ] Utwórz `pages/owner/SettingsPage.jsx`: na razie tylko nagłówek i przycisk „Wyloguj się”
-       (`Button variant="danger"`): najpierw nawigacja na `/`, potem `logout()`.
-3. [ ] **Zedytuj** `src/router.jsx`.
-
-**Sprawdź cały przepływ (T12 z `docs/09-testy.md`):** wylogowany wchodzi na `/ustawienia`, trafia na `/login`,
-potem „Symuluj kliknięcie”, i wraca na **`/ustawienia`**. Ponowne otwarcie tego samego linku pokazuje błąd
-(T11). Wylogowanie przenosi na `/` (nie na `/login`). W konsoli nie ma błędów, mimo `StrictMode`.
-**README:** Dziennik → opis przepływu logowania krok po kroku (przyda się w pracy pisemnej).
-**Commit:** `Dodaj weryfikację magic linku i wylogowanie`
-
-> **Kamień milowy M1** (`docs/06-harmonogram.md`): logowanie na danych przykładowych, ochrona tras,
-> powrót na stronę sprzed logowania.
+Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz.
 
 ---
 
-## Część E — Panel właściciela
+# Część D (ciąg dalszy) — Pierwsze działające funkcje i logowanie
 
-### Etap 22 — Formatowanie dat i liczb ★★ · ~1 h
-*Nowe pojęcia:* `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, `Intl.NumberFormat`, funkcje czyste,
-polska odmiana liczebników (1 rok, 2 lata, 5 lat), daty bez godziny a strefa czasowa.
-*Wzór:* `petracer/src/lib/format.js`.
+## Sesja 14: Panel pokazuje moje zwierzęta · ~2 h
+- **Cel:** po wejściu na `/panel` widzę spinner, a potem imiona Luny i Mruczka wczytane z „bazy” w przeglądarce.
+- **Źródło w prototypie:**
+  - `src/mocks/db.js` — `STORAGE_KEY`, `cache`, `load`, `getDb`, `saveDb`, `resetDb`. **Pomiń** `describeHealth`
+    i `fromSeed` (Twój `seed.js` od razu ma kształt bazy, więc w `load` wołasz po prostu `createSeed()`).
+  - `src/api/errors.js` — cały plik.
+  - `src/api/mock/client.js` — tylko `delay`.
+  - `src/api/mock/pets.js` — tylko `getPets`, **w uproszczonej wersji**: na razie bez `requireUser`
+    i bez `toPet`, zwraca po prostu `getDb().pets` (logowanie i filtrowanie po właścicielu dojdą w sesji 18).
+  - `src/api/pets.js` — na razie jedna linijka: `export { getPets } from './mock/pets.js'`
+    (wybór mock / http dopiszesz w sesji 41).
+  - `src/hooks/useAsync.js` — cały plik.
+  - `src/pages/owner/DashboardPage.jsx` — tylko `PetList` i nagłówek strony. W `PetList` zamiast `PetCard`
+    na razie lista imion jako linki do `/zwierzeta/:id`, zamiast `ErrorState` zwykły akapit z błędem
+    i przyciskiem „Spróbuj ponownie”. **Pomiń** `RecentScans` i `Notice` o telefonie. W nagłówku zamiast
+    `Cześć, {user.name}` na razie „Twoje zwierzęta” (`useAuth` jeszcze nie ma).
+- **Czego się uczę:** localStorage i JSON, `try/catch`, referencje a kopia (`structuredClone`), Promise,
+  `setTimeout`, `async`/`await`, `useEffect` z zależnościami i sprzątaniem, wyścig zapytań (flaga `ignore`).
+- **Gotowe, gdy:** `/panel` pokazuje spinner ok. 0,3 s, a potem „Luna, Mruczek”. Gdy tymczasowo dopiszesz
+  `throw new Error('test')` w `getPets`, pojawia się komunikat i działający „Spróbuj ponownie”. W konsoli:
+  zmiana obiektu z `getDb()` **bez** `saveDb` niczego nie zmienia, a z `saveDb` przetrwa odświeżenie.
+- **Commit:** `feat(owner): lista zwierząt w panelu z danych w localStorage`
 
-1. [ ] Utwórz `lib/format.js`: `plural`, `formatDate`, `formatDateTime`, `formatRelative` („wczoraj, 8:12”),
-       `formatAge`, `formatDuration`, `formatDistance`, `formatWeight`, `speciesLabel`, `describeUserAgent`
-       („Chrome · Android”).
+## Sesja 15: Karty zwierząt z wiekiem, zaginięciem i zawieszką · ~1,5 h
+- **Cel:** panel pokazuje karty zwierząt z awatarem, rasą, wiekiem, czerwonym oznaczeniem zaginięcia i kodem zawieszki.
+- **Źródło w prototypie:**
+  - `src/lib/format.js` — tylko `plural`, `formatAge`, `speciesLabel` (reszta dojdzie w kolejnych sesjach).
+  - `src/components/pets/PetAvatar.jsx`, `PetCard.jsx` — całe pliki.
+  - `src/api/mock/client.js` — `toPet` (dokleja `tagCode` aktywnej zawieszki i usuwa `ownerId`).
+  - `src/api/mock/pets.js` — w `getPets` dodaj `.map((pet) => toPet(db, pet))`.
+  - `src/pages/owner/DashboardPage.jsx` — w `PetList` lista imion → siatka `PetCard`.
+  - `src/components/ui/ErrorState.jsx` — cały plik; podmień nim akapit z błędem w `PetList`.
+- **Czego się uczę:** komponent prezentacyjny, wartości wyliczane w renderze, `Intl` i polska odmiana
+  liczebników (1 rok, 2 lata, 5 lat), daty bez godziny a strefa czasowa, dane wyliczane przy odczycie
+  (jak `LEFT JOIN` w SQL).
+- **Gotowe, gdy:** na 375 px i na komputerze widać dwie karty; Mruczek ma czerwoną obwódkę i „Zaginione”,
+  obie karty mają kod zawieszki w czcionce monospace, kliknięcie prowadzi do `/zwierzeta/:id`.
+- **Commit:** `feat(owner): karty zwierząt z wiekiem, zaginięciem i kodem zawieszki`
 
-**Sprawdź:** w konsoli wywołaj każdą funkcję z kilkoma wartościami (też brzegowymi: 0, wczoraj, dziś,
-12 i 22 lata, `describeUserAgent(navigator.userAgent)`).
-**README:** Struktura → `lib/`.
-**Commit:** `Dodaj funkcje formatowania dat, liczb i przeglądarki`
+## Sesja 16: Proszę o link do logowania · ~1,5 h
+- **Cel:** wpisuję e-mail na `/login`, widzę „Sprawdź pocztę” i przycisk „[DEV] Symuluj kliknięcie w link”.
+- **Źródło w prototypie:**
+  - `src/lib/redirect.js` — cały plik.
+  - `src/api/mock/auth.js` — tylko `EMAIL_PATTERN`, `LINK_TTL_MS` i `requestMagicLink`.
+  - `src/api/auth.js` — na razie `export { requestMagicLink } from './mock/auth.js'` + komentarz z opisem
+    funkcji (przepisz cały komentarz z prototypu — to specyfikacja przyszłego backendu).
+  - `src/pages/public/LoginPage.jsx` — tylko komponent `LoginPage`, **bez** sprawdzania `user` na górze
+    (nie ma jeszcze `useAuth`) i **bez** `DemoLogin`. `next` na razie `null`.
+  - `src/pages/public/CheckEmailPage.jsx` — cały plik.
+- **Czego się uczę:** input kontrolowany, `onSubmit` + `preventDefault`, `noValidate`, blokowanie przycisku
+  w trakcie wysyłki, `useNavigate` ze `state`, jednorazowy token z datą ważności, `URLSearchParams`.
+- **Gotowe, gdy:** pusty i błędny e-mail pokazują błąd pod polem; poprawny prowadzi na `/login/sprawdz-poczte`
+  z Twoim adresem; w Local Storage w `loginTokens` jest nowy token z `expiresAt` za 15 minut; odświeżenie
+  strony „Sprawdź pocztę” pokazuje „Wróć do logowania”.
+- **Commit:** `feat(auth): formularz prośby o link do logowania`
 
-### Etap 23 — Avatar, karta zwierzęcia i komunikaty ★★ · ~1,5 h
-*Nowe pojęcia:* wartości wyliczane w renderze, komponent prezentacyjny, mapa wariantów.
-*Wzór:* `petracer/src/components/pets/PetAvatar.jsx`, `PetCard.jsx`, `components/ui/Notice.jsx`, `ErrorState.jsx`.
+## Sesja 17: Klikam link i jestem zalogowany · ~2 h
+- **Cel:** „Symuluj kliknięcie” loguje mnie i przenosi do panelu, a w sidebarze widzę swoje imię — także po odświeżeniu.
+- **Źródło w prototypie:**
+  - `src/api/mock/client.js` — `TOKEN_KEY`, `getAuthToken`, `setAuthToken`, `clearAuthToken`,
+    `findSessionUser`, `toUser`.
+  - `src/api/mock/auth.js` — `verifyToken`, `getCurrentUser`, `logout`.
+  - `src/api/auth.js` — dopisz te trzy funkcje do eksportu.
+  - `src/context/AuthContext.js` — cały plik.
+  - `src/context/AuthProvider.jsx` — cały, **bez** `loginAsDemo` (dojdzie w sesji 19).
+  - `src/hooks/useAuth.js` — cały plik.
+  - `src/main.jsx` — owinięcie `RouterProvider` w `AuthProvider`.
+  - `src/pages/public/AuthVerifyPage.jsx` — cały plik.
+  - `src/components/layout/Sidebar.jsx` — linijka z „Zalogowano jako {user.name}”.
+  - `src/pages/owner/DashboardPage.jsx` — nagłówek „Cześć, {user.name}”.
+- **Czego się uczę:** Context (`createContext`, `useContext`), prop drilling, własny hook, `useMemo`,
+  stan „jeszcze nie wiadomo” (`isLoading`), `useSearchParams`, podwójny efekt w `StrictMode` i `useRef`
+  jako zabezpieczenie, sesja jako token w localStorage (i dlaczego prawdziwy serwer zrobi to inaczej).
+- **Gotowe, gdy:** po kliknięciu linku jesteś na `/panel` z „Cześć, Maciej”; po odświeżeniu nadal jesteś
+  zalogowany; ponowne otwarcie tego samego linku pokazuje „Nie udało się zalogować”; w konsoli brak błędów
+  mimo `StrictMode`.
+- **Commit:** `feat(auth): weryfikacja linku i kontekst zalogowanego użytkownika`
 
-1. [ ] Utwórz `components/ui/Notice.jsx` (ramka z komunikatem: info / ostrzeżenie / błąd) i
-       `components/ui/ErrorState.jsx` (błąd ładowania z „Spróbuj ponownie”).
-2. [ ] Utwórz folder `src/components/pets/` i pliki `PetAvatar.jsx` (inicjał, kolor wg gatunku, czerwona
-       obwódka przy zaginięciu) i `PetCard.jsx` (imię, rasa, wiek, oznaczenia „Zaginione” i kod zawieszki).
-3. [ ] **Zedytuj** `DashboardPage.jsx`: lista imion → siatka `PetCard`, błąd → `ErrorState`.
-4. [ ] **Zedytuj** `UiGalleryPage.jsx`: dodaj przykłady nowych komponentów.
+## Sesja 18: Panel tylko dla zalogowanych, powrót po logowaniu i wylogowanie · ~1,5 h
+- **Cel:** niezalogowany trafia z `/panel` na `/login`, po zalogowaniu wraca tam, skąd przyszedł; „Wyloguj się” działa.
+- **Źródło w prototypie:**
+  - `src/components/layout/RequireAuth.jsx` — cały plik; w `src/router.jsx` owiń nim grupę właściciela.
+  - `src/api/mock/client.js` — `requireUser`.
+  - `src/api/mock/pets.js` — `getPets` w pełnej wersji: `requireUser` i filtr po `ownerId`.
+  - `src/pages/public/LoginPage.jsx` — górna część: `from`/`next` z `location.state` i
+    `if (user) return <Navigate …>`.
+  - `src/pages/owner/SettingsPage.jsx` — tylko nagłówek i przycisk „Wyloguj się” z `handleLogout`.
+- **Czego się uczę:** `<Navigate>`, `replace`, `state` w nawigacji, open redirect (dlaczego `safeRedirect`),
+  kolejność „najpierw nawigacja, potem wylogowanie”, 401 jako „brak sesji”.
+- **Gotowe, gdy:** wylogowany wchodzi na `/ustawienia` → `/login` → „Symuluj kliknięcie” → wraca na
+  **`/ustawienia`**. Odświeżenie zalogowanej strony nie wyrzuca na `/login`. Wylogowanie przenosi na `/`.
+  Nowe konto (inny e-mail) widzi pusty panel z `EmptyState`.
+- **Commit:** `feat(auth): ochrona panelu, powrót po zalogowaniu i wylogowanie`
 
-**Sprawdź:** `/panel`: dwie karty, Mruczek z czerwonym oznaczeniem zaginięcia, kliknięcie prowadzi do profilu.
-**Commit:** `Dodaj awatar, kartę zwierzęcia i komponenty komunikatów`
+## Sesja 19: Wchodzę na konto demo jednym przyciskiem · ~0,5 h
+- **Cel:** na `/login` jest przycisk „Wejdź na konto demo”, który od razu loguje na konto Macieja.
+- **Źródło w prototypie:**
+  - `src/api/mock/auth.js` — `DEMO_EMAIL`, `getDemoLogin`, `loginAsDemo`; dopisz je do fasady `api/auth.js`.
+  - `src/context/AuthProvider.jsx` — `loginAsDemo`.
+  - `src/pages/public/LoginPage.jsx` — komponent `DemoLogin` i jego użycie pod formularzem.
+- **Czego się uczę:** komponent, który sam decyduje, czy się pokazać (`return null`), reakcja na zmianę
+  kontekstu (`<Navigate>` przenosi sam, bez `navigate()`).
+- **Gotowe, gdy:** jedno kliknięcie na `/login` przenosi do panelu z Luną i Mruczkiem.
+- **Commit:** `feat(auth): logowanie na konto demo jednym przyciskiem`
 
-### Etap 24 — Panel: ostatnie skanowania ★★★ · ~1,5 h
-*Nowe pojęcia:* łączenie danych z kilku tabel (jak JOIN), sortowanie i przycinanie list, `<time dateTime>`.
-*Wzór:* `petracer/src/api/mock/tags.js` (`getRecentScans`), `components/tags/ScanList.jsx`, `pages/owner/DashboardPage.jsx`.
+> **Kamień milowy M1:** logowanie na danych przykładowych, ochrona tras, powrót na stronę sprzed logowania.
 
-1. [ ] Utwórz `api/mock/tags.js` z `getRecentScans(limit)` (skan + imię zwierzęcia, od najnowszego)
-       i fasadę `api/tags.js`.
-2. [ ] Utwórz `components/tags/ScanList.jsx`: data względna, przeglądarka, oznaczenie „Ty” / „Inna osoba”.
-3. [ ] **Zedytuj** `DashboardPage.jsx`: sekcja „Ostatnie skanowania” (4 stany) i ostrzeżenie `Notice`,
-       gdy użytkownik nie ma numeru telefonu.
+---
 
-**Sprawdź:** panel pokazuje 5 skanowań z seeda z nazwami przeglądarek. Zaloguj się nowym e-mailem —
-zobaczysz stany puste i ostrzeżenie o braku telefonu.
-**Commit:** `Dodaj ostatnie skanowania zawieszek w panelu`
+# Część E — Panel właściciela
 
-### Etap 25 — Profil zwierzęcia ★★★ · ~1,5 h
-*Nowe pojęcia:* pobieranie zależne od parametru URL, zakładka w adresie (`?tab=health`), `<dl>`.
-*Wzór:* `petracer/src/pages/owner/PetProfilePage.jsx` (bez `LostModeSwitch` i zakładki „Aktywność” — dojdą w części F).
+## Sesja 20: Profil zwierzęcia — dane i zdrowie · ~1,5 h
+- **Cel:** klikam kartę Luny i widzę jej profil z zakładkami „Dane” i „Zdrowie”, a zakładka zostaje po odświeżeniu.
+- **Źródło w prototypie:**
+  - `src/api/mock/client.js` — `findOwnPet`.
+  - `src/api/mock/pets.js` — `getPetById`; dopisz do fasady.
+  - `src/lib/format.js` — `formatDate`, `formatWeight`.
+  - `src/pages/owner/PetProfilePage.jsx` — `TABS` (na razie bez `activity`), `PetProfilePage` **bez**
+    `updatedPet` i `LostModeSwitch`, oraz `ProfileHeader`, `ProfileTabs`, `InfoTab`, `HealthTab`.
+  - `src/router.jsx` — trasa `zwierzeta/:id`.
+- **Czego się uczę:** pobieranie zależne od parametru URL (`useParams` + `useAsync`), stan w adresie
+  (`?tab=health`) zamiast w `useState`, `replace` przy zmianie zakładki, `<dl>`, `whitespace-pre-line`,
+  „cudze = 404”.
+- **Gotowe, gdy:** `/zwierzeta/luna?tab=health` pokazuje uwagi medyczne Luny; przełączanie zakładek zmienia
+  adres, a odświeżenie zostawia tę samą; `/zwierzeta/xyz` pokazuje „Nie znaleziono zwierzęcia”.
+- **Commit:** `feat(owner): profil zwierzęcia z zakładkami w adresie`
 
-1. [ ] Utwórz `pages/owner/PetProfilePage.jsx`: nagłówek (awatar, imię, rasa, wiek, przyciski „Zawieszka”
-       i „Edytuj”) i `Tabs` z zakładkami „Dane” i „Zdrowie”. Aktywna zakładka w `useSearchParams`.
-2. [ ] **Zedytuj** `src/router.jsx`.
+## Sesja 21: Dodaję nowe zwierzę · ~2–3 h
+- **Cel:** przycisk „Dodaj zwierzę” otwiera formularz, a po zapisie widzę profil nowego zwierzęcia.
+- **Źródło w prototypie:**
+  - `src/api/mock/pets.js` — `EDITABLE_FIELDS`, `pickEditable`, `validate`, `createPet`; dopisz do fasady.
+  - `src/components/ui/Notice.jsx` — cały plik.
+  - `src/components/pets/PetForm.jsx` — cały plik.
+  - `src/pages/owner/PetNewPage.jsx` — cały plik; trasa `zwierzeta/nowe` w routerze.
+  - `src/pages/owner/DashboardPage.jsx` — przycisk „Dodaj zwierzę” w nagłówku i w `EmptyState`.
+- **Czego się uczę:** stan formularza jako obiekt, jeden `handleChange` po atrybucie `name`, walidacja
+  w przeglądarce i „na serwerze”, zamiana danych API na wartości pól (`null` → `''`), błąd z API pokazany
+  w formularzu, lista dozwolonych pól.
+- **Gotowe, gdy:** pusty formularz pokazuje błąd przy imieniu; waga „12,5” (z przecinkiem) się zapisuje;
+  data z przyszłości daje błąd; po zapisie jesteś na profilu nowego zwierzęcia, a w panelu jest jego karta
+  (także po odświeżeniu).
+- **Commit:** `feat(owner): dodawanie zwierzęcia`
 
-**Sprawdź:** `/zwierzeta/luna`: przełączanie zakładek zmienia adres, a odświeżenie zostawia tę samą
-zakładkę. `/zwierzeta/xyz` pokazuje błąd „Nie znaleziono zwierzęcia”.
-**Commit:** `Dodaj profil zwierzęcia z zakładkami`
+## Sesja 22: Edytuję zwierzę · ~1 h
+- **Cel:** przycisk „Edytuj” w profilu otwiera ten sam formularz z danymi zwierzęcia i zapisuje zmiany.
+- **Źródło w prototypie:**
+  - `src/api/mock/pets.js` — `updatePet`; dopisz do fasady.
+  - `src/pages/owner/PetEditPage.jsx` — cały plik; trasa `zwierzeta/:id/edytuj`.
+- **Czego się uczę:** ponowne użycie komponentu w dwóch trybach, `key` do zresetowania stanu formularza,
+  aktualizacja bez mutacji (`{ ...pet, ...zmiany }`).
+- **Gotowe, gdy:** zmiana rasy Luny jest widoczna w profilu i po odświeżeniu; „Anuluj” wraca do profilu bez zmian.
+- **Commit:** `feat(owner): edycja profilu zwierzęcia`
 
-### Etap 26 — Formularz zwierzęcia ★★★★ · ~2–3 h
-*Nowe pojęcia:* stan formularza jako obiekt, wspólny `handleChange` po `name`, walidacja,
-zamiana danych z API na wartości pól (null → ''), błąd z API w formularzu.
-*Wzór:* `petracer/src/components/pets/PetForm.jsx`, `pages/owner/PetNewPage.jsx`.
-
-1. [ ] Utwórz `components/pets/PetForm.jsx`: jeden ekran z polami imię, gatunek, rasa, data urodzenia,
-       waga, uwagi medyczne; props `pet`, `onSubmit`, `submitLabel`, `cancelTo`.
-2. [ ] Utwórz `pages/owner/PetNewPage.jsx`: `PetForm` + `createPet` + przejście do profilu.
-3. [ ] **Zedytuj** `src/router.jsx`.
-
-**Sprawdź:** pusty formularz pokazuje błąd przy imieniu, waga „17,5” (z przecinkiem) się zapisuje,
-a nowe zwierzę widać na `/panel` (także po odświeżeniu).
-**Commit:** `Dodaj formularz dodawania zwierzęcia`
-
-### Etap 27 — Edycja zwierzęcia ★★ · ~0,5 h
-*Nowe pojęcia:* ponowne użycie komponentu, `key` do resetu stanu.
-*Wzór:* `petracer/src/pages/owner/PetEditPage.jsx`.
-
-1. [ ] Utwórz `pages/owner/PetEditPage.jsx`: ładuje zwierzę, przekazuje je do `PetForm`, `updatePet`.
-2. [ ] **Zedytuj** `src/router.jsx`.
-
-**Sprawdź:** zmiana rasy Luny jest widoczna w profilu i po odświeżeniu.
-**Commit:** `Dodaj edycję profilu zwierzęcia`
-
-### Etap 28 — Ustawienia ★★★ · ~1 h
-*Nowe pojęcia:* aktualizacja danych w kontekście po zapisie, komunikat „Zapisano”, `type="tel"`.
-*Wzór:* `petracer/src/pages/owner/SettingsPage.jsx`, `updateSettings` w `api/mock/auth.js`.
-
-1. [ ] **Zedytuj** `api/mock/auth.js` i fasadę `api/auth.js`: `updateSettings({ name, phone })`.
-2. [ ] **Zedytuj** `SettingsPage.jsx`: imię, numer telefonu dla znalazcy (z wyjaśnieniem, kiedy jest
-       widoczny), zapis z `updateUser`, wylogowanie.
-
-**Sprawdź:** zmiana imienia od razu zmienia sidebar, błędny numer pokazuje błąd, zmiany zostają po odświeżeniu.
-**README:** Trasy → oznacz gotowe strony części E.
-**Commit:** `Dodaj ustawienia z imieniem i numerem telefonu`
-
-### Dodatek do części E — Strona główna bez szkiców ★★ · ~1–1,5 h (opcjonalny)
-*Nowe pojęcia:* SVG w JSX (`viewBox`, `path`, `ellipse`), kolory z tokenów w SVG (`fill-pine`, `stroke-ember`),
-`role="img"` i `aria-label` dla grafiki, lista uporządkowana `<ol>` jako kroki.
-*Wzór:* `petracer/src/components/landing/HeroIllustration.jsx`, `HowItWorksStep.jsx`, `pages/public/LandingPage.jsx`.
-
-1. [ ] Utwórz folder `src/components/landing/` i plik `HowItWorksStep.jsx` (karta: ikona, „Krok N”, tytuł, opis).
-2. [ ] Utwórz `HeroIllustration.jsx`: obroża, zawieszka, fale NFC i telefon. Możesz narysować własny, prostszy
-       obrazek — ważne, żeby kolory brać z tokenów, a nie wpisywać ręcznie.
-3. [ ] **Zedytuj** `LandingPage.jsx`: ilustracja obok tekstu i sekcja „Jak działa tag” z trzema krokami.
-
-**Sprawdź:** na 375 px ilustracja jest pod tekstem, na komputerze obok; czytnik ekranu (albo DevTools →
-Accessibility) czyta opis obrazka.
-**Commit:** `Dodaj ilustrację i opis kroków na stronie głównej`
+## Sesja 23: Ustawiam numer telefonu dla znalazcy · ~1 h
+- **Cel:** w ustawieniach zmieniam imię i telefon, a panel ostrzega, gdy telefonu brak.
+- **Źródło w prototypie:**
+  - `src/api/mock/auth.js` — `PHONE_PATTERN`, `updateSettings`; dopisz do fasady.
+  - `src/context/AuthProvider.jsx` — `updateUser`.
+  - `src/pages/owner/SettingsPage.jsx` — cały plik (formularz + wylogowanie z sesji 18).
+  - `src/pages/owner/DashboardPage.jsx` — `Notice` „Dodaj numer telefonu”.
+- **Czego się uczę:** aktualizacja danych w kontekście po zapisie, status formularza jako jeden napis
+  (`idle` / `saving` / `saved` / `error`), `type="tel"` i `autoComplete`.
+- **Gotowe, gdy:** zmiana imienia od razu zmienia sidebar; błędny numer pokazuje błąd; konto bez telefonu
+  widzi w panelu żółte ostrzeżenie, które znika po zapisaniu numeru.
+- **Commit:** `feat(owner): ustawienia z imieniem i numerem telefonu`
 
 > **Kamień milowy M2:** dodanie, edycja i profil zwierzęcia; zmiany zachowane po odświeżeniu.
 
 ---
 
-## Część F — Strona zawieszki i widoki znalazcy
+# Część F — Zawieszka i znalazca
 
-### Etap 29 — Routing kontekstowy w API ★★★★ · ~1,5 h
-*Nowe pojęcia:* **decyzja po stronie serwera** (D6), zwracanie tylko potrzebnych danych, zapis skanu
-(audit log), ochrona przed podwójnym zapisem.
-*Wzór:* `resolveTag` w `petracer/src/api/mock/tags.js` (przeczytaj komentarz w `api/tags.js`).
+## Sesja 24: Znalazca skanuje tag i widzi profil zwierzaka · ~2 h
+- **Cel:** niezalogowana osoba wchodzi na `/t/LUNA-7K2Q` i widzi imię, uwagi medyczne i przycisk „Zadzwoń do opiekuna”.
+- **Źródło w prototypie:**
+  - `src/api/mock/tags.js` — `resolveTag` **bez** `recordScan` i bez gałęzi `owner` i `lost`
+    (zostają: nieznany kod → `inactive`, zwierzę → `found`). Utwórz fasadę `api/tags.js` z pełnym komentarzem
+    o wariantach.
+  - `src/lib/sms.js` — tylko `normalizePhone` i `buildTelLink`.
+  - `src/components/finder/ActionLink.jsx`, `MedicalNotes.jsx`, `InactiveTagView.jsx`, `FoundView.jsx` — całe pliki.
+  - `src/pages/finder/TagPage.jsx` — `TagContent` z wariantami `found` i `inactive` oraz `Loading`.
+    `TagPage` na razie zwraca po prostu `<TagContent code={tagId} />` (czekanie na `useAuth` dojdzie w sesji 28).
+  - `src/router.jsx` — trasa `t/:tagId` w `FinderLayout`.
+- **Czego się uczę:** routing kontekstowy (D6) — o widoku decyduje „serwer”, a nie strona; zwracanie tylko
+  potrzebnych danych; `switch` po wariancie; link `tel:` jako `<a href>` (a nie `<Link>`); projektowanie pod stres.
+- **Gotowe, gdy:** po wylogowaniu `/t/LUNA-7K2Q` pokazuje profil Luny z przyciskiem ≥ 56 px prowadzącym do
+  `tel:+48600123456`, a numeru ani imienia opiekuna **nie ma na ekranie**; `/t/XXXX-0000` i `/t/ABCD-EFGH`
+  pokazują „Ten tag nie jest aktywny”; kod małymi literami (`/t/luna-7k2q`) też działa.
+- **Commit:** `feat(finder): profil zwierzaka po zeskanowaniu zawieszki`
 
-1. [ ] **Zedytuj** `api/mock/tags.js`: `resolveTag(code)` sprawdza warunki w kolejności z `docs/03` i zwraca
-       `{ variant: 'inactive' | 'owner' | 'lost' | 'found', … }` z danymi tylko dla tego wariantu.
-       Każde wejście zapisuje skan (`userAgent`, `byOwner`), chyba że identyczny był przed chwilą.
-2. [ ] **Zedytuj** fasadę `api/tags.js`: dopisz `resolveTag` i opis wariantów w komentarzu.
+## Sesja 25: Zaginione zwierzę — alarm dla znalazcy · ~1 h
+- **Cel:** zawieszka zaginionego Mruczka pokazuje czerwony alarm z komunikatem i numerem opiekuna.
+- **Źródło w prototypie:**
+  - `src/api/mock/tags.js` — w `resolveTag` gałąź `lost` (z `phone` i `message`).
+  - `src/components/finder/LostView.jsx` — cały plik (przycisk SMS prowadzi na razie do strony, której jeszcze
+    nie ma — to normalne, zrobisz ją w sesji 27).
+  - `src/pages/finder/TagPage.jsx` — `case 'lost'`.
+- **Czego się uczę:** jednoznaczny komunikat alarmowy, kiedy numer jest widoczny, a kiedy nie (D5),
+  `state` przekazany w `<Link>`.
+- **Gotowe, gdy:** po wylogowaniu `/t/MRCZ-4P9D` pokazuje czerwony nagłówek „Zaginione zwierzę”, komunikat
+  o Mruczku, numer telefonu i przyciski „Wyślij SMS z lokalizacją” oraz „Zadzwoń”.
+- **Commit:** `feat(finder): widok alarmowy dla zaginionego zwierzęcia`
 
-**Sprawdź (konsola, tabela 3 × 2):** `LUNA-7K2Q`, `MRCZ-4P9D` i `XXXX-0000`, każdy jako zalogowany
-i wylogowany. Wariant `found` nie zawiera `message`, `owner` nie zawiera telefonu. W `getRecentScans()`
-pojawiają się nowe wpisy.
-**README:** osobna sekcja „Routing kontekstowy”: tabela warunek → widok i dlaczego w tej kolejności.
-To jest serce pracy.
-**Commit:** `Dodaj wybór wariantu strony zawieszki i zapis skanowań`
+## Sesja 26: Włączam tryb zaginięcia w profilu · ~1,5 h
+- **Cel:** w profilu przestawiam „Zaginione”, potwierdzam w oknie z komunikatem, a strona zawieszki pokazuje alarm.
+- **Źródło w prototypie:**
+  - `src/api/mock/pets.js` — `setLostMode`; dopisz do fasady.
+  - `src/components/pets/LostModeSwitch.jsx` — cały plik.
+  - `src/pages/owner/PetProfilePage.jsx` — `updatedPet` i wyliczenie `pet` w `PetProfilePage`,
+    `<LostModeSwitch>`, odznaka „Zaginione” w `ProfileHeader`.
+- **Czego się uczę:** potwierdzenie akcji w `Modal`, przełącznik, który nie zmienia stanu od razu,
+  aktualizacja widoku danymi zwróconymi przez API (bez ponownego ładowania), `key` przy zmianie zwierzęcia.
+- **Gotowe, gdy:** włączenie trybu dla Luny z komunikatem daje czerwone oznaczenie w profilu i na karcie,
+  a po wylogowaniu `/t/LUNA-7K2Q` pokazuje alarm z Twoim komunikatem. Wyłączenie też wymaga potwierdzenia.
+- **Commit:** `feat(owner): przełącznik trybu zaginięcia z potwierdzeniem`
 
-### Etap 30 — Strona zawieszki: tag nieaktywny i widok znalazcy ★★★ · ~2 h
-*Nowe pojęcia:* `switch` po wariancie, `key` do ponownego pobrania, link `tel:` (zwykłe `<a href>`,
-nie `<Link>`), projektowanie pod stres (duże przyciski, kontrast).
-*Wzór:* `petracer/src/pages/finder/TagPage.jsx`, `components/finder/InactiveTagView.jsx`, `FoundView.jsx`,
-`ActionLink.jsx`, `MedicalNotes.jsx`, `buildTelLink` w `lib/sms.js`.
+## Sesja 27: Znalazca wysyła mi SMS z lokalizacją · ~2–3 h
+- **Cel:** z widoku alarmowego znalazca pobiera swoją pozycję i otwiera gotowy SMS z linkiem do mapy.
+- **Źródło w prototypie:**
+  - `src/hooks/useGeolocation.js` — cały plik.
+  - `src/lib/sms.js` — `isIOS`, `buildSmsLink`, `mapsLink`, `buildFinderMessage`.
+  - `src/pages/finder/ShareLocationPage.jsx` — cały plik; trasa `t/:tagId/lokalizacja`.
+- **Czego się uczę:** Geolocation API (callback, zgoda, kody błędów), dlaczego tylko HTTPS/localhost,
+  link `sms:` i różnice Android / iOS, `encodeURIComponent`, wyjście awaryjne bez lokalizacji,
+  dane, które celowo **nie** trafiają do bazy (D4, RODO).
+- **Gotowe, gdy:** w DevTools → ⋮ → More tools → Sensors ustawiasz pozycję, a link „Otwórz SMS” zawiera numer
+  i `https://maps.google.com/?q=…`; przy „Block” jest „SMS bez lokalizacji” z prośbą o opis miejsca;
+  w emulacji iPhone'a separator to `&body=`, na Androidzie `?body=`; odświeżenie strony lokalizacji działa.
+- **Commit:** `feat(finder): SMS z lokalizacją do opiekuna`
 
-1. [ ] Utwórz folder `src/components/finder/` i pliki `ActionLink.jsx`, `MedicalNotes.jsx`,
-       `InactiveTagView.jsx`, `FoundView.jsx`.
-2. [ ] Utwórz `lib/sms.js` na razie z `normalizePhone` i `buildTelLink`.
-3. [ ] Utwórz folder `src/pages/finder/` i plik `TagPage.jsx`: czeka na `isLoading` z `useAuth`, potem
-       `TagContent` z `key={user?.id}`; warianty `inactive` i `found`, pozostałe na razie jako nagłówek.
-4. [ ] **Zedytuj** `src/router.jsx`.
+## Sesja 28: Skanuję własny tag i zapisuję karmienie · ~1,5 h
+- **Cel:** zalogowany właściciel po wejściu na swoją zawieszkę widzi przyciski „Karmienie” i „Spacer”, a kliknięcie zapisuje aktywność.
+- **Źródło w prototypie:**
+  - `src/api/mock/tags.js` — w `resolveTag` sprawdzenie `isOwner` (`findSessionUser`) i gałąź `owner`
+    **przed** `lost`.
+  - `src/api/mock/activities.js` — tylko `logActivity`; utwórz fasadę `api/activities.js`.
+  - `src/components/finder/OwnerQuickLog.jsx` — cały plik.
+  - `src/lib/format.js` — `formatRelative`.
+  - `src/pages/finder/TagPage.jsx` — pełny `TagPage`: czekanie na `isLoading` z `useAuth` i
+    `key={user?.id ?? 'anonymous'}`; `case 'owner'`.
+- **Czego się uczę:** kolejność warunków w routingu kontekstowym (właściciel przed alarmem — dlaczego?),
+  `key` do ponownego pobrania po zmianie użytkownika, stan „zapisano” po akcji, blokowanie przycisków w trakcie zapisu.
+- **Gotowe, gdy:** zalogowany na `/t/LUNA-7K2Q` widzi szybki zapis, po „Karmienie” pojawia się
+  „Zapisano karmienie (dziś, …)”; zalogowany **innym** e-mailem widzi na tej samej zawieszce zwykły profil;
+  właściciel zaginionego Mruczka na `/t/MRCZ-4P9D` widzi szybki zapis, a nie alarm.
+- **Commit:** `feat(finder): szybki zapis aktywności po zeskanowaniu własnej zawieszki`
 
-**Sprawdź na szerokości 375 px (T3, T4, T9):** `/t/LUNA-7K2Q` w oknie incognito: imię, uwagi medyczne,
-przycisk „Zadzwoń” ≥ 56 px z linkiem `tel:`, a numeru ani imienia właściciela **nie ma na ekranie**.
-`/t/XXXX-0000` i `/t/ABCD-EFGH`: „Ten tag nie jest aktywny”.
-**Commit:** `Dodaj stronę zawieszki z widokiem znalazcy`
+## Sesja 29: Widzę aktywność z ostatnich 7 dni · ~1,5 h
+- **Cel:** w profilu zakładka „Aktywność” pokazuje podsumowanie i listę karmień i spacerów z tygodnia.
+- **Źródło w prototypie:**
+  - `src/api/mock/activities.js` — `getActivities`; dopisz do fasady.
+  - `src/lib/format.js` — `formatDuration`, `formatDistance`.
+  - `src/components/pets/ActivityList.jsx` — cały plik.
+  - `src/pages/owner/PetProfilePage.jsx` — zakładka `activity` w `TABS` i komponent `ActivityTab`.
+- **Czego się uczę:** filtrowanie po dacie, sortowanie napisów ISO (`localeCompare`), sumowanie `reduce`,
+  `StatTile` i `tabular-nums`, odznaka zamiast tekstu („Po skanie”).
+- **Gotowe, gdy:** Luna ma kafelki „Spacery / Karmienia / Czas spacerów” i listę z 7 dni; karmienie zapisane
+  w sesji 28 jest na górze z odznaką „Po skanie”; nowe zwierzę widzi stan pusty z podpowiedzią.
+- **Commit:** `feat(owner): aktywność zwierzęcia z ostatnich 7 dni`
 
-### Etap 31 — Widok alarmowy ★★ · ~1 h
-*Nowe pojęcia:* jednoznaczny komunikat alarmowy, `state` w `<Link>`.
-*Wzór:* `petracer/src/components/finder/LostView.jsx`.
+## Sesja 30: Każde skanowanie zapisuje się, a ja widzę je w panelu · ~1,5 h
+- **Cel:** każde otwarcie strony zawieszki zapisuje skan, a panel pokazuje ostatnie skanowania z przeglądarką.
+- **Źródło w prototypie:**
+  - `src/api/mock/tags.js` — `DUPLICATE_SCAN_MS`, `recordScan` (i jego wywołanie w `resolveTag`),
+    `scansOf`, `getRecentScans`; dopisz do fasady.
+  - `src/lib/format.js` — `describeUserAgent`.
+  - `src/components/tags/ScanList.jsx` — cały plik.
+  - `src/pages/owner/DashboardPage.jsx` — komponent `RecentScans` i jego sekcja.
+- **Czego się uczę:** audyt bezpieczeństwa (UC8), minimalizacja danych (bez IP i lokalizacji), ochrona
+  przed podwójnym zapisem, łączenie danych z trzech kolekcji (jak `JOIN`), rozpoznawanie przeglądarki po User-Agent.
+- **Gotowe, gdy:** panel pokazuje skany z danych przykładowych („Safari · iOS”, „Chrome · Android”);
+  po wylogowaniu wejdź na `/t/LUNA-7K2Q`, zaloguj się — nowy skan jest na górze jako „Inna osoba”.
+  Skan własnej zawieszki jest oznaczony „Ty”. (W trybie mock nie testuj w oknie incognito — ma osobny localStorage.)
+- **Commit:** `feat(owner): zapis skanowań i ostatnie skanowania w panelu`
 
-1. [ ] Utwórz `components/finder/LostView.jsx`: czerwony nagłówek, komunikat od opiekuna, widoczny numer,
-       przyciski „Wyślij SMS z lokalizacją” (prowadzi do `/t/:tagId/lokalizacja` z `state`) i „Zadzwoń”.
-2. [ ] **Zedytuj** `TagPage.jsx`: wariant `lost`.
+## Sesja 31: Tworzę zawieszkę z kodem QR · ~2 h
+- **Cel:** dla nowego zwierzęcia klikam „Utwórz zawieszkę” i dostaję kod `XXXX-XXXX`, kod QR, adres do NFC i plik do druku.
+- **Źródło w prototypie:**
+  - `npm install qrcode.react`
+  - `src/api/mock/tags.js` — `ALPHABET`, `generateTagCode`, `createTag`; dopisz do fasady.
+  - `src/pages/owner/PetTagPage.jsx` — `PetTagPage` (bez `<ScanHistory>`), `useCreateTag`, `CreateTag`,
+    `TagDetails` **bez** modala „Nowy kod” i bez `handleRegenerate`.
+  - `src/router.jsx` — trasa `zwierzeta/:id/tag`.
+- **Czego się uczę:** losowość kryptograficzna (`crypto.getRandomValues`), alfabet bez mylących znaków,
+  `QRCodeSVG`, `window.location.origin`, schowek (`navigator.clipboard`), pobieranie pliku z `Blob`,
+  własny hook z logiką akcji (`useCreateTag`), warunek wstępny (bez telefonu nie ma zawieszki).
+- **Gotowe, gdy:** nowe zwierzę dostaje kod bez `0`, `O`, `1`, `I`, `L`; „Kopiuj” kopiuje adres;
+  „Pobierz QR (SVG)” zapisuje plik; aparat telefonu odczytuje QR z ekranu (adres z `localhost` nie otworzy się
+  na telefonie — to normalne); konto bez telefonu widzi prośbę o uzupełnienie ustawień.
+- **Commit:** `feat(tags): generowanie zawieszki z kodem QR`
 
-**Sprawdź (T5):** `/t/MRCZ-4P9D` w oknie incognito pokazuje czerwony widok z komunikatem o Mruczku.
-**Commit:** `Dodaj widok alarmowy dla zaginionego zwierzęcia`
+## Sesja 32: Historia skanowań zawieszki i nowy kod · ~1 h
+- **Cel:** na stronie zawieszki widzę wszystkie jej skanowania i mogę wygenerować nowy kod, który wyłącza stary.
+- **Źródło w prototypie:**
+  - `src/api/mock/tags.js` — `getTagScans`; dopisz do fasady.
+  - `src/pages/owner/PetTagPage.jsx` — komponent `ScanHistory` (z `key={pet.tagCode}`) oraz w `TagDetails`
+    przycisk „Nowy kod”, `Modal` i `handleRegenerate`.
+- **Czego się uczę:** akcja nieodwracalna w oknie potwierdzenia, `key` do przeładowania sekcji,
+  dlaczego stary kod zostaje w bazie jako nieaktywny (historia, „jeden aktywny tag na zwierzę”).
+- **Gotowe, gdy:** historia pokazuje skany z przeglądarką i „Ty / Inna osoba”; po „Nowy kod” stary adres
+  pokazuje „Ten tag nie jest aktywny”, a nowy działa.
+- **Commit:** `feat(tags): historia skanowań i wymiana kodu zawieszki`
 
-### Etap 32 — Szybki zapis i zakładka „Aktywność” ★★★ · ~2 h
-*Nowe pojęcia:* stan „zapisano” po akcji, blokowanie przycisków w trakcie zapisu, sumowanie (`reduce`).
-*Wzór:* `petracer/src/api/mock/activities.js`, `components/finder/OwnerQuickLog.jsx`,
-`components/pets/ActivityList.jsx`, `ActivityTab` w `pages/owner/PetProfilePage.jsx`.
+## Sesja 33: Panel DEV do pokazu (opcjonalnie) · ~1 h
+- **Cel:** w rogu ekranu w `npm run dev` mam panel, którym w kilka sekund pokazuję wszystkie warianty zawieszki.
+- **Źródło w prototypie:**
+  - `src/api/mock/dev.js` — cały plik.
+  - `src/dev/DevPanel.jsx` — cały plik, **bez** gałęzi `isMock ? … : …` dla trybu http (dopiszesz w sesji 42,
+    jeśli zechcesz) i bez `API_MODE` w etykiecie.
+  - `src/components/layout/RootLayout.jsx` — `{import.meta.env.DEV && <DevPanel />}`.
+- **Czego się uczę:** `import.meta.env.DEV`, usuwanie kodu z wersji produkcyjnej, `sessionStorage`,
+  zamykanie Escape (`addEventListener` + sprzątanie).
+- **Gotowe, gdy:** panel przełącza logowanie i tryb zaginięcia, resetuje dane; po `npm run build && npm run preview` panelu nie ma.
+- **Commit:** `feat(dev): panel deweloperski do demonstracji wariantów`
 
-1. [ ] Utwórz `api/mock/activities.js` (`logActivity`, `getActivities(petId, days)`) i fasadę `api/activities.js`.
-2. [ ] Utwórz `components/finder/OwnerQuickLog.jsx`: przyciski „Karmienie” i „Spacer”, potwierdzenie z godziną.
-3. [ ] **Zedytuj** `TagPage.jsx`: wariant `owner`.
-4. [ ] Utwórz `components/pets/ActivityList.jsx` i **zedytuj** `PetProfilePage.jsx`: zakładka „Aktywność”
-       (3 × `StatTile` + lista z 7 dni).
+## Sesja 34: Strona główna z ilustracją (opcjonalnie) · ~1–1,5 h
+- **Cel:** strona główna ma ilustrację zawieszki i telefonu oraz trzy kroki „Jak działa tag”.
+- **Źródło w prototypie:**
+  - `src/components/landing/HeroIllustration.jsx`, `HowItWorksStep.jsx` — całe pliki (ilustrację możesz
+    narysować prostszą, po swojemu).
+  - `src/pages/public/LandingPage.jsx` — cały plik.
+- **Czego się uczę:** SVG w JSX (`viewBox`, `path`, `ellipse`), kolory z tokenów w SVG (`fill-pine`),
+  `role="img"` + `aria-label`, `<ol>` jako kroki.
+- **Gotowe, gdy:** na 375 px ilustracja jest pod tekstem, na komputerze obok; DevTools → Accessibility
+  pokazuje opis obrazka.
+- **Commit:** `feat(public): ilustracja i kroki na stronie głównej`
 
-**Sprawdź (T8):** zalogowany na `/t/LUNA-7K2Q` widzi szybki zapis, po „Karmienie” pojawia się potwierdzenie,
-a wpis jest w zakładce „Aktywność” profilu. Zaloguj się **innym** e-mailem: ta sama zawieszka pokazuje
-widok znalazcy, a nie szybki zapis.
-**Commit:** `Dodaj szybki zapis aktywności po zeskanowaniu zawieszki`
-
-### Etap 33 — Lokalizacja w SMS-ie ★★★★ · ~2–3 h
-*Nowe pojęcia:* Geolocation API, callback, HTTPS/localhost, kody błędów, link `sms:` i różnice
-Android/iOS, `encodeURIComponent`, dane, które **nie** trafiają do bazy (D4).
-*Wzór:* `petracer/src/hooks/useGeolocation.js`, `lib/sms.js`, `pages/finder/ShareLocationPage.jsx`.
-
-1. [ ] Utwórz `hooks/useGeolocation.js`: `status`, `position`, `error`, `request()`.
-2. [ ] **Zedytuj** `lib/sms.js`: `isIOS`, `buildSmsLink`, `mapsLink`, `buildFinderMessage`.
-3. [ ] Utwórz `pages/finder/ShareLocationPage.jsx`: numer z `location.state` (a po odświeżeniu z `resolveTag`),
-       „Pobierz moją lokalizację” → „Otwórz SMS”, przy błędzie „SMS bez lokalizacji”.
-4. [ ] **Zedytuj** `src/router.jsx`.
-
-**Sprawdź (T6, T7):** pozycję udawaj w DevTools → ⋮ → More tools → Sensors → Location. Link SMS zawiera
-numer i link do Google Maps. Przy odmowie zgody jest SMS z prośbą o opis miejsca. W DevTools włącz
-emulację iPhone'a — separator zmienia się z `?body=` na `&body=`.
-**README:** Dziennik → dlaczego SMS, a nie zapis lokalizacji w bazie (D4, RODO).
-**Commit:** `Dodaj wysyłanie SMS z lokalizacją przez znalazcę`
-
-### Etap 34 — Tryb zaginięcia ★★★ · ~1,5 h
-*Nowe pojęcia:* potwierdzenie akcji w modalu, aktualizacja widoku danymi zwróconymi przez API.
-*Wzór:* `petracer/src/components/pets/LostModeSwitch.jsx`, `setLostMode` w `api/mock/pets.js`.
-
-1. [ ] **Zedytuj** `api/mock/pets.js` i fasadę: `setLostMode(petId, isLost, message)`.
-2. [ ] Utwórz `components/pets/LostModeSwitch.jsx`: `Toggle` otwiera `Modal`; przy włączaniu komunikat
-       dla znalazcy i ostrzeżenia (brak telefonu, brak zawieszki); wyłączenie też z potwierdzeniem.
-3. [ ] **Zedytuj** `PetProfilePage.jsx`: przełącznik pod nagłówkiem, zwierzę z odpowiedzi zapisane w stanie.
-
-**Sprawdź (T13):** włącz tryb dla Luny z komunikatem — profil i karta w panelu mają czerwone oznaczenie,
-a w drugiej karcie `/t/LUNA-7K2Q` (po wylogowaniu) pokazuje widok alarmowy z Twoim komunikatem.
-**Commit:** `Dodaj przełącznik trybu zaginięcia z potwierdzeniem`
-
-### Etap 35 — Generowanie zawieszki i kod QR ★★★ · ~2 h
-*Nowe pojęcia:* `crypto.getRandomValues`, alfabet bez mylących znaków, `QRCodeSVG`,
-`window.location.origin`, schowek (`navigator.clipboard`), pobieranie pliku (`Blob`).
-*Wzór:* `createTag` w `petracer/src/api/mock/tags.js`, `CreateTag` i `TagDetails` w `pages/owner/PetTagPage.jsx`.
-
-1. [ ] Zainstaluj: `npm install qrcode.react`
-2. [ ] **Zedytuj** `api/mock/tags.js` i fasadę: `createTag(petId)` (wymaga telefonu; stara zawieszka
-       zostaje wyłączona).
-3. [ ] Utwórz `pages/owner/PetTagPage.jsx`: bez zawieszki — „Utwórz zawieszkę” (albo prośba o telefon);
-       z zawieszką — QR, kod, adres z „Kopiuj”, instrukcja NFC, „Pobierz QR (SVG)”.
-4. [ ] **Zedytuj** `src/router.jsx`.
-
-**Sprawdź:** dodaj nowe zwierzę i utwórz mu zawieszkę — kod ma format `XXXX-XXXX` bez `0`, `O`, `1`, `I`, `L`.
-Zeskanuj QR telefonem: adres z `localhost` nie otworzy się na telefonie i to jest normalne, ważne, że kod
-zawiera poprawny adres.
-**README:** Stack → qrcode.react.
-**Commit:** `Dodaj generowanie zawieszki z kodem QR`
-
-### Etap 36 — Historia skanowań i nowy kod ★★★ · ~1 h
-*Nowe pojęcia:* audyt bezpieczeństwa, `key` do przeładowania sekcji, akcja nieodwracalna w modalu.
-*Wzór:* `ScanHistory` i modal „Wygenerować nowy kod?” w `petracer/src/pages/owner/PetTagPage.jsx`.
-
-1. [ ] **Zedytuj** `api/mock/tags.js` i fasadę: `getTagScans(petId)`.
-2. [ ] **Zedytuj** `PetTagPage.jsx`: sekcja „Historia skanowań” (`ScanList`) i przycisk „Nowy kod”.
-
-**Sprawdź (T14):** zeskanuj zawieszkę jako właściciel i w oknie incognito — oba wpisy są w historii z przeglądarką.
-Po „Nowy kod” stary adres pokazuje „Ten tag nie jest aktywny”.
-**README:** Trasy → oznacz gotowe strony części F.
-**Commit:** `Dodaj historię skanowań i wymianę kodu zawieszki`
-
-### Etap 37 — Panel DEV ★★ · ~1 h (opcjonalny, bardzo przydatny na obronie)
-*Nowe pojęcia:* `import.meta.env.DEV`, usuwanie kodu z wersji produkcyjnej.
-*Wzór:* `petracer/src/dev/DevPanel.jsx`, `api/mock/dev.js`.
-
-1. [ ] Utwórz `api/mock/dev.js` (przegląd tagów, tryb zaginięcia bez logowania, reset danych).
-2. [ ] Utwórz folder `src/dev/` i plik `DevPanel.jsx`: logowanie tą samą drogą co w aplikacji
-       (`requestMagicLink` → token z `devLink` → `login`), linki do zawieszek i galerii `/dev/ui`,
-       przełączniki zaginięcia, reset. Po zmianie danych panel przeładowuje stronę.
-3. [ ] **Zedytuj** `RootLayout.jsx`: pokazuj panel tylko w trybie dev.
-
-**Sprawdź:** w kilka sekund przejdziesz przez 4 warianty strony zawieszki. Po `npm run build && npm run preview`
-panelu nie ma.
-**Commit:** `Dodaj panel deweloperski do demonstracji wariantów`
-
-> **Kamień milowy M3:** cztery warianty strony zawieszki, tryb zaginięcia, SMS z lokalizacją,
-> generowanie zawieszki i QR.
+> **Kamień milowy M3:** cztery warianty strony zawieszki, tryb zaginięcia, SMS z lokalizacją, zawieszka z QR.
 
 ---
 
-## Część G — PWA i pierwsze wdrożenie
+# Część G — PWA i pierwsze wdrożenie
 
-Wcześnie, bo HTTPS jest wymagany przez geolokalizację i service worker, a problemy z domeną lepiej
+Wcześnie, bo HTTPS jest wymagany przez geolokalizację i service worker, a problemy z serwerem lepiej
 odkryć teraz niż tydzień przed obroną. Wdrażasz **sam frontend** na danych przykładowych.
 
-### Etap 38 — PWA ★★★ · ~1,5 h
-*Nowe pojęcia:* manifest, service worker, precache, instalowalność, ikona maskable, plik PNG od środka.
-*Wzór:* `petracer/vite.config.js`, `scripts/generate-icons.mjs`, `index.html`.
+## Sesja 35: Instaluję aplikację na telefonie (PWA) · ~1,5 h
+- **Cel:** aplikację da się zainstalować z przeglądarki, ma ikonę PetTrace i otwiera się bez paska adresu.
+- **Źródło w prototypie:**
+  - `npm install -D vite-plugin-pwa`
+  - `scripts/generate-icons.mjs` — cały plik (uruchom `node scripts/generate-icons.mjs`) albo własne ikony
+    192, 512, maskable 512 i apple-touch 180 z dowolnego programu.
+  - `vite.config.js` — blok `VitePWA({ … })`.
+  - `index.html` — `<link rel="apple-touch-icon">`.
+- **Czego się uczę:** manifest, service worker, precache, ikona maskable, dlaczego `/api` nie trafia do cache,
+  jak zbudowany jest plik PNG (jeśli przepisujesz generator).
+- **Gotowe, gdy:** po `npm run build && npm run preview` w DevTools → Application widać manifest i aktywny
+  service worker, w pasku adresu jest ikona instalacji, a w trybie Offline strona się otwiera.
+- **Commit:** `feat(pwa): manifest, ikony i service worker`
 
-1. [ ] Zainstaluj: `npm install -D vite-plugin-pwa`
-2. [ ] Skopiuj `scripts/generate-icons.mjs`, przeczytaj komentarze i uruchom `node scripts/generate-icons.mjs`
-       (powstaną ikony 192, 512, maskable i apple-touch w `public/`). Możesz też zrobić ikony w dowolnym
-       programie graficznym — ważne są rozmiary.
-3. [ ] **Zedytuj** `vite.config.js`: plugin `VitePWA` z manifestem (nazwa, kolory z tokenów, ikony)
-       i `navigateFallbackDenylist` dla `/api`.
-4. [ ] **Zedytuj** `index.html`: link do ikony apple-touch.
+## Sesja 36: Aplikacja działa w Dockerze na moim komputerze · ~2–3 h
+- **Cel:** jednym poleceniem `docker compose up --build` uruchamiam zbudowaną aplikację pod `http://localhost:8080`.
+- **Źródło w prototypie:**
+  - Najpierw porządek (D18): przenieś frontend do `client/` — `git mv src public index.html vite.config.js
+    eslint.config.js package.json package-lock.json scripts client/`, w `client/` `npm install`.
+  - `Dockerfile` → u Ciebie `client/Dockerfile` — cały plik **bez** linijki `ENV VITE_API_MODE=http`.
+  - `Caddyfile` → `client/Caddyfile` — cały plik **bez** bloku `handle /api/*`.
+  - `.dockerignore` → `client/.dockerignore`.
+  - `docker-compose.yml` — tylko `name:` i usługa `caddy` z wolumenami `caddy-data`, `caddy-config`.
+    Nazwa projektu **`name: pettrace`** (inna niż prototyp `petrace` — na serwerze będą działać oba).
+- **Czego się uczę:** obraz i kontener, `Dockerfile`, budowanie wieloetapowe, `docker compose`, wolumen,
+  serwer wejściowy (reverse proxy), aplikacja jednostronicowa (`try_files`), cache plików z hashem w nazwie,
+  `trusted_proxies`.
+- **Gotowe, gdy:** `http://localhost:8080/t/LUNA-7K2Q` działa, odświeżenie dowolnej podstrony nie daje 404,
+  a `docker compose down` i `up` uruchamiają wszystko ponownie.
+- **Commit:** `chore(deploy): obraz Docker z Caddy dla frontendu`
 
-**Sprawdź (tylko build!):** `npm run build && npm run preview`, potem DevTools → Application (Manifest,
-Service Workers), ikona instalacji w pasku adresu, tryb Offline i odświeżenie.
-**README:** sekcja „PWA”: co jest cache’owane i co działa offline.
-**Commit:** `Skonfiguruj PWA z manifestem i service workerem`
+## Sesja 37: Aplikacja działa pod app.petracker.pl · ~2 h
+- **Cel:** moja wersja działa na serwerze przez HTTPS pod `app.petracker.pl`, obok prototypu.
+- **Źródło w prototypie:** `DEPLOY.md`, sekcja 14 (serwer z nginx — tak jest skonfigurowany Twój VPS):
+  - rekord DNS **A**: `app` → IP serwera,
+  - na serwerze `git clone … ~/pettrace`, w `.env`: `SITE_ADDRESS=:80`, `HTTP_PORT=127.0.0.1:8081`,
+    `HTTPS_PORT=127.0.0.1:8444`, potem `docker compose up -d --build`,
+  - plik `/etc/nginx/sites-available/app.petracker.pl` z `proxy_pass http://127.0.0.1:8081`,
+    `sudo ln -s` do `sites-enabled`, `sudo nginx -t && sudo systemctl reload nginx`,
+  - `sudo certbot --nginx -d app.petracker.pl`.
+- **Czego się uczę:** SSH, DNS, subdomena, nginx jako reverse proxy, certyfikat Let's Encrypt, port dostępny
+  tylko z serwera (`127.0.0.1`), `.env` poza repozytorium, `git pull` jako sposób aktualizacji.
+- **Gotowe, gdy:** `https://app.petracker.pl` ma kłódkę, aplikację da się zainstalować na telefonie (T15),
+  prototyp pod `petracker.pl` działa dalej. (W trybie mock każdy telefon ma własne dane.)
+- **Commit:** `docs(deploy): wdrożenie frontendu na app.petracker.pl`
 
-### Etap 39 — Monorepo: folder `client/` ★★ · ~0,5 h
-*Nowe pojęcia:* monorepo (D18), `git mv` (przeniesienie z zachowaniem historii).
-
-Docelowa struktura z `docs/04-architektura.md`: `client/` (frontend), `server/` (backend), `docs/`.
-Prototyp ma frontend w korzeniu — u Ciebie od tego etapu wszystkie ścieżki frontendu zaczynają się od `client/`.
-
-1. [ ] Przenieś frontend: `git mv src public index.html vite.config.js eslint.config.js package.json package-lock.json client/`
-       (utwórz najpierw folder `client/`).
-2. [ ] Usuń stary `node_modules` z korzenia, w `client/` uruchom `npm install`.
-3. [ ] Przenieś plan i dokumentację do `docs/`.
-
-**Sprawdź:** w `client/` działają `npm run dev`, `npm run lint` i `npm run build`.
-**README:** Struktura i Uruchomienie → `cd client`.
-**Commit:** `Przenieś frontend do folderu client`
-
-### Etap 40 — Docker i Caddy dla frontendu ★★★ · ~2 h
-*Nowe pojęcia:* **kontener i obraz**, `Dockerfile`, budowanie wieloetapowe (multi-stage), `docker compose`,
-wolumen, serwer wejściowy (reverse proxy), aplikacja jednostronicowa (`try_files`), cache plików.
-*Wzór:* `petracer/Dockerfile`, `petracer/Caddyfile` (na razie bez bloku `handle /api/*`),
-`petracer/docker-compose.yml` (na razie tylko usługa `caddy`), `.dockerignore`.
-
-1. [ ] Zainstaluj Docker Desktop.
-2. [ ] Utwórz `client/Dockerfile`: etap `build` (Node, `npm ci`, `npm run build`) i etap z `caddy:2-alpine`
-       kopiujący `dist` do `/srv`.
-3. [ ] Utwórz `client/Caddyfile` (obok `Dockerfile`, bo obraz go kopiuje) i `client/.dockerignore`:
-       `{$SITE_ADDRESS:http://localhost}`, kompresja, nagłówki bezpieczeństwa, `try_files {path} /index.html`,
-       cache dla `/assets` i blok globalny `trusted_proxies` (przyda się, bo na serwerze przed Caddy stoi nginx).
-4. [ ] Utwórz w korzeniu `docker-compose.yml` z usługą `caddy` (`build: ./client`, porty, wolumeny `caddy-data` i `caddy-config`).
-       Na górze pliku `name: pettrace` — **inna nazwa niż prototyp** (`petrace`), bo oba projekty będą działać
-       na jednym serwerze, a Docker po nazwie projektu rozróżnia kontenery i wolumeny (w tym bazę!).
-
-**Sprawdź:** `docker compose up --build`, potem `http://localhost:8080/t/LUNA-7K2Q` działa, a odświeżenie
-dowolnej podstrony nie daje błędu 404.
-**README:** Uruchomienie → Docker.
-**Commit:** `Dodaj obraz Docker z Caddy dla frontendu`
-
-### Etap 41 — Wdrożenie na VPS ★★★ · ~2 h
-*Nowe pojęcia:* SSH, rekord DNS typu A, subdomena, **nginx jako reverse proxy**, certbot i Let's Encrypt,
-port dostępny tylko z serwera (`127.0.0.1:8081`), `.env` poza repozytorium.
-*Wzór:* `petracer/DEPLOY.md`, sekcja 14 (serwer z nginx) — tak jest skonfigurowany Twój VPS.
-
-Na serwerze działa już nginx, Docker i prototyp pod `petracker.pl` (port 8080). Twoja wersja na razie
-stanie obok, pod **`app.petracker.pl`** i na porcie **8081**. Gdy będzie gotowa (etap 57), przełączysz na nią
-główną domenę.
-
-1. [ ] W panelu domeny dodaj rekord **A**: `app` → adres IP serwera.
-2. [ ] Na serwerze: `git clone <adres Twojego repozytorium> ~/pettrace`, a w `~/pettrace/.env`:
-       `SITE_ADDRESS=:80`, `HTTP_PORT=127.0.0.1:8081`, `HTTPS_PORT=127.0.0.1:8444`.
-3. [ ] `docker compose up -d --build` i `curl -I http://127.0.0.1:8081` (ma być `200 OK`).
-4. [ ] Utwórz `/etc/nginx/sites-available/app.petracker.pl` z `proxy_pass http://127.0.0.1:8081` (wzór bloku
-       w DEPLOY.md, sekcja 14), włącz go: `sudo ln -s /etc/nginx/sites-available/app.petracker.pl /etc/nginx/sites-enabled/`,
-       potem `sudo nginx -t && sudo systemctl reload nginx`.
-5. [ ] HTTPS: `sudo certbot --nginx -d app.petracker.pl`.
-
-**Sprawdź:** `https://app.petracker.pl` ma kłódkę, aplikację da się zainstalować na telefonie (T15), a
-`https://app.petracker.pl/t/LUNA-7K2Q` otwiera się na telefonie. Prototyp pod `petracker.pl` działa dalej.
-Pamiętaj: w trybie mock każdy telefon ma własne dane w swojej przeglądarce.
-**README:** link do działającej wersji.
-**Commit:** `Dodaj konfigurację wdrożenia na serwer`
-
-### Etap 42 — Prawdziwa zawieszka i pierwsze testy ★★ · ~1–2 h
-*Nowe pojęcia:* NDEF, rekord URL, NTAG213, czytelność kodu QR.
-*Wzór:* `petracer/DEPLOY.md`, krok 12.
-
-1. [ ] Zapisz adres `https://app.petracker.pl/t/LUNA-7K2Q` na tagu NFC aplikacją NFC Tools. **Nie blokuj tagu** —
-       w etapie 57 zmienisz adres na `petracker.pl`.
-2. [ ] Wydrukuj kod QR z aplikacji (min. 2 × 2 cm) i przyklej obok tagu.
-3. [ ] Przejdź scenariusze T1–T9 i T15–T16 z `docs/09-testy.md` na Androidzie i iPhonie, wyniki wpisz do tabeli.
-
-**Sprawdź:** przyłożenie telefonu i skan aparatem otwierają stronę zawieszki.
-**README:** Dziennik → wyniki testów i wykryte problemy.
-**Commit:** `Uzupełnij wyniki pierwszej serii testów na urządzeniach`
+## Sesja 38: Prawdziwa zawieszka otwiera aplikację · ~1–2 h
+- **Cel:** przykładam telefon do tagu NFC albo skanuję nadrukowany QR i otwiera się strona zawieszki.
+- **Źródło w prototypie:** `DEPLOY.md`, sekcja 12; tabela `docs/09-testy.md`.
+- **Czego się uczę:** NDEF i rekord URL, NTAG213/215/216, dlaczego nie blokować tagu, czytelność kodu QR.
+- **Gotowe, gdy:** tag z adresem `https://app.petracker.pl/t/LUNA-7K2Q` (niezablokowany) i wydrukowany QR
+  otwierają stronę na Androidzie i iPhonie; wyniki T1–T9, T15–T16 są wpisane do tabeli testów.
+- **Commit:** `docs(tests): pierwsza seria testów na urządzeniach`
 
 > **Kamień milowy M4:** aplikacja pod własną domeną przez HTTPS, instalacja jako PWA, skan prawdziwej zawieszki.
 
 ---
 
-## Część H — Backend: Node.js, Express i PostgreSQL
+# Część H — Backend, plaster po plastrze
 
-Do tej pory „serwerem” były funkcje w `api/mock/`. Teraz napiszesz prawdziwy serwer, który robi
-**dokładnie to samo**, tylko dane trzyma w bazie PostgreSQL. Funkcje mock są Twoją specyfikacją:
-każdemu plikowi `api/mock/*.js` odpowiada plik tras w `server/src/routes/`.
+Każda sesja przenosi **jedną funkcję** z `api/mock/` na prawdziwy serwer: piszesz trasę w Expressie,
+zapytanie SQL i funkcję w `api/http/`, a potem przełączasz tę jedną funkcję w fasadzie. Funkcje mock są
+Twoją specyfikacją — serwer ma zwracać dokładnie te same pola.
 
-**Jak testować backend bez frontendu:** narzędziem `curl` w terminalu (jest w Git Bash i w Windows)
-albo rozszerzeniem REST Client / Thunder Client w VS Code. Przykłady są w każdym etapie.
+Tryb `mock` (`npm run dev`) działa przez cały czas. Tryb `http` (`npm run dev:http`) działa w tych częściach
+aplikacji, które już przeniosłeś — to normalne, że reszta jeszcze nie.
 
-### Etap 43 — Pierwszy serwer Express ★★★ · ~1,5 h
-*Nowe pojęcia:* **Node.js** (JavaScript poza przeglądarką), `process`, moduły ES w Node (`"type": "module"`),
-**HTTP: metoda, adres, nagłówki, kod odpowiedzi, treść**, Express, **trasa** (`app.get`), `req`/`res`,
-`res.json`, port, `node --watch`.
-*Wzór:* `petracer/server/package.json`, `server/src/app.js` (tylko `/api/health`), `server/src/index.js`,
-`server/eslint.config.js`.
+**Testowanie serwera bez frontendu:** `curl` w terminalu albo rozszerzenie REST Client / Thunder Client w VS Code.
 
-1. [ ] Utwórz folder `server/` i w nim `npm init -y`. W `package.json` ustaw `"type": "module"`, `"private": true`
-       i skrypty `dev` (`node --watch src/index.js`) i `start`.
-2. [ ] Zainstaluj: `npm install express`
-3. [ ] Utwórz `server/src/app.js`: funkcja `createApp()` z trasą `GET /api/health` → `{ ok: true }`.
-4. [ ] Utwórz `server/src/index.js`: `createApp().listen(3000, …)` z komunikatem w konsoli.
-5. [ ] Utwórz `server/eslint.config.js` (globalne zmienne Node zamiast przeglądarki) i `server/.gitignore`.
+## Sesja 39: Serwer odpowiada · ~1,5 h
+- **Cel:** uruchamiam własny serwer Express i widzę jego odpowiedź pod `http://localhost:5173/api/health`.
+- **Źródło w prototypie:**
+  - `server/package.json` — `"type": "module"`, skrypty `dev` (`node --watch src/index.js`) i `start`;
+    `npm install express`.
+  - `server/src/app.js` — `createApp` z samą trasą `/api/health` (bez routerów, cookie-parser i obsługi błędów).
+  - `server/src/index.js` — tylko `createApp().listen(…)` (bez bazy i danych przykładowych).
+  - `server/eslint.config.js`, `server/.gitignore` — całe pliki.
+  - `client/vite.config.js` — sekcja `server.proxy`.
+- **Czego się uczę:** Node.js (JavaScript poza przeglądarką), moduły ES w Node, HTTP (metoda, adres,
+  nagłówki, kod, treść), Express: trasa, `req`, `res.json`, port, przeładowanie przy zmianach, proxy Vite
+  (dlaczego jedna domena = brak CORS).
+- **Gotowe, gdy:** `curl http://localhost:3000/api/health` i `http://localhost:5173/api/health` w przeglądarce
+  zwracają `{"ok":true}`; zmiana tekstu w trasie przeładowuje serwer sam.
+- **Commit:** `feat(server): szkielet serwera Express z trasą health`
 
-**Sprawdź:** `npm run dev` w `server/`, potem `curl http://localhost:3000/api/health` zwraca `{"ok":true}`.
-Zmień tekst w trasie i zapisz — serwer sam się przeładuje. `curl -i` pokazuje też kod 200 i nagłówki.
-**README:** Stack → Node.js, Express. Uruchomienie → backend. Dziennik → czym jest żądanie i odpowiedź HTTP.
-**Commit:** `Dodaj szkielet serwera Express`
+## Sesja 40: Baza danych z tabelami i Luną w środku · ~2–3 h
+- **Cel:** PostgreSQL działa w Dockerze, ma wszystkie tabele i dane przykładowe, a serwer łączy się z nim przy starcie.
+- **Źródło w prototypie:**
+  - `docker-compose.dev.yml` — cały plik (port `5434`).
+  - `server/sql/001_init.sql` — cały plik; pisz po jednej tabeli i porównuj z polami w swoim `mocks/seed.js`.
+  - `server/sql/seed.sql` — cały plik (te same dane co w `seed.js`, tylko w SQL).
+  - `server/.env.example` — cały plik (skopiuj do `server/.env`); `npm install pg dotenv`.
+  - `server/src/config.js` — `required` i z obiektu `config` tylko `isProduction`, `port`, `databaseUrl`,
+    `seedDemoData` (resztę pól dopiszesz w kolejnych sesjach).
+  - `server/src/db.js` — `pool`, parsery typów, `query` (bez `withTransaction`).
+  - `server/src/seed.js`, `server/scripts/db-reset.js` — całe pliki; skrypt `db:reset` w `package.json`.
+  - `server/src/index.js` — `SELECT 1` i `seedDemoDataIfEmpty` przed startem.
+- **Czego się uczę:** relacyjna baza danych, typy kolumn, klucz główny i obcy, `UNIQUE`, `CHECK`, `DEFAULT`,
+  `ON DELETE`, indeks (też częściowy `WHERE is_active`), `psql`, zmienne środowiskowe, pula połączeń,
+  zapytanie z parametrami (`$1`) i SQL injection.
+- **Gotowe, gdy:** `docker compose -f docker-compose.dev.yml exec db psql -U petrace -d petrace` → `\dt`
+  pokazuje 7 tabel, a `SELECT name, is_lost FROM pets;` — Lunę i Mruczka; drugi start serwera nie dubluje danych;
+  `npm run db:reset` przywraca stan początkowy.
+- **Commit:** `feat(server): schemat PostgreSQL i dane przykładowe`
 
-### Etap 44 — PostgreSQL w Dockerze i schemat bazy ★★★★ · ~2–3 h
-*Nowe pojęcia:* **relacyjna baza danych**, tabela, wiersz, kolumna, typy (`uuid`, `text`, `date`,
-`numeric`, `boolean`, `timestamptz`), **klucz główny i obcy**, `UNIQUE`, `CHECK`, `DEFAULT`,
-`ON DELETE CASCADE / SET NULL`, indeks (także częściowy `WHERE`), `psql`.
-*Wzór:* `petracer/server/sql/001_init.sql` (przeczytaj komentarze), `petracer/docker-compose.dev.yml`.
+## Sesja 41: Prośba o link trafia do prawdziwego serwera · ~2–3 h
+- **Cel:** w trybie `http` wpisuję e-mail na `/login`, a link logowania pojawia się w konsoli serwera.
+- **Źródło w prototypie:**
+  - `server/src/errors.js`, `server/src/middleware/errorHandler.js` — całe pliki.
+  - `server/src/validation.js` — `EMAIL_PATTERN`, `text`, `parseEmail`, `parseOptionalName`.
+  - `server/src/services/tokens.js` — cały plik.
+  - `server/src/services/mail.js` — tylko gałąź „brak SMTP → `console.log`” (bez `nodemailer`).
+  - `server/src/config.js` — `appUrl`, `isLocalApp`, `exposeDevLink`.
+  - `server/src/routes/auth.js` — `safeNextPath` i `POST /request-link` **bez** `limitByIp` / `limitByEmail`
+    (dojdą w sesji 45).
+  - `server/src/app.js` — `express.json`, `app.use('/api/auth', authRouter)`, `notFound`, `errorHandler`.
+  - Frontend: `client/.env.http` i skrypt `dev:http`; `src/api/http/request.js` — cały plik;
+    `src/api/http/auth.js` — tylko `requestMagicLink`.
+  - `src/api/auth.js` — przejście na wybór per funkcja: `const useHttp = …` i
+    `export const requestMagicLink = useHttp ? http.requestMagicLink : mock.requestMagicLink`.
+    Pozostałe funkcje na razie `export const verifyToken = mock.verifyToken` itd. (przeczytaj komentarz
+    w prototypowym `api/auth.js` — dlaczego osobna linijka na funkcję).
+- **Czego się uczę:** middleware i ich kolejność, obsługa błędów w Expressie 5, walidacja po stronie serwera,
+  `crypto.randomBytes`, hash SHA-256 (dlaczego w bazie nie ma samego tokenu), `INSERT … ON CONFLICT`,
+  `fetch` i `response.ok`, tryby Vite (`--mode`), tree shaking.
+- **Gotowe, gdy:** `npm run dev:http` → `/login` → e-mail → strona „Sprawdź pocztę”, a w konsoli serwera jest
+  link; w tabeli `login_tokens` jest wiersz z `token_hash` **innym** niż token z linku; błędny e-mail
+  pokazuje komunikat z serwera; `npm run dev` (mock) działa jak wcześniej.
+- **Commit:** `feat(auth): prośba o link logowania obsługiwana przez serwer`
 
-1. [ ] Utwórz `docker-compose.dev.yml` z samą usługą `db` (`postgres:17-alpine`, port `5434:5432`,
-       wolumen, plik schematu w `/docker-entrypoint-initdb.d`).
-2. [ ] Utwórz `server/sql/001_init.sql`: tabele `users`, `login_tokens`, `pets`, `tags`, `tag_scans`,
-       `activities`, `vet_shares` według diagramu ERD z `docs/04-architektura.md`. Pisz po jednej tabeli
-       i porównuj z polami, które zwracają Twoje funkcje mock.
-3. [ ] `docker compose -f docker-compose.dev.yml up -d`.
+## Sesja 42: Logowanie przez serwer — ciasteczko sesji · ~2–3 h
+- **Cel:** w trybie `http` klikam link (albo „Wejdź na konto demo”), jestem zalogowany i zostaję zalogowany po odświeżeniu.
+- **Źródło w prototypie:**
+  - `npm install jsonwebtoken cookie-parser`
+  - `server/src/services/session.js` — cały plik.
+  - `server/src/config.js` — `jwtSecret` z `assertSafeSecret`, `cookieSecure`, `demoLogin`, `demoEmail`.
+  - `server/src/mappers.js` — tylko `toUser`.
+  - `server/src/middleware/requireAuth.js` — tylko `loadUser`.
+  - `server/src/routes/auth.js` — `POST /verify`, `GET /me`, `POST /logout`, `GET /demo`, `POST /demo`.
+  - `server/src/app.js` — `cookieParser()`.
+  - `src/api/http/auth.js` — `verifyToken`, `getCurrentUser`, `logout`, `getDemoLogin`, `loginAsDemo`;
+    przełącz je w fasadzie.
+  - (opcjonalnie) `src/dev/DevPanel.jsx` — gałąź dla trybu http i `API_MODE` z `src/api/mode.js`.
+- **Czego się uczę:** JWT (nagłówek, dane, podpis), ciasteczko `httpOnly` / `Secure` / `SameSite` (D8),
+  `UPDATE … RETURNING` jako atomowe „sprawdź i zużyj”, dlaczego `/auth/me` zwraca `{ user: null }` zamiast 401.
+- **Gotowe, gdy:** po kliknięciu linku z konsoli serwera trafiasz do panelu — lista zwierząt pokaże
+  „Sesja wygasła”, bo `getPets` jest jeszcze z mocka, który nie zna ciasteczka serwera (naprawisz w sesji 43); w DevTools → Application → Cookies `petrace_session` ma `HttpOnly`; ponowny link daje błąd;
+  odświeżenie nie wylogowuje; „Wyloguj się” usuwa ciasteczko.
+- **Commit:** `feat(auth): sesja w ciasteczku httpOnly i logowanie przez serwer`
 
-**Sprawdź:** `docker compose -f docker-compose.dev.yml exec db psql -U petrace -d petrace`, a w środku:
-`\dt` (lista tabel), `\d pets` (kolumny), `INSERT INTO users (email) VALUES ('test@test.pl');` i
-`SELECT * FROM users;`. Spróbuj wstawić ten sam e-mail drugi raz — baza odmówi (`UNIQUE`). Wyjście: `\q`.
-Schemat wczytuje się tylko do pustej bazy: po zmianie pliku `down -v` i `up -d`.
-**README:** Dziennik → dlaczego PostgreSQL (D14) i diagram tabel.
-**Commit:** `Dodaj schemat bazy danych i PostgreSQL w Dockerze`
+## Sesja 43: Panel pokazuje zwierzęta z bazy · ~2 h
+- **Cel:** w trybie `http` panel i profil pokazują zwierzęta z PostgreSQL, a cudze zwierzę daje 404.
+- **Źródło w prototypie:**
+  - `server/src/middleware/requireAuth.js` — `requireAuth`.
+  - `server/src/services/pets.js` — cały plik (`PET_SELECT`, `UUID_PATTERN`, `findOwnPet`).
+  - `server/src/mappers.js` — `toPet`.
+  - `server/src/routes/pets.js` — `petsRouter.use(requireAuth)`, `GET /`, `GET /:id`.
+  - `src/api/http/pets.js` — `petPath`, `getPets`, `getPetById`; przełącz w fasadzie.
+- **Czego się uczę:** middleware jako strażnik (401), REST (zasób i metody), `req.params`, `LEFT JOIN`
+  z warunkiem w `ON`, sprawdzanie własności zasobu, `snake_case` → `camelCase`.
+- **Gotowe, gdy:** w trybie `http` panel pokazuje Lunę i Mruczka z bazy (sprawdź: zmiana imienia w `psql`
+  widoczna po odświeżeniu); `curl` bez ciasteczka → 401; drugie konto po id Luny → 404. Sekcja „Ostatnie skanowania” do sesji 48
+  pokazuje błąd — to normalne, skanowania są jeszcze z mocka.
+- **Commit:** `feat(owner): zwierzęta z bazy danych`
 
-### Etap 45 — Połączenie z bazą i dane przykładowe ★★★ · ~2 h
-*Nowe pojęcia:* zmienne środowiskowe, `.env` i `dotenv`, **pula połączeń** (`pg.Pool`),
-**zapytanie z parametrami** (`$1`) i SQL injection, `SELECT … WHERE`, `ORDER BY`, interwał (`now() - interval '2 days'`).
-*Wzór:* `petracer/server/src/config.js`, `db.js`, `seed.js`, `server/sql/seed.sql`, `server/scripts/db-reset.js`,
-`server/.env.example`.
+## Sesja 44: Dodawanie, edycja i tryb zaginięcia zapisują się w bazie · ~2 h
+- **Cel:** w trybie `http` dodaję i edytuję zwierzę oraz włączam tryb zaginięcia, a zmiany są w PostgreSQL.
+- **Źródło w prototypie:**
+  - `server/src/validation.js` — `DATE_PATTERN`, `SPECIES`, `parsePet`, `parseLostMode`.
+  - `server/src/routes/pets.js` — `COLUMNS`, `POST /`, `PATCH /:id`, `PATCH /:id/lost`.
+  - `src/api/http/pets.js` — `createPet`, `updatePet`, `setLostMode`; przełącz w fasadzie.
+- **Czego się uczę:** kod 201, `INSERT … RETURNING`, dynamiczne `UPDATE … SET` z listy dozwolonych kolumn
+  (i dlaczego to bezpieczne), walidacja częściowa przy edycji.
+- **Gotowe, gdy:** nowe zwierzę i edycja są widoczne w `psql`; pusty formularz dostaje błąd z serwera;
+  tryb zaginięcia zmienia `is_lost` w bazie.
+- **Commit:** `feat(owner): zapis zwierząt i trybu zaginięcia w bazie`
 
-1. [ ] Zainstaluj: `npm install pg dotenv`
-2. [ ] Utwórz `server/.env.example` i skopiuj go do `server/.env`.
-3. [ ] Utwórz `src/config.js` (wszystkie ustawienia w jednym obiekcie, wartości domyślne tylko poza produkcją)
-       i `src/db.js` (`pool`, `query`, parsery typów `date` i `numeric`).
-4. [ ] Utwórz `server/sql/seed.sql`: Maciej, Luna, Mruczek, zawieszki, kilka skanowań i aktywności
-       (daty względem `now()`), te same co w trybie mock.
-5. [ ] Utwórz `src/seed.js` (wczytanie do pustej bazy przy starcie, gdy `SEED_DEMO_DATA=true`) i
-       `scripts/db-reset.js` ze skryptem `npm run db:reset`.
-6. [ ] **Zedytuj** `src/index.js`: przed startem `SELECT 1` (sprawdzenie połączenia) i dane przykładowe.
+## Sesja 45: Ustawienia w bazie i limit prób logowania · ~1,5 h
+- **Cel:** w trybie `http` zapisuję telefon w bazie, a zbyt wiele próśb o link kończy się komunikatem „za dużo prób”.
+- **Źródło w prototypie:**
+  - `server/src/validation.js` — `PHONE_PATTERN`, `parseSettings`.
+  - `server/src/routes/me.js` — cały plik; `app.use('/api/me', meRouter)`.
+  - `server/src/middleware/rateLimit.js` — cały plik.
+  - `server/src/routes/auth.js` — `limitByIp`, `limitByEmail` w `POST /request-link`.
+  - `server/src/config.js` — `trustProxyHops`; `server/src/app.js` — `trust proxy`, `x-powered-by`.
+  - `src/api/http/auth.js` — `updateSettings`; przełącz w fasadzie.
+- **Czego się uczę:** rate limiting (okno czasowe, `Map`, kod 429, `Retry-After`), `trust proxy`
+  i nagłówek `X-Forwarded-For`, dlaczego dwa limity (IP i e-mail).
+- **Gotowe, gdy:** zmiana telefonu jest w `psql`; czwarta prośba o link na ten sam e-mail w 15 minut pokazuje
+  „Wysłaliśmy już kilka linków…”.
+- **Commit:** `feat(auth): ustawienia konta w bazie i limit prób logowania`
 
-**Sprawdź:** start serwera wypisuje „Wczytano dane przykładowe”, drugi start już nie. W `psql`:
-`SELECT name, is_lost FROM pets;`. `npm run db:reset` przywraca stan początkowy.
-**README:** Uruchomienie → baza w Dockerze, `.env`, `db:reset`.
-**Commit:** `Połącz serwer z bazą i dodaj dane przykładowe`
+## Sesja 46: Znalazca skanuje tag — wariant wybiera serwer · ~2 h
+- **Cel:** w trybie `http` strona zawieszki dostaje wariant i dane z serwera, a każde skanowanie trafia do bazy.
+- **Źródło w prototypie:**
+  - `server/src/services/tagCodes.js` — tylko `normalizeTagCode`.
+  - `server/src/routes/tags.js` — `DUPLICATE_SCAN_SECONDS`, `GET /tags/:code`, `recordScan`; `app.use('/api', tagsRouter)`.
+  - `src/api/http/tags.js` — `resolveTag`; utwórz fasadę z wyborem per funkcja.
+- **Czego się uczę:** routing kontekstowy po stronie serwera (D6), trasa publiczna z opcjonalną sesją,
+  `JOIN` trzech tabel, `INSERT … SELECT … WHERE NOT EXISTS`, nagłówek `User-Agent`.
+- **Gotowe, gdy:** w trybie `http` cztery warianty działają jak w mocku (sprawdź jako zalogowany i w incognito —
+  tym razem incognito **widzi te same dane**, bo są na serwerze); odpowiedź `found` w DevTools → Network
+  nie zawiera komunikatu ani id właściciela; każde wejście dodaje wiersz do `tag_scans`.
+- **Commit:** `feat(finder): wybór wariantu zawieszki i zapis skanów na serwerze`
 
-### Etap 46 — Błędy i walidacja ★★★ · ~1,5 h
-*Nowe pojęcia:* **middleware** (`req, res, next`), kolejność middleware, obsługa błędów w Expressie 5
-(błąd w `async` trafia sam do handlera), `express.json()`, kody 400/404/500, nigdy nie ufaj danym od klienta.
-*Wzór:* `petracer/server/src/errors.js`, `middleware/errorHandler.js`, `validation.js`, `mappers.js`.
+## Sesja 47: Szybki zapis i aktywność w bazie · ~1,5 h
+- **Cel:** w trybie `http` „Karmienie” po skanie i zakładka „Aktywność” korzystają z bazy.
+- **Źródło w prototypie:**
+  - `server/src/validation.js` — `parseActivity`.
+  - `server/src/mappers.js` — `toActivity`.
+  - `server/src/routes/activities.js` — cały plik; `app.use('/api', activitiesRouter)`.
+  - `src/api/http/activities.js` — cały plik; fasada `api/activities.js` z wyborem per funkcja.
+- **Czego się uczę:** `req.query`, `make_interval`, filtrowanie po dacie w SQL, granice wartości (`Math.min`/`Math.max`).
+- **Gotowe, gdy:** karmienie zapisane po skanie jest w `psql` i w zakładce „Aktywność”; `?days=1` zwraca mniej wpisów niż `?days=7`.
+- **Commit:** `feat(owner): aktywności zapisywane w bazie`
 
-1. [ ] Utwórz `src/errors.js` (`HttpError`) i `src/middleware/errorHandler.js` (`errorHandler`, `notFound`).
-2. [ ] Utwórz `src/validation.js` (`parseEmail`, `parsePet`, `parseSettings`, …) i `src/mappers.js`
-       (`snake_case` z bazy → `camelCase` dla frontendu).
-3. [ ] **Zedytuj** `src/app.js`: `express.json`, na końcu `notFound` i `errorHandler`.
+## Sesja 48: Zawieszka i historia skanowań w bazie · ~2 h
+- **Cel:** w trybie `http` tworzę zawieszkę, wymieniam kod i widzę historię skanowań — wszystko z bazy.
+- **Źródło w prototypie:**
+  - `server/src/db.js` — `withTransaction`.
+  - `server/src/services/tagCodes.js` — `ALPHABET`, `generateTagCode`.
+  - `server/src/mappers.js` — `toScan`.
+  - `server/src/routes/tags.js` — `POST /pets/:id/tag`, `SCAN_SELECT`, `GET /pets/:id/scans`, `GET /scans`.
+  - `src/api/http/tags.js` — `createTag`, `getTagScans`, `getRecentScans`; przełącz w fasadzie.
+  - `client/package.json` — `"sideEffects": ["**/*.css"]`.
+- **Czego się uczę:** transakcja (`BEGIN` / `COMMIT` / `ROLLBACK`), `crypto.randomInt` (losowanie bez przekłamań),
+  obsługa kolizji przez `ON CONFLICT DO NOTHING`, `LIMIT`.
+- **Gotowe, gdy:** cała aplikacja działa w `npm run dev:http` (przejdź T3–T14 z `docs/09-testy.md`);
+  w `tags` jest stary kod jako nieaktywny i nowy aktywny; po `npm run build -- --mode http` w plikach
+  `dist/assets/*.js` nie ma tekstu `pettrace:db` (kod mock wycięty).
+- **Commit:** `feat(tags): zawieszki i historia skanowań w bazie`
 
-**Sprawdź:** `curl http://localhost:3000/api/nie-ma` → 404 z `{"error": …}`. Tymczasowa trasa, która rzuca
-`new HttpError(400, 'Test')`, zwraca 400, a rzucony zwykły `Error` — 500 z ogólnym komunikatem
-(szczegóły tylko w konsoli serwera).
-**Commit:** `Dodaj obsługę błędów i walidację danych`
-
-### Etap 47 — Magic link: prośba o link ★★★★ · ~2 h
-*Nowe pojęcia:* `crypto.randomBytes`, **hash SHA-256** (dlaczego w bazie nie ma samego tokenu),
-`INSERT … ON CONFLICT DO NOTHING`, `make_interval`, `Router` w Expressie, `URLSearchParams`.
-*Wzór:* `petracer/server/src/services/tokens.js`, `services/mail.js`, `POST /request-link` w `routes/auth.js`.
-
-1. [ ] Utwórz `src/services/tokens.js`: `generateToken`, `hashToken`.
-2. [ ] Utwórz `src/services/mail.js`: na razie **tylko wypisanie linku w konsoli** (wysyłkę SMTP dodasz w etapie 57).
-3. [ ] Utwórz `src/routes/auth.js` z `POST /request-link`: walidacja e-maila, założenie konta, jeśli go nie ma,
-       zapis skrótu tokenu (ważny 15 min), link z `next` (`safeNextPath`), odpowiedź z `devLink` tylko poza produkcją.
-4. [ ] **Zedytuj** `src/app.js`: `app.use('/api/auth', authRouter)`.
-
-**Sprawdź:**
-```
-curl -X POST http://localhost:3000/api/auth/request-link -H "Content-Type: application/json" -d "{\"email\":\"maciej@pettrace.pl\"}"
-```
-W konsoli serwera jest link, w tabeli `login_tokens` nowy wiersz — z kolumną `token_hash` **innym** niż token z linku.
-**README:** Dziennik → przepływ magic link (diagram z `docs/04-architektura.md`).
-**Commit:** `Dodaj endpoint wysyłania linku logowania`
-
-### Etap 48 — Magic link: weryfikacja i sesja ★★★★ · ~2–3 h
-*Nowe pojęcia:* **JWT** (nagłówek, dane, podpis), **ciasteczko `httpOnly`, `Secure`, `SameSite`** (D8),
-`cookie-parser`, `UPDATE … RETURNING`, atomowość (jeden token = jedno logowanie, nawet przy dwóch kliknięciach).
-*Wzór:* `petracer/server/src/services/session.js`, `POST /verify`, `GET /me`, `POST /logout` w `routes/auth.js`,
-`loadUser` w `middleware/requireAuth.js`.
-
-1. [ ] Zainstaluj: `npm install jsonwebtoken cookie-parser`
-2. [ ] Utwórz `src/services/session.js`: `setSessionCookie`, `clearSessionCookie`, `readSessionUserId`.
-3. [ ] Utwórz `src/middleware/requireAuth.js` na razie z `loadUser` (ustawia `req.user` albo `null`).
-4. [ ] **Zedytuj** `routes/auth.js`: `POST /verify`, `GET /me` (niezalogowany → `{ user: null }`, nie 401),
-       `POST /logout`. **Zedytuj** `app.js`: `cookieParser()`.
-
-**Sprawdź (T10, T11):** `curl -c cookies.txt -X POST …/api/auth/verify -d "{\"token\":\"…\"}"` zapisuje ciasteczko,
-`curl -b cookies.txt …/api/auth/me` zwraca użytkownika. Drugi `verify` z tym samym tokenem → 400.
-Wklej JWT z pliku `cookies.txt` na jwt.io — widać `sub` i datę ważności, ale bez sekretu nie da się go podrobić.
-**Commit:** `Dodaj weryfikację linku i sesję w ciasteczku`
-
-### Etap 49 — Ochrona tras, limit żądań i ustawienia ★★★ · ~1,5 h
-*Nowe pojęcia:* middleware jako „strażnik”, 401 vs 404, **rate limiting** (okno czasowe, `Map`, kod 429),
-`trust proxy`.
-*Wzór:* `requireAuth` w `petracer/server/src/middleware/requireAuth.js`, `middleware/rateLimit.js`, `routes/me.js`.
-
-1. [ ] **Zedytuj** `requireAuth.js`: `requireAuth` (bez sesji → 401).
-2. [ ] Utwórz `src/middleware/rateLimit.js` i **zedytuj** `routes/auth.js`: limit na IP i na e-mail dla `/request-link`.
-3. [ ] Utwórz `src/routes/me.js`: `PATCH /api/me` (imię, telefon). **Zedytuj** `app.js`: `trust proxy`, nowa trasa.
-
-**Sprawdź:** `PATCH /api/me` bez ciasteczka → 401, z ciasteczkiem → zmienione dane. Czwarte żądanie
-`request-link` na ten sam e-mail w ciągu 15 minut → 429.
-**Commit:** `Dodaj ochronę tras, limit prób logowania i ustawienia konta`
-
-### Etap 50 — Endpointy zwierząt ★★★★ · ~2–3 h
-*Nowe pojęcia:* **REST** (zasób, metody GET/POST/PATCH), parametr trasy (`req.params`), kod 201,
-**sprawdzanie własności zasobu**, `LEFT JOIN`, dynamiczne `UPDATE … SET` z listy dozwolonych kolumn.
-*Wzór:* `petracer/server/src/services/pets.js`, `routes/pets.js` (bez `/lost`).
-
-1. [ ] Utwórz `src/services/pets.js`: `PET_SELECT` (zwierzę + kod aktywnej zawieszki) i `findOwnPet`
-       (zły format id albo cudze zwierzę → 404).
-2. [ ] Utwórz `src/routes/pets.js`: `GET /`, `POST /`, `GET /:id`, `PATCH /:id`, wszystkie za `requireAuth`.
-3. [ ] **Zedytuj** `app.js`: `app.use('/api/pets', petsRouter)`.
-
-**Sprawdź:** porównaj odpowiedź `GET /api/pets` z wynikiem `getPets()` w trybie mock — te same pola.
-Zaloguj się drugim kontem i spróbuj pobrać Lunę po jej id → 404.
-**Commit:** `Dodaj endpointy zwierząt ze sprawdzaniem własności`
-
-### Etap 51 — Tryb zaginięcia i aktywności ★★★ · ~1,5 h
-*Nowe pojęcia:* zapytanie parametru (`req.query`), filtrowanie po dacie, `INSERT … RETURNING`.
-*Wzór:* `PATCH /:id/lost` w `petracer/server/src/routes/pets.js`, `routes/activities.js`.
-
-1. [ ] **Zedytuj** `routes/pets.js`: `PATCH /:id/lost`.
-2. [ ] Utwórz `src/routes/activities.js`: `POST` i `GET /api/pets/:id/activities?days=7`.
-
-**Sprawdź:** włączenie trybu zaginięcia zmienia `is_lost` w bazie; dodana aktywność jest na liście z 7 dni,
-a `?days=1` zwraca mniej wpisów.
-**Commit:** `Dodaj endpointy trybu zaginięcia i aktywności`
-
-### Etap 52 — Strona zawieszki na serwerze ★★★★ · ~2 h
-*Nowe pojęcia:* **routing kontekstowy po stronie serwera** (D6), trasa publiczna z opcjonalną sesją,
-`JOIN` trzech tabel, `INSERT … SELECT … WHERE NOT EXISTS`, nagłówek `User-Agent`.
-*Wzór:* `GET /tags/:code` i `recordScan` w `petracer/server/src/routes/tags.js` (przeczytaj komentarz).
-
-1. [ ] Utwórz `src/services/tagCodes.js` z `normalizeTagCode` (generowanie dojdzie w następnym etapie).
-2. [ ] Utwórz `src/routes/tags.js` z `GET /tags/:code`: cztery warianty w kolejności z `docs/03`, zapis skanu.
-3. [ ] **Zedytuj** `app.js`.
-
-**Sprawdź:** tabela 3 × 2 z etapu 29, tym razem przez `curl` (z ciasteczkiem i bez). Odpowiedź `found`
-nie zawiera komunikatu ani id właściciela. Każde wywołanie dodaje wiersz do `tag_scans` (z wyjątkiem
-powtórzenia w ciągu 5 sekund).
-**README:** sekcja „Routing kontekstowy” → dopisz, że decyzję podejmuje serwer, i dlaczego.
-**Commit:** `Dodaj publiczny endpoint strony zawieszki z wyborem wariantu`
-
-### Etap 53 — Generowanie zawieszki i historia skanowań ★★★★ · ~2 h
-*Nowe pojęcia:* **transakcja** (`BEGIN`/`COMMIT`/`ROLLBACK`), `crypto.randomInt` (losowanie bez przekłamań),
-`ON CONFLICT DO NOTHING` jako obsługa kolizji, `LIMIT`.
-*Wzór:* `withTransaction` w `petracer/server/src/db.js`, `generateTagCode` w `services/tagCodes.js`,
-`POST /pets/:id/tag`, `GET /pets/:id/scans`, `GET /scans` w `routes/tags.js`.
-
-1. [ ] **Zedytuj** `db.js`: `withTransaction`. **Zedytuj** `tagCodes.js`: `generateTagCode`.
-2. [ ] **Zedytuj** `routes/tags.js`: `POST /pets/:id/tag` (wymaga telefonu; w transakcji wyłącza stary kod
-       i wstawia nowy), `GET /pets/:id/scans`, `GET /scans?limit=`.
-
-**Sprawdź:** dwa razy `POST …/tag` dla tego samego zwierzęcia — w tabeli `tags` są dwa kody, tylko jeden aktywny.
-Konto bez telefonu dostaje 400.
-**README:** Architektura → pełna lista endpointów (tabela z `docs/04-architektura.md`, kolumna „gotowe”).
-**Commit:** `Dodaj generowanie zawieszki i historię skanowań`
-
-> **Kamień milowy M5:** wszystkie endpointy priorytetu 1 działają na PostgreSQL.
+> **Kamień milowy M5:** wszystkie funkcje priorytetu 1 działają na PostgreSQL.
 
 ---
 
-## Część I — Integracja i pełne wdrożenie
+# Część I — Pełne wdrożenie i testy
 
-### Etap 54 — Klient HTTP ★★★★ · ~2 h
-*Nowe pojęcia:* **`fetch`**, `Response.ok`, `response.json()`, `credentials`, proxy serwera deweloperskiego,
-tryby Vite (`--mode`), pliki `.env.[tryb]`.
-*Wzór:* `petracer/src/api/http/request.js`, `api/http/*.js`, `petracer/.env.http`, sekcja `server.proxy`
-w `vite.config.js`, skrypty `dev:http` i `build:http` w `package.json`.
+## Sesja 49: Cały system w Docker Compose · ~2 h
+- **Cel:** `docker compose up --build` uruchamia bazę, API i frontend w trybie `http` pod `http://localhost:8080`.
+- **Źródło w prototypie:**
+  - `server/Dockerfile`, `server/.dockerignore` — całe pliki.
+  - `docker-compose.yml` — usługi `db` i `api` oraz `depends_on` w `caddy`.
+  - `Caddyfile` — blok `handle /api/*`.
+  - `Dockerfile` — `ENV VITE_API_MODE=http`.
+  - `.env.example` — cały plik.
+- **Czego się uczę:** obraz dla Node (`npm ci --omit=dev`, użytkownik bez roota), `depends_on` + `healthcheck`,
+  sieć między kontenerami (adresy `db`, `api`), `${ZMIENNA:-domyślna}`, dlaczego hasło do bazy ustawia się
+  tylko przy pierwszym starcie.
+- **Gotowe, gdy:** na `http://localhost:8080` działa „Wejdź na konto demo” i cała aplikacja; `docker compose down`
+  i `up` zachowują dane; `down -v` je kasuje.
+- **Commit:** `chore(deploy): cały system w Docker Compose`
 
-1. [ ] Utwórz `api/http/request.js`: jedno miejsce wykonujące `fetch`, błąd sieci → `apiError(0, …)`,
-       odpowiedź z błędem → `apiError(status, data.error)`.
-2. [ ] Utwórz `api/http/auth.js`, `pets.js`, `tags.js`, `activities.js` — te same nazwy funkcji co w `api/mock/`.
-3. [ ] **Zedytuj** `vite.config.js`: proxy `/api` → `http://localhost:3000`.
-4. [ ] Utwórz `.env.http` (`VITE_API_MODE=http`) i skrypty `dev:http`, `build:http`.
-
-**Sprawdź:** z działającym serwerem i bazą `npm run dev:http`, w konsoli przeglądarki
-`(await import('/src/api/http/pets.js')).getPets()` po zalogowaniu zwraca dane z PostgreSQL.
-**Commit:** `Dodaj implementację warstwy api opartą na fetch`
-
-### Etap 55 — Przełączenie aplikacji na API ★★★ · ~2–3 h
-*Nowe pojęcia:* wybór implementacji w czasie budowania, **tree shaking** (usuwanie nieużywanego kodu),
-`sideEffects` w `package.json`.
-*Wzór:* fasady `petracer/src/api/auth.js` (przeczytaj komentarz), `pets.js`, `tags.js`, `activities.js`,
-`api/mode.js`, `DevPanel.jsx` (tryb http), `"sideEffects"` w `package.json`.
-
-1. [ ] **Zedytuj** fasady: `export const getPets = useHttp ? http.getPets : mock.getPets` dla każdej funkcji.
-2. [ ] Utwórz `api/mode.js` i **zedytuj** `DevPanel.jsx`: w trybie http logowanie przez `devLink` z serwera,
-       bez przełączników zaginięcia i resetu.
-3. [ ] **Zedytuj** `package.json`: `"sideEffects": ["**/*.css"]`.
-4. [ ] Przejdź całą aplikację w trybie http: logowanie, panel, profil, formularze, ustawienia, zawieszka,
-       strona znalazcy, SMS, historia skanowań.
-
-**Sprawdź:** pełny przepływ z `docs/09-testy.md` (T3–T14) w `npm run dev:http`, w konsoli bez błędów.
-Po `npm run build:http` w plikach `dist/assets/*.js` nie ma tekstu `pettrace:db` (kod mock wycięty).
-**README:** Architektura → jak przełączać tryby i dlaczego strony się nie zmieniły (D16).
-**Commit:** `Przełącz aplikację na prawdziwe API`
-
-### Etap 56 — Cały system w Docker Compose ★★★ · ~2 h
-*Nowe pojęcia:* obraz dla Node.js, `npm ci --omit=dev`, użytkownik bez uprawnień roota, `depends_on` +
-`healthcheck`, sieć między kontenerami (adres `db`, `api`), wartości domyślne `${ZMIENNA:-domyślna}`.
-*Wzór:* `petracer/server/Dockerfile`, `server/.dockerignore`, `petracer/docker-compose.yml`,
-`Caddyfile` (blok `handle /api/*`), `.env.example`, `assertSafeSecret` w `server/src/config.js`.
-
-1. [ ] Utwórz `server/Dockerfile` i `server/.dockerignore`.
-2. [ ] **Zedytuj** `docker-compose.yml`: usługi `db`, `api`, `caddy`; obraz frontendu z `VITE_API_MODE=http`.
-3. [ ] **Zedytuj** `Caddyfile`: `/api/*` → `reverse_proxy api:3000`.
-4. [ ] Utwórz `.env.example` z opisem każdej zmiennej. **Zedytuj** `config.js`: serwer nie wystartuje
-       z domyślnym sekretem na prawdziwej domenie, a `TRUST_PROXY_HOPS` mówi, ilu pośredników stoi przed API
-       (lokalnie 1 — Caddy; na Twoim serwerze 2 — nginx i Caddy). Bez tego limit prób logowania liczyłby
-       wszystkich użytkowników jako jeden adres IP.
-
-**Sprawdź:** `docker compose up --build`, `http://localhost:8080`, logowanie linkiem z `docker compose logs api`,
-ciasteczko w DevTools → Application → Cookies ma `HttpOnly`. `docker compose down` i ponowne `up` — dane zostają.
-**README:** Uruchomienie → cały system jednym poleceniem.
-**Commit:** `Uruchom cały system w Docker Compose`
-
-### Etap 57 — Pełne wdrożenie, poczta i kopie zapasowe ★★★ · ~2–3 h
-*Nowe pojęcia:* SMTP, `nodemailer`, SPF/DKIM, `pg_dump`, `cron`, aktualizacja aplikacji na serwerze.
-*Wzór:* `petracer/server/src/services/mail.js`, `petracer/DEPLOY.md` (kroki 5–11).
-
-1. [ ] Zainstaluj w `server/`: `npm install nodemailer` i **zedytuj** `mail.js`: wysyłka przez SMTP,
-       gdy `SMTP_HOST` jest ustawiony, inaczej link w konsoli.
-2. [ ] Na serwerze w `~/pettrace`: `git pull`, uzupełnij `.env` (`POSTGRES_PASSWORD`, `JWT_SECRET`,
-       `APP_URL=https://app.petracker.pl`, `TRUST_PROXY_HOPS=2`, SMTP), `docker compose up -d --build`.
-       Hasło do bazy ustawia się **tylko przy pierwszym starcie** — późniejsza zmiana w `.env` kończy się błędem
-       `password authentication failed` (wtedy `docker compose down -v`, co kasuje dane).
-3. [ ] Ustaw kopię zapasową bazy (`pg_dump` + `cron`, DEPLOY.md krok 8) i raz przećwicz jej przywrócenie.
-4. [ ] Przełącz główną domenę na swoją wersję: w `/etc/nginx/sites-available/petracker.pl` zmień
-       `proxy_pass` na `http://127.0.0.1:8081`, w `.env` ustaw `APP_URL=https://petracker.pl`, przeładuj nginx
-       i zrestartuj API. Prototyp zatrzymaj (`docker compose down` w `~/prototyp`). Przepisz adres na tagu NFC.
-
-**Sprawdź:** logowanie na `https://petracker.pl` linkiem z prawdziwego maila (sprawdź też folder spam),
-dane zostają po `docker compose restart`, w katalogu kopii jest plik z dzisiejszą datą, a stary tag
-prowadzi już do Twojej wersji.
-**README:** link do `DEPLOY.md`.
-**Commit:** `Dodaj wysyłkę maili przez SMTP i kopie zapasowe bazy`
+## Sesja 50: petracker.pl działa na mojej wersji · ~2–3 h
+- **Cel:** moja aplikacja z bazą działa pod `https://petracker.pl`, wysyła maile i ma codzienną kopię zapasową.
+- **Źródło w prototypie:**
+  - `server/src/services/mail.js` — cały plik (`npm install nodemailer`), `smtp` w `config.js`.
+  - `DEPLOY.md` — kroki 5 (`.env`: `POSTGRES_PASSWORD`, `JWT_SECRET`, `TRUST_PROXY_HOPS=2`, SMTP),
+    8 (kopie zapasowe), 9 (aktualizacja), 10 (poczta), 14 (nginx).
+  - Przełączenie domeny: w `/etc/nginx/sites-available/petracker.pl` `proxy_pass http://127.0.0.1:8081`,
+    w `.env` `APP_URL=https://petracker.pl`, prototyp zatrzymany (`docker compose down` w `~/prototyp`).
+- **Czego się uczę:** SMTP, SPF i DKIM (dlaczego maile trafiają do spamu), `pg_dump` i `cron`, przywracanie
+  kopii, aktualizacja aplikacji na serwerze.
+- **Gotowe, gdy:** link logowania przychodzi mailem; w katalogu kopii jest plik z dzisiejszą datą, a próbne
+  przywrócenie działa; tag NFC przepisany na `https://petracker.pl/t/…` otwiera Twoją wersję.
+- **Commit:** `feat(deploy): wysyłka maili, kopie zapasowe i wdrożenie na petracker.pl`
 
 > **Kamień milowy M6:** aplikacja korzysta z API, całość uruchamiana przez `docker compose`.
 
----
-
-## Część J — Testy i poprawki
-
-### Etap 58 — Testy na urządzeniach ★★★ · ~3 h (dwa podejścia)
-*Nowe pojęcia:* testy akceptacyjne, Lighthouse, obsługa klawiaturą, czytnik ekranu.
-
-1. [ ] Przejdź wszystkie scenariusze T1–T16 z `docs/09-testy.md` na Androidzie, iPhonie i komputerze.
-2. [ ] Lighthouse na `/`, `/t/LUNA-7K2Q` i `/panel`: cel ≥ 90 w każdej kategorii.
-3. [ ] Przejdź każdą stronę samą klawiaturą (Tab, Enter, Esc w oknach) i sprawdź stany puste i błędów.
-4. [ ] Popraw znalezione błędy (każdy osobnym commitem) i zrób zrzuty ekranu do pracy.
-
-**Sprawdź:** tabela w `docs/09-testy.md` wypełniona, wszystkie scenariusze zaliczone albo opisane.
-**README:** uzupełnij całość: aktualna struktura, wszystkie trasy jako gotowe, zrzuty ekranu.
-**Commit:** `Uzupełnij wyniki testów na urządzeniach`
+## Sesja 51: Testy na urządzeniach · ~3 h (dwa podejścia)
+- **Cel:** wszystkie scenariusze z `docs/09-testy.md` są sprawdzone na Androidzie, iPhonie i komputerze.
+- **Źródło w prototypie:** `plan/09-testy.md` (tabela), Lighthouse w Chrome DevTools.
+- **Czego się uczę:** testy akceptacyjne, audyt Lighthouse, obsługa samą klawiaturą, czytnik ekranu.
+- **Gotowe, gdy:** tabela T1–T16 wypełniona; Lighthouse ≥ 90 na `/`, `/t/LUNA-7K2Q` i `/panel`; każdy
+  znaleziony błąd poprawiony osobnym commitem; zrzuty ekranu do pracy zrobione.
+- **Commit:** `docs(tests): wyniki testów na urządzeniach`
 
 ---
 
-## Priorytet 2 (po ukończeniu priorytetu 1)
+# Priorytet 2 (po ukończeniu priorytetu 1)
 
 Udostępnianie weterynarzowi, ręczny wpis spaceru, mapa przy wysyłaniu lokalizacji i zdjęcie zwierzęcia
-(`docs/01-zakres.md`). Etapy dopiszemy, gdy priorytet 1 będzie działał i zostanie zaakceptowany.
-Do tego czasu strony `/spacery`, `/spacery/nowy`, `/zwierzeta/:id/vet-share` i `/vet/:shareToken`
-zostają szkicami, a `/harmonogram` (priorytet 3) — szkicem na stałe.
+(`docs/01-zakres.md`). Sesje dopiszemy, gdy priorytet 1 będzie działał. Do tego czasu `/spacery`,
+`/spacery/nowy`, `/zwierzeta/:id/vet-share` i `/vet/:shareToken` zostają prostymi stronami-zaślepkami,
+a `/harmonogram` (priorytet 3) — zaślepką na stałe.
 
 ---
 
-## Dodatek: pułapki i rzeczy, których nie kopiujemy z prototypu
+# Dodatek: pułapki i rzeczy, których nie kopiujemy z prototypu
 
-- **React Router v7:** importy z `react-router` (nie `react-router-dom`). Tutoriale z `<BrowserRouter>` i
-  `<Routes>` opisują inne podejście.
-- **Tailwind v4:** nie ma `tailwind.config.js` ani `npx tailwindcss init`. Konfiguracja jest w `@theme` w CSS.
-- **Nie przepisuj** `petracer/src/dev/SketchBox.jsx`. To tymczasowe rusztowanie prototypu.
-- **Prototyp ma frontend w korzeniu,** a Ty od etapu 39 w `client/`. Ścieżki w „Wzór” podają położenie w prototypie.
+- **React Router v7:** importy z `react-router` (nie `react-router-dom`).
+- **Tailwind v4:** nie ma `tailwind.config.js`. Konfiguracja jest w `@theme` w CSS.
+- **Nie przepisuj** `petracer/src/dev/SketchBox.jsx` ani funkcji `fromSeed` / `describeHealth` z `mocks/db.js`.
+- **Prototyp ma frontend w korzeniu,** a Ty od sesji 36 w `client/`. Ścieżki w „Źródle” podają położenie w prototypie.
+- **W trybie mock incognito to „inny komputer”** — ma osobny localStorage. Wspólne dane dla wielu
+  przeglądarek będą dopiero w trybie `http`.
 - **Express 5, nie 4:** błąd rzucony w funkcji `async` trafia sam do obsługi błędów. Starsze tutoriale
   owijają trasy w `try/catch` i wołają `next(error)` — tu nie trzeba.
-- **SQL zawsze z parametrami** (`$1`, `$2`). Nigdy nie sklejaj zapytania z danymi od użytkownika
-  (`'… WHERE id = ' + id`) — to otwiera drogę do SQL injection.
+- **SQL zawsze z parametrami** (`$1`, `$2`). Nigdy nie sklejaj zapytania z danymi od użytkownika.
 - **Schemat bazy wczytuje się tylko raz** (do pustej bazy). Po zmianie `001_init.sql` lokalnie:
-  `docker compose -f docker-compose.dev.yml down -v` i `up -d`; na serwerze: osobny plik migracji (DEPLOY.md, krok 9).
-- **Port bazy 5434, nie 5432:** na Windowsie często działa już PostgreSQL zainstalowany w systemie
-  i zajmuje port 5432.
-- **Szkice zostają szkicami:** strony priorytetu 2 i 3 mają w prototypie `SketchBox`. Nie przepisuj ich,
-  dopóki nie dojdziemy do priorytetu 2.
+  `docker compose -f docker-compose.dev.yml down -v` i `up -d`.
+- **Hasło do bazy w Dockerze ustawia się tylko przy pierwszym starcie.** Zmiana `POSTGRES_PASSWORD` później
+  daje `password authentication failed` — wtedy `down -v` (kasuje dane).
+- **Port bazy 5434, nie 5432:** na Windowsie często działa już PostgreSQL zainstalowany w systemie.
+- **Dwa projekty na jednym serwerze:** prototyp ma w `docker-compose.yml` nazwę `petrace`, Twój — `pettrace`.
+  Bez różnych nazw Docker pomieszałby kontenery i bazy.
 
-## Postęp
+# Postęp
 
-| Część | Etapy | Gotowe |
-|---|---|---|
-| A. Fundamenty | 0–3 | ☐ |
-| B. Layout | 4–7 | ☐ |
-| C. Komponenty UI | 8–12 | ☐ |
-| D. Dane i logowanie | 13–21 | ☐ |
-| E. Panel właściciela | 22–28 | ☐ |
-| F. Strona zawieszki i znalazca | 29–37 | ☐ |
-| G. PWA i pierwsze wdrożenie | 38–42 | ☐ |
-| H. Backend | 43–53 | ☐ |
-| I. Integracja i pełne wdrożenie | 54–57 | ☐ |
-| J. Testy | 58 | ☐ |
+| Część | Sesje | Kamień milowy | Gotowe |
+|---|---|---|---|
+| A–C. Fundamenty, layout, komponenty UI | etapy 0–12 | — | ☑ |
+| D. Pierwsze funkcje i logowanie | 13–19 | M1 | ☐ |
+| E. Panel właściciela | 20–23 | M2 | ☐ |
+| F. Zawieszka i znalazca | 24–34 | M3 | ☐ |
+| G. PWA i pierwsze wdrożenie | 35–38 | M4 | ☐ |
+| H. Backend | 39–48 | M5 | ☐ |
+| I. Pełne wdrożenie i testy | 49–51 | M6 | ☐ |
