@@ -1,47 +1,48 @@
-# PetTrace — brief projektu (frontend-prototyp)
+# PetTrace — brief projektu (prototyp: frontend + backend)
 
-> Ten plik to stały kontekst dla Claude Code. Czytaj go na początku każdej sesji
-> i trzymaj się go. Jeśli coś w nim jest niejasne lub sprzeczne — zapytaj, zanim zgadniesz.
+> Ten plik to stały kontekst dla Claude Code. Czytaj go na początku każdej sesji i trzymaj się go.
+> **Źródłem prawdy jest specyfikacja w folderze `plan/`** (`00-start.md` … `09-testy.md`; w repozytorium
+> autora ten folder nazywa się `docs/`). Gdy ten plik albo kod przeczy `plan/`, wygrywa `plan/`.
+> Jeśli coś jest niejasne lub sprzeczne — zapytaj, zanim zgadniesz. Nie zmieniaj plików w `plan/` bez zgody autora.
 
 ## 1. Czym jest projekt
 
 Praca inżynierska: **„Inteligentny Ekosystem Identyfikacji i Zarządzania Aktywnością Zwierząt Domowych”**.
-System identyfikacji i lokalizacji zwierząt domowych oparty na tagach **NFC / QR** przypiętych do obroży,
-zintegrowany z aplikacją webową **PWA** z **routingiem kontekstowym**.
+System identyfikacji zwierząt oparty na zawieszkach z tagiem **NFC** i kodem **QR**, zintegrowany z aplikacją
+webową **PWA** z **routingiem kontekstowym**.
 
-Kluczowa idea: tag przechowuje zwykły adres URL `https://<domena>/t/<tagId>`. Telefon znalazcy otwiera go
-w przeglądarce — **bez instalowania żadnej aplikacji**. Ten sam adres pokazuje różne widoki zależnie od kontekstu
-(czy zwierzę jest zaginione, czy skanuje właściciel itd.).
+Zawieszka przechowuje adres `https://petracker.pl/t/<kod>`. Telefon znalazcy otwiera go w przeglądarce — bez
+instalowania aplikacji. Ten sam adres pokazuje różne widoki zależnie od kontekstu, a **wariant wybiera serwer** (D6).
 
-Cele: bezpieczeństwo (szybkie odnalezienie zgubionego zwierzęcia) i profilaktyka zdrowotna
-(harmonogram szczepień/leków, rejestr aktywności, szybkie udostępnienie danych weterynarzowi).
+Zakres i priorytety: `plan/01-zakres.md`. **Priorytet 1 jest zrobiony.** Priorytet 2 (weterynarz, ręczne spacery,
+mapa przy lokalizacji, zdjęcie) — tylko po akceptacji autora. Priorytet 3 i kierunki rozwoju — nie implementujemy.
 
-**Zakres TEGO etapu: wyłącznie frontend.** Backendu nie ma — wszystkie dane pochodzą z warstwy mock
-(patrz sekcja 6), zaprojektowanej tak, by później podmienić ją na prawdziwe API (Node.js + Express + PostgreSQL)
-bez zmian w komponentach.
-
-Autor będzie tę aplikację później przepisywał samodzielnie, ucząc się na niej — kod ma być **czytelny i edukacyjny**.
+Ten prototyp jest **wzorem**: autor przepisuje aplikację samodzielnie w osobnym repozytorium według
+`PLAN_PRZEPISYWANIA.md`. Kod ma być **czytelny i edukacyjny**.
 
 ## 2. Stack
 
-- **Vite + React** (JavaScript, JSX — bez TypeScriptu, dla czytelności)
-- **Tailwind CSS v4** (plugin `@tailwindcss/vite`, tokeny w `@theme` w `src/index.css`)
-- **React Router v7** (`createBrowserRouter`, zagnieżdżone layouty)
-- **react-leaflet + Leaflet** — mapy (kafelki OpenStreetMap)
-- **qrcode.react** — kody QR (Vet Quick Share, podgląd tagu)
-- **recharts** — wykresy w analityce spacerów
-- **lucide-react** — ikony
-- **vite-plugin-pwa** — manifest, service worker, instalowalność
-- **@fontsource** — fonty hostowane lokalnie (działają offline w PWA)
+Frontend (korzeń repozytorium):
+- **Vite + React 19** (JavaScript, JSX — bez TypeScriptu)
+- **Tailwind CSS v4** (`@tailwindcss/vite`, tokeny w `@theme` w `src/index.css`)
+- **React Router v7** (`createBrowserRouter`, zagnieżdżone layouty, importy z `react-router`)
+- **qrcode.react** (kod QR zawieszki), **lucide-react** (ikony), **@fontsource** (fonty lokalnie)
+- **vite-plugin-pwa** — manifest, service worker
+- **leaflet / react-leaflet** — zainstalowane na priorytet 2 (mapa przy wysyłaniu lokalizacji), dziś nieużywane
 
-Nie dodawaj innych bibliotek bez uzasadnienia w odpowiedzi. Żadnych bibliotek komponentów UI (MUI, shadcn itp.) —
-komponenty budujemy sami w Tailwindzie.
+Backend (`server/`):
+- **Node.js 22 + Express 5**, **pg** (SQL pisany ręcznie, bez ORM — D15), **jsonwebtoken**, **cookie-parser**,
+  **nodemailer**, **dotenv**
+- **PostgreSQL 17** w Dockerze
+
+Wdrożenie: **Docker Compose** (`db`, `api`, `caddy`) i **Caddy** (HTTPS, frontend, proxy `/api`).
+
+Nie dodawaj innych bibliotek bez uzasadnienia. Żadnych bibliotek komponentów UI (MUI, shadcn itp.) ani ORM-ów.
 
 ## 3. Kierunek wizualny
 
 Charakter: **ciepły, spokojny, godny zaufania** — jak dobra przychodnia weterynaryjna połączona z porządną
-aplikacją sportową. Nie „słodki” i nie „kliniczno-sterylny”. Mobile-first (projektuj od 375 px), na desktopie
-treść w wygodnej kolumnie / siatce, a panel właściciela z boczną nawigacją.
+aplikacją sportową. Mobile-first (od 375 px), na desktopie treść w kolumnie / siatce, panel właściciela z boczną nawigacją.
 
 ### Kolory (tokeny w `@theme`)
 | Token | Wartość | Użycie |
@@ -55,157 +56,135 @@ treść w wygodnej kolumnie / siatce, a panel właściciela z boczną nawigacją
 | `pine-soft` | `#E3EFE9` | tła wyróżnień primary |
 | `ember` (akcent/CTA) | `#E0703A` | najważniejsze akcje, wyróżnienia |
 | `ember-soft` | `#FBE9DE` | tła akcentów |
-| `alert` (Lost Mode) | `#D2362B` | tryb zaginięcia, błędy krytyczne |
+| `alert` | `#D2362B` | tryb zaginięcia, błędy krytyczne |
 | `alert-soft` | `#FCE6E3` | tła alarmowe |
-| `sky` | `#3A7CA5` | informacje, mapy, trasy spacerów |
-| `amber` | `#C98A12` | ostrzeżenia, zbliżające się terminy |
+| `sky` | `#3A7CA5` | informacje |
+| `amber` | `#C98A12` | ostrzeżenia |
 
-Kontrast tekstu minimum WCAG AA. Nie używaj czystej czerni ani szarości Tailwinda — tylko tokeny.
+Kontrast tekstu minimum WCAG AA. Tylko tokeny — domyślna paleta Tailwinda jest wyłączona.
 
-### Typografia
-- Nagłówki: **Bricolage Grotesque** (600–800), lekko zaciśnięty tracking na dużych rozmiarach
-- Tekst i UI: **Plus Jakarta Sans** (400–700)
-- Liczby w statystykach: `font-variant-numeric: tabular-nums`
-- Identyfikatory tagów: font monospace systemowy
-
-### Język kształtów
-- Zaokrąglenia: karty `rounded-2xl`, przyciski i inputy `rounded-xl`, badge `rounded-full`
-- Cienie subtelne, ciepłe (lekko brązowawe), zamiast mocnych — hierarchię buduj głównie kolorem i odstępami
-- Hojne odstępy, wyraźna hierarchia: jedna główna akcja na ekran
-- Mikrointerakcje: delikatne przejścia (150–250 ms), stany hover/active/focus-visible dla każdego elementu klikalnego;
-  respektuj `prefers-reduced-motion`
-- Zdjęcia zwierząt: placeholdery z inicjałem i kolorowym tłem (bez zewnętrznych obrazków)
+### Typografia i kształty
+- Nagłówki: **Bricolage Grotesque**; tekst: **Plus Jakarta Sans**; liczby `tabular-nums`; kody zawieszek monospace.
+- Karty `rounded-2xl`, przyciski i inputy `rounded-xl`, badge `rounded-full`, ciepłe subtelne cienie.
+- Jedna główna akcja na ekran, stany hover/active/focus-visible, przejścia 150–250 ms, `prefers-reduced-motion`.
+- Zdjęć nie ma (P2): awatar z inicjałem na tle w kolorze zależnym od gatunku.
 
 ### Trzy „tonacje” interfejsu
-1. **Owner (panel właściciela)** — spokojny, informacyjny, gęstszy układ danych.
-2. **Finder (znalazca)** — maksymalnie prosty: duże zdjęcie, imię, 2–3 ogromne przyciski (min. 56 px),
-   obsługa jedną ręką, zero nawigacji, zero logowania. Czytelny w słońcu i w stresie.
-3. **Lost Mode** — ta sama prostota co Finder, ale z czerwonym, jednoznacznie alarmowym nagłówkiem
-   („ZAGINĄŁ — pomóż mi wrócić do domu”) i wyeksponowaną akcją wysłania lokalizacji.
+1. **Właściciel** — spokojny, informacyjny, gęstszy układ danych.
+2. **Znalazca** — maksymalnie prosty: duży awatar, imię, 1–2 ogromne przyciski (min. 56 px), zero nawigacji i logowania.
+3. **Tryb zaginięcia** — prostota znalazcy z czerwonym, jednoznacznym nagłówkiem („Zaginione zwierzę — pomóż mi
+   wrócić do domu”) i wyeksponowanym SMS-em z lokalizacją.
 
-Wszystkie teksty w UI **po polsku**. Nazwy w kodzie (zmienne, pliki, komponenty) **po angielsku**.
+Teksty w UI **po polsku**, nazwy w kodzie **po angielsku**. Nazwa aplikacji w interfejsie: **PetTrace**
+(`plan/` używa „PeTrace” — rozbieżność do decyzji autora; logo i `index.html` są zamrożone).
 
-## 4. Mapa tras
+## 4. Trasy
+
+Pełna lista: `plan/03-widoki-i-trasy.md`.
 
 ```
 PUBLICZNE (PublicLayout)
-/                          Landing: czym jest system, jak działa tag, CTA „Zaloguj się”
-/login                     E-mail → „wyślij magic link”
-/login/sprawdz-poczte      Informacja o wysłanym linku + [DEV] przycisk „Symuluj kliknięcie w link”
-/auth/verify               Obsługa tokenu (mock) → przekierowanie do /panel
+/  /login  /login/sprawdz-poczte  /auth/verify?token=…&next=…  /dev/ui (tylko dev)  *
 
-FINDER FLOW (FinderLayout, bez logowania)
-/t/:tagId                  Routing kontekstowy — jeden komponent decyduje, co pokazać:
-                             • tag nieznany / nieaktywny → ekran „Tag nieaktywny”
-                             • zalogowany właściciel tego zwierzęcia → Quick NFC Tap
-                               (szybki zapis: spacer / karmienie / lek / „tylko sprawdzam”)
-                             • zwierzę w Lost Mode → widok alarmowy
-                             • w pozostałych przypadkach → publiczny profil znalezionego zwierzęcia
-/t/:tagId/lokalizacja      Udostępnienie lokalizacji (Geolocation API + mapa + opcjonalna wiadomość i telefon)
-/t/:tagId/wyslano          Potwierdzenie + „co dalej” (np. zostań ze zwierzęciem, podaj wodę)
+ZNALAZCA (FinderLayout)
+/t/:tagId               routing kontekstowy — wariant z GET /api/tags/:code:
+                          1. inactive  kod nie istnieje / tag nieaktywny / bez zwierzęcia
+                          2. owner     skanuje zalogowany właściciel → szybki zapis: Karmienie, Spacer
+                          3. lost      zwierzę zaginione → alarm, komunikat, numer, SMS z lokalizacją
+                          4. found     reszta → imię, uwagi medyczne, „Zadzwoń” (numer niewidoczny jako tekst, D5)
+/t/:tagId/lokalizacja   pozycja GPS → link sms: z linkiem do Google Maps; lokalizacja NIE trafia do bazy (D4)
 
-VET (VetLayout, publiczny, tymczasowy)
-/vet/:shareToken           Paszport medyczny: szczepienia, leki, alergie, choroby, waga; licznik ważności;
-                           stan „link wygasł”
+WETERYNARZ (VetLayout)  /vet/:shareToken — P2, szkic
 
-OWNER FLOW (OwnerLayout, wymaga „zalogowania”)
-/panel                     Dashboard: karty zwierząt (z oznaczeniem Lost Mode), najbliższe przypomnienia,
-                           podsumowanie aktywności z tygodnia, ostatnie odczyty tagów
-/zwierzeta/nowe            Formularz dodania zwierzęcia (wieloetapowy: podstawowe → zdrowie → kontakt)
-/zwierzeta/:id             Profil zwierzęcia, zakładki: Informacje / Zdrowie / Aktywność / Tag
-/zwierzeta/:id/edytuj      Edycja
-/zwierzeta/:id/zaginiecie  Lost Mode: włącz/wyłącz (z potwierdzeniem), komunikat dla znalazców,
-                           mapa z pinezkami zgłoszeń lokalizacji od znalazców
-/zwierzeta/:id/vet-share   Generowanie tymczasowego QR dla weterynarza (wybór czasu ważności, zakres danych),
-                           lista aktywnych udostępnień z możliwością unieważnienia
-/zwierzeta/:id/tag         Parowanie tagu (wpisanie/skan ID), podgląd QR tagu, audyt: historia odczytów
-                           (data, przybliżone miejsce, kontekst: znalazca / właściciel / weterynarz)
-/spacery                   Lista spacerów + analityka (dystans i czas tygodniowo — recharts)
-/spacery/nowy              Śledzenie na żywo: mapa, czas, dystans, start/pauza/koniec
-                           (Geolocation watchPosition; jeśli brak zgody lub desktop → symulowana trasa)
-/spacery/:id               Szczegóły spaceru: trasa na mapie, statystyki, notatka
-/harmonogram               Przypomnienia: szczepienia, leki, odrobaczanie, wizyty — widok listy
-                           pogrupowany (zaległe / dziś / nadchodzące), dodawanie, oznaczanie jako wykonane
-/ustawienia                Konto, powiadomienia (UI przełączników), dane kontaktowe widoczne dla znalazcy,
-                           wylogowanie
-*                          404
+WŁAŚCICIEL (RequireAuth → OwnerLayout)
+/panel                      zwierzęta + ostatnie skanowania
+/zwierzeta/nowe             formularz jednoetapowy
+/zwierzeta/:id              profil: Dane / Zdrowie / Aktywność (?tab=), przełącznik trybu zaginięcia z Modal (D10)
+/zwierzeta/:id/edytuj
+/zwierzeta/:id/tag          „Utwórz zawieszkę” (D9), QR, adres NFC, historia skanowań, „Nowy kod”
+/zwierzeta/:id/vet-share    P2, szkic
+/spacery  /spacery/nowy     P2, szkice (ręczny wpis; śledzenia GPS nie ma — D11)
+/harmonogram                P3, szkic na stałe (jest w zamrożonej nawigacji)
+/ustawienia                 imię, telefon dla znalazcy, wylogowanie
 ```
 
-Nawigacja Owner: na mobile dolny pasek (Panel · Spacery · Harmonogram · Ustawienia) + pływający przycisk
-szybkiej akcji; na desktopie boczny sidebar.
+Nie ma (i nie dodawaj): `/t/:tagId/wyslano`, `/zwierzeta/:id/zaginiecie`, `/spacery/:id`, mapy zgłoszeń, `recharts`.
 
-## 5. Struktura folderów
+## 5. Struktura
 
 ```
 src/
-  api/              warstwa danych (dziś mock, jutro fetch do backendu)
-  mocks/            dane przykładowe + „baza” w localStorage
+  api/              fasady (auth, pets, tags, activities) + mode.js + errors.js
+    mock/           implementacja na localStorage (udaje serwer)
+    http/           implementacja fetch do /api
+  mocks/            seed.js (zamrożony) + db.js (przekłada seed na model z bazy)
   components/
-    ui/             Button, Card, Input, Textarea, Select, Badge, Tabs, Modal, Toggle, EmptyState, Spinner, StatTile
-    layout/         PublicLayout, FinderLayout, VetLayout, OwnerLayout, BottomNav, Sidebar
-    pets/           PetAvatar, PetCard, LostBanner
-    map/            MapView, WalkRoute, ReportPins
-    reminders/      ReminderItem
-  pages/
-    public/  finder/  vet/  owner/
-  hooks/            useAuth, useGeolocation, useWalkTracker …
-  context/          AuthContext
-  lib/              formatowanie dat/dystansu, obliczenia (haversine) itp.
-  router.jsx
-  main.jsx
-  index.css         Tailwind + @theme (tokeny)
+    ui/  layout/    zamrożone (wolno dodawać NOWE pliki, np. Notice, ErrorState)
+    pets/  finder/  tags/
+  pages/  public/ finder/ owner/ vet/ dev/
+  hooks/            useAuth, useAsync, useGeolocation
+  context/          AuthContext, AuthProvider
+  lib/              cn, format, sms, redirect
+  dev/              DevPanel, SketchBox (tylko szkice P2/P3)
+server/
+  src/              index, app, config, db, errors, mappers, validation, seed
+    routes/         auth, me, pets, tags, activities
+    middleware/     requireAuth, rateLimit, errorHandler
+    services/       mail, tokens, session, tagCodes, pets
+  sql/              001_init.sql (schemat), seed.sql (dane przykładowe)
+  scripts/          db-reset.js
+scripts/            generate-icons.mjs (ikony PWA)
+plan/               specyfikacja (źródło prawdy)
 ```
 
-## 6. Dane i „backend” mock
+## 6. Dane i API
 
-- Komponenty **nigdy** nie importują danych z `mocks/` bezpośrednio — tylko przez funkcje z `src/api/`
-  (np. `getPets()`, `getPetById(id)`, `resolveTag(tagId)`, `setLostMode(petId, on)`, `createWalk(...)`,
-  `getReminders()`, `createVetShare(...)`, `getTagScans(petId)`, `reportLocation(tagId, payload)`).
-- Funkcje API są `async`, dodają sztuczne opóźnienie 200–500 ms i zapisują zmiany w `localStorage`,
-  żeby prototyp „pamiętał” akcje po odświeżeniu. Dodaj funkcję resetu danych.
-- Każdy ekran obsługuje stany: **ładowanie, pusty, błąd, sukces**.
-- Autoryzacja: `AuthContext` z mockowym magic linkiem; trasy Owner chronione (przekierowanie na /login).
+- Strony importują **tylko** fasady z `src/api/` — nigdy z `api/mock/`, `api/http/` ani `mocks/` (D16).
+- Tryb wybiera `VITE_API_MODE`: `mock` (domyślnie, `npm run dev`) albo `http` (`npm run dev:http`, `.env.http`, Docker).
+  Fasady wybierają implementację per funkcja (`useHttp ? http.x : mock.x`), żeby kod mock wypadał z paczki produkcyjnej.
+- Obie implementacje zwracają **te same kształty** (camelCase): `pet`, `scan`, `activity`, warianty `resolveTag`
+  — opis w komentarzach fasad i w `server/src/mappers.js`. Zmieniasz jedną — zmień drugą.
+- Lista endpointów: `plan/04-architektura.md`, plus `GET /api/scans?limit=` (ostatnie skanowania w panelu)
+  i `GET /api/health`. `GET /api/auth/me` zwraca `{ user: null }` zamiast 401 (brak błędu w konsoli).
+- Bezpieczeństwo: token logowania z `crypto.randomBytes`, w bazie skrót SHA-256, 15 min, jednorazowy (atomowy `UPDATE`);
+  sesja JWT 30 dni w ciasteczku `httpOnly`, `SameSite=Lax`, `Secure` w produkcji; limit `/auth/request-link`;
+  `findOwnPet` w każdej trasie `/pets/:id/…`; kody zawieszek 8 znaków `XXXX-XXXX` bez `0/O/1/I/L`.
+- Bez SMTP link logowania jest wypisywany w konsoli serwera. `devLink` w odpowiedzi tylko poza produkcją.
+- Każdy ekran obsługuje stany: ładowanie, pusty, błąd, sukces.
 
-Dane przykładowe (realistyczne, polskie):
-- Właściciel: Maciej, Kraków.
-- **Luna** — pies, border collie, 3 lata, tag `LUNA-7K2Q`, stan normalny, kilkanaście spacerów
-  z trasami po Krakowie (Błonia, Bulwary Wiślane), szczepienia i leki.
-- **Mruczek** — kot, europejski, 6 lat, tag `MRCZ-4P9D`, **w Lost Mode**, 2 zgłoszenia lokalizacji od znalazców.
-- Tag `XXXX-0000` — nieaktywny (do demonstracji ekranu „Tag nieaktywny”).
-- Historia odczytów tagów, kilka przypomnień (w tym jedno zaległe), jedno aktywne udostępnienie dla weterynarza.
+Dane przykładowe (te same w obu trybach): Maciej (`maciej@pettrace.pl`, telefon ustawiony), **Luna** (pies,
+`LUNA-7K2Q`), **Mruczek** (kot, `MRCZ-4P9D`, w trybie zaginięcia), `XXXX-0000` (nieaktywny), kilka skanowań
+i aktywności.
 
 ## 7. Tryb demonstracyjny
 
-Dodaj dyskretny, zwijany **panel DEV** (widoczny tylko w trybie deweloperskim) pozwalający:
-przełączyć zalogowanie, otworzyć `/t/<tagId>` każdego zwierzęcia, włączyć/wyłączyć Lost Mode, zresetować dane.
-Chodzi o to, by w kilka sekund zobaczyć każdy wariant routingu kontekstowego.
+Panel DEV (tylko `npm run dev`): logowanie kontem demo, linki do zawieszek; w trybie mock także przełączniki
+zaginięcia i reset danych. W trybie http reset: `npm run db:reset` w `server/`.
 
-## 8. PWA
+## 8. PWA i wdrożenie
 
-`vite-plugin-pwa`: manifest (nazwa, kolory z tokenów, ikony — wygeneruj proste SVG/PNG), service worker
-z cache zasobów aplikacji. Widoki Finder i Vet powinny działać możliwie szybko i lekko.
-Powiadomienia push — tylko UI zgody w ustawieniach, bez implementacji (wymagają backendu).
+`vite-plugin-pwa` (manifest z kolorami tokenów, ikony z `scripts/generate-icons.mjs`, service worker bez cache `/api`).
+Wdrożenie: `docker-compose.yml` + `Caddyfile` + `.env` (wzór `.env.example`), instrukcja `DEPLOY.md`.
+Lokalnie: `docker compose up --build` → `http://localhost:8080`.
 
-## 9. Standardy kodu
+## 9. Pliki zamrożone (wzór dla etapów 0–13 planu)
+
+Nie zmieniaj wyglądu, klas, propsów ani zachowania: `index.html`, `vite.config.js`, `eslint.config.js`,
+`src/main.jsx`, `src/index.css`, `src/components/layout/*` (RootLayout, PublicLayout, FinderLayout, VetLayout,
+PageHeader, Logo, Sidebar, BottomNav, OwnerLayout, ownerNav.js), istniejące `src/components/ui/*` i `fieldClasses.js`,
+`src/lib/cn.js`, `src/pages/dev/UiGalleryPage.jsx`, `src/pages/public/LandingPage.jsx`, `NotFoundPage.jsx`,
+`src/mocks/seed.js`, etapy 0–13 w `PLAN_PRZEPISYWANIA.md`.
+
+Dozwolone dopiski: trasy w `router.jsx`, proxy i PWA w `vite.config.js`, providery w `main.jsx`, nowe kolekcje
+w `seed.js`, link apple-touch w `index.html`. `RequireAuth.jsx` nie jest zamrożony. Potrzebny nowy komponent UI —
+nowy plik. Inna zmiana zamrożonego pliku — najpierw zapytaj autora.
+
+## 10. Standardy kodu
 
 - Komponenty funkcyjne, małe i jednoodpowiedzialne; logika w hookach.
-- Semantyczny HTML (`header`, `main`, `nav`, `section`, `button` zamiast klikalnych `div`), etykiety w formularzach,
-  `aria-*` tam, gdzie potrzebne, widoczny focus.
-- **Komentarze po polsku** przy nieoczywistych decyzjach (np. jak działa routing kontekstowy, dlaczego tak liczymy
-  dystans) — autor będzie się na tym kodzie uczył. Bez komentowania rzeczy oczywistych.
-- Bez martwego kodu i bez `console.log` w gotowych etapach.
-- Po każdym etapie aplikacja musi się budować (`npm run build`) i uruchamiać bez błędów w konsoli.
-
-## 10. Sposób pracy
-
-Pracujemy **etapami**. Na koniec każdego etapu: krótko podsumuj, co powstało, jak to sprawdzić
-(konkretne adresy do kliknięcia) i co jest uproszczone względem docelowej wersji.
-
-1. Setup: zależności, Tailwind z tokenami i fontami, router ze wszystkimi trasami (strony-szkielety), layouty, panel DEV.
-2. UI kit (`components/ui`) + strona `/dev/ui` prezentująca wszystkie komponenty i warianty.
-3. Warstwa mock (`api/`, `mocks/`) + AuthContext + logowanie magic link.
-4. Owner Flow: dashboard, profil zwierzęcia z zakładkami, formularz dodawania/edycji.
-5. Finder Flow + Lost Mode + Vet view (routing kontekstowy `/t/:tagId`).
-6. Mapy i spacery: śledzenie, szczegóły, analityka; mapa zgłoszeń w Lost Mode.
-7. Harmonogram, Vet Quick Share, audyt tagu, ustawienia, 404.
-8. PWA + dopracowanie: responsywność desktop, dostępność, stany puste/błędów, spójność wizualna.
+- Semantyczny HTML, etykiety w formularzach, `aria-*` tam, gdzie potrzebne, widoczny focus.
+- **Komentarze po polsku** przy nieoczywistych decyzjach (autor się na tym kodzie uczy). Bez komentowania oczywistości.
+- SQL zawsze z parametrami (`$1`), nigdy sklejany z danymi.
+- Bez martwego kodu i bez `console.log` (wyjątek: komunikaty startu serwera i link logowania bez SMTP).
+- Przed commitem: `npm run lint` i `npm run build` bez błędów, w konsoli przeglądarki bez błędów.
+- Commity po polsku w trybie rozkazującym („Dodaj…”, „Popraw…”).
