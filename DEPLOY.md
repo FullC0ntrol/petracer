@@ -19,6 +19,7 @@ Każde polecenie jest w osobnym bloku. Polecenia z sekcji „na serwerze” wpis
 11. [Gdy coś nie działa](#11-gdy-coś-nie-działa)
 12. [Zawieszki: tag NFC i kod QR](#12-zawieszki-tag-nfc-i-kod-qr)
 13. [Uruchomienie całości lokalnie](#13-uruchomienie-całości-lokalnie)
+14. [Serwer, na którym działa już nginx](#14-serwer-na-którym-działa-już-nginx)
 
 ---
 
@@ -454,3 +455,111 @@ Zatrzymaj i usuń dane, żeby następne uruchomienie zaczęło od czystej bazy.
 ```bash
 docker compose down -v
 ```
+
+## 14. Serwer, na którym działa już nginx
+
+Jeśli na serwerze nginx obsługuje już inne strony (np. `plan.petracker.pl`), to on zajmuje porty 80 i 443, a kontener Caddy nie może ich dostać. Wtedy nginx zostaje „drzwiami wejściowymi”: obsługuje HTTPS i przekazuje ruch dla `petracker.pl` do Caddy, który działa na porcie 8080 dostępnym tylko z wnętrza serwera.
+
+```
+internet → nginx (HTTPS, certbot) → 127.0.0.1:8080 Caddy (frontend) → api → db
+                                  ↳ plan.petracker.pl i inne strony bez zmian
+```
+
+Kroki 1, 3, 4, 7–13 wykonujesz tak samo. Zmieniają się krok 2 (bez `ufw`, jeśli zapora jest już ustawiona), krok 5 (`.env`) i dochodzi konfiguracja nginx.
+
+### Plik `.env`
+
+Oprócz haseł (krok 5) ustaw te wartości — Caddy nasłuchuje wtedy tylko lokalnie, bez własnego HTTPS:
+
+```
+SITE_ADDRESS=:80
+APP_URL=https://petracker.pl
+HTTP_PORT=127.0.0.1:8080
+HTTPS_PORT=127.0.0.1:8443
+TRUST_PROXY_HOPS=2
+COOKIE_SECURE=true
+```
+
+Uruchom aplikację (krok 6) i sprawdź, czy odpowiada na serwerze — wynik powinien zawierać `{"ok":true}`.
+
+```bash
+curl http://127.0.0.1:8080/api/health
+```
+
+### Konfiguracja nginx
+
+Zrób kopię obecnej konfiguracji strony, żeby móc do niej wrócić.
+
+```bash
+sudo cp /etc/nginx/sites-available/petracker.pl /etc/nginx/petracker.pl.backup
+```
+
+Otwórz plik konfiguracji domeny.
+
+```bash
+sudo nano /etc/nginx/sites-available/petracker.pl
+```
+
+Zastąp całą zawartość poniższą: `www` przekierowuje na adres bez `www`, a `petracker.pl` przekazuje wszystko do aplikacji.
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name www.petracker.pl;
+    return 301 https://petracker.pl$request_uri;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name petracker.pl;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Sprawdź, czy w konfiguracji nie ma błędów — wynik powinien kończyć się `test is successful`.
+
+```bash
+sudo nginx -t
+```
+
+Przeładuj nginx z nową konfiguracją.
+
+```bash
+sudo systemctl reload nginx
+```
+
+### Certyfikat HTTPS (certbot)
+
+Zainstaluj certbota z wtyczką do nginx.
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+```
+
+Pobierz certyfikat dla obu adresów — certbot sam dopisze HTTPS do konfiguracji nginx i przekierowanie z HTTP. Podaj e-mail do powiadomień o wygasaniu certyfikatu.
+
+```bash
+sudo certbot --nginx -d petracker.pl -d www.petracker.pl
+```
+
+Sprawdź, czy automatyczne odnawianie certyfikatu działa.
+
+```bash
+sudo certbot renew --dry-run
+```
+
+Sprawdź aplikację przez HTTPS — wynik powinien zawierać `{"ok":true}`.
+
+```bash
+curl https://petracker.pl/api/health
+```
+
+> Stara statyczna strona z `/var/www/petracker.pl/html` nie jest już serwowana, ale pliki zostają na dysku. Konfiguracja `plan.petracker.pl` się nie zmienia.

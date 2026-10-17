@@ -49,6 +49,8 @@ export const config = {
   // http://localhost jako bezpieczny, więc lokalny Docker działa także z `true`.
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProduction,
   seedDemoData: process.env.SEED_DEMO_DATA === 'true',
+  // Ilu pośredników (reverse proxy) stoi przed API: 1 = sam Caddy, 2 = nginx + Caddy.
+  trustProxyHops: Number(process.env.TRUST_PROXY_HOPS ?? 1),
   smtp: {
     host: process.env.SMTP_HOST ?? '',
     port: Number(process.env.SMTP_PORT ?? 587),

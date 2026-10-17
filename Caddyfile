@@ -4,6 +4,16 @@
 # Adres strony bierzemy ze zmiennej SITE_ADDRESS:
 #   petracker.pl        → HTTPS z automatycznym certyfikatem (serwer VPS)
 #   http://localhost    → zwykły HTTP do testów na własnym komputerze (domyślnie)
+#   :80                 → zwykły HTTP dla każdej domeny, gdy przed Caddy stoi nginx z HTTPS
+{
+	servers {
+		# Gdy przed Caddy stoi nginx (adres z sieci prywatnej Dockera), Caddy zachowuje nagłówek
+		# X-Forwarded-For z prawdziwym adresem IP użytkownika. Nagłówkom od obcych adresów z internetu
+		# nie wierzy — inaczej każdy mógłby podać dowolny adres i ominąć limit prób logowania.
+		trusted_proxies static private_ranges
+	}
+}
+
 {$SITE_ADDRESS:http://localhost} {
 	encode zstd gzip
 

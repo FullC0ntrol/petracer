@@ -1,5 +1,6 @@
 import cookieParser from 'cookie-parser'
 import express from 'express'
+import { config } from './config.js'
 import { errorHandler, notFound } from './middleware/errorHandler.js'
 import { activitiesRouter } from './routes/activities.js'
 import { authRouter } from './routes/auth.js'
@@ -16,7 +17,9 @@ export function createApp() {
 
   // Serwer stoi za Caddy (reverse proxy). Bez tego `req.ip` byłby zawsze adresem Caddy,
   // a limit żądań traktowałby wszystkich użytkowników jak jedną osobę.
-  app.set('trust proxy', 1)
+  // Gdy przed Caddy stoi jeszcze nginx (np. na serwerze z innymi stronami), pośredników jest dwóch
+  // — liczbę ustawia TRUST_PROXY_HOPS (patrz .env.example).
+  app.set('trust proxy', config.trustProxyHops)
   app.disable('x-powered-by')
 
   app.use(express.json({ limit: '20kb' }))
