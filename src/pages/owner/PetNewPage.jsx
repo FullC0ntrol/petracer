@@ -1,27 +1,21 @@
+import { useNavigate } from 'react-router'
+import { createPet } from '../../api/pets.js'
 import PageHeader from '../../components/layout/PageHeader.jsx'
-import SketchBox from '../../dev/SketchBox.jsx'
-
-const STEPS = ['Podstawowe', 'Zdrowie', 'Kontakt']
+import PetForm from '../../components/pets/PetForm.jsx'
 
 export default function PetNewPage() {
+  const navigate = useNavigate()
+
+  // Błąd z createPet „wypływa” do PetForm, który pokaże go nad przyciskiem.
+  async function handleSubmit(values) {
+    const pet = await createPet(values)
+    navigate(`/zwierzeta/${pet.id}`, { replace: true })
+  }
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <PageHeader title="Nowe zwierzę" description="Trzy krótkie kroki — możesz wrócić do nich później." />
-      <ol className="mb-6 grid grid-cols-3 gap-2 text-sm font-semibold">
-        {STEPS.map((step, index) => (
-          <li
-            key={step}
-            className={`rounded-xl px-3 py-2 text-center ${index === 0 ? 'bg-pine-soft text-pine' : 'bg-surface text-ink-muted'}`}
-          >
-            {index + 1}. {step}
-          </li>
-        ))}
-      </ol>
-      <SketchBox label="Pola kroku: imię, gatunek, rasa, data urodzenia…" hint="Etap 4" className="h-72" />
-      <div className="mt-6 flex justify-between gap-3">
-        <SketchBox label="Wstecz" className="min-h-12 flex-1" />
-        <SketchBox label="Dalej" className="min-h-12 flex-1" />
-      </div>
+    <div className="max-w-2xl">
+      <PageHeader title="Nowe zwierzę" description="Wymagane jest tylko imię — resztę możesz uzupełnić później." />
+      <PetForm onSubmit={handleSubmit} submitLabel="Dodaj zwierzę" cancelTo="/panel" />
     </div>
   )
 }

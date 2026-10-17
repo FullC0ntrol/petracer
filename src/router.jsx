@@ -10,7 +10,6 @@ import LocationSentPage from './pages/finder/LocationSentPage.jsx'
 import ShareLocationPage from './pages/finder/ShareLocationPage.jsx'
 import TagPage from './pages/finder/TagPage.jsx'
 import DashboardPage from './pages/owner/DashboardPage.jsx'
-import LostModePage from './pages/owner/LostModePage.jsx'
 import PetEditPage from './pages/owner/PetEditPage.jsx'
 import PetNewPage from './pages/owner/PetNewPage.jsx'
 import PetProfilePage from './pages/owner/PetProfilePage.jsx'
@@ -72,7 +71,6 @@ export const router = createBrowserRouter([
               { path: 'zwierzeta/nowe', element: <PetNewPage /> },
               { path: 'zwierzeta/:id', element: <PetProfilePage /> },
               { path: 'zwierzeta/:id/edytuj', element: <PetEditPage /> },
-              { path: 'zwierzeta/:id/zaginiecie', element: <LostModePage /> },
               { path: 'zwierzeta/:id/vet-share', element: <VetSharePage /> },
               { path: 'zwierzeta/:id/tag', element: <PetTagPage /> },
               { path: 'spacery', element: <WalksPage /> },
