@@ -1,6 +1,5 @@
 import * as http from './http/tags.js'
 import * as mock from './mock/tags.js'
-import { API_MODE } from './mode.js'
 
 /*
   Zawieszki i historia skanowań:
@@ -17,6 +16,9 @@ import { API_MODE } from './mode.js'
 
   scan = { id, tagCode, scannedAt, userAgent, byOwner, petId, petName }
 */
-const impl = API_MODE === 'http' ? http : mock
+const useHttp = import.meta.env.VITE_API_MODE === 'http'
 
-export const { resolveTag, createTag, getTagScans, getRecentScans } = impl
+export const resolveTag = useHttp ? http.resolveTag : mock.resolveTag
+export const createTag = useHttp ? http.createTag : mock.createTag
+export const getTagScans = useHttp ? http.getTagScans : mock.getTagScans
+export const getRecentScans = useHttp ? http.getRecentScans : mock.getRecentScans

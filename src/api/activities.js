@@ -1,6 +1,5 @@
 import * as http from './http/activities.js'
 import * as mock from './mock/activities.js'
-import { API_MODE } from './mode.js'
 
 /*
   Aktywności zwierzęcia (karmienie, spacer):
@@ -9,6 +8,7 @@ import { API_MODE } from './mode.js'
 
   activity = { id, petId, type: 'feeding' | 'walk', occurredAt, durationMin, distanceM, source: 'quick_tap' | 'manual' }
 */
-const impl = API_MODE === 'http' ? http : mock
+const useHttp = import.meta.env.VITE_API_MODE === 'http'
 
-export const { logActivity, getActivities } = impl
+export const logActivity = useHttp ? http.logActivity : mock.logActivity
+export const getActivities = useHttp ? http.getActivities : mock.getActivities

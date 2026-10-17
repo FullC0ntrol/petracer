@@ -1,0 +1,38 @@
+# Caddy: serwer wejściowy. Serwuje zbudowany frontend, przekazuje /api/* do Expressa
+# i sam pobiera certyfikat HTTPS (Let's Encrypt) dla domeny.
+#
+# Adres strony bierzemy ze zmiennej SITE_ADDRESS:
+#   petracker.pl        → HTTPS z automatycznym certyfikatem (serwer VPS)
+#   http://localhost    → zwykły HTTP do testów na własnym komputerze (domyślnie)
+{$SITE_ADDRESS:http://localhost} {
+	encode zstd gzip
+
+	header {
+		# Przeglądarka nie zgaduje typu plików, nie wysyła pełnego adresu do innych stron
+		# i nie pozwala osadzić aplikacji w ramce na cudzej stronie.
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+	}
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv
+
+		# Pliki z /assets mają w nazwie skrót zawartości (np. index-DZ0j9PSk.js), więc mogą być
+		# trzymane w pamięci przeglądarki „na zawsze”. Reszta (index.html, sw.js, manifest) — nie,
+		# żeby nowa wersja aplikacji docierała do użytkowników od razu.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@notAssets not path /assets/*
+		header @notAssets Cache-Control "no-cache"
+
+		# Aplikacja jednostronicowa: adres taki jak /t/K7Q2-M9XD nie jest plikiem na dysku,
+		# więc oddajemy index.html, a widok wybiera React Router.
+		try_files {path} /index.html
+		file_server
+	}
+}

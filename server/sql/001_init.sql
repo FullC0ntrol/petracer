@@ -1,4 +1,4 @@
--- Schemat bazy PeTrace (PostgreSQL 13+).
+-- Schemat bazy PetTrace (PostgreSQL 13+).
 -- W Dockerze plik uruchamia się sam przy pierwszym starcie pustej bazy
 -- (katalog /docker-entrypoint-initdb.d). Lokalnie: `npm run db:reset` w folderze server/.
 --

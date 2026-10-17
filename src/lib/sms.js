@@ -33,7 +33,7 @@ export function mapsLink(latitude, longitude) {
 }
 
 export function buildFinderMessage(petName, position) {
-  const intro = `Dzień dobry, znalazłem/znalazłam Pani/Pana zwierzę: ${petName} (wiadomość ze strony zawieszki PeTrace).`
+  const intro = `Dzień dobry, znalazłem/znalazłam Pani/Pana zwierzę: ${petName} (wiadomość ze strony zawieszki PetTrace).`
   if (!position) {
     return `${intro} Nie udało się pobrać lokalizacji z telefonu — opisuję miejsce, w którym jestem: `
   }

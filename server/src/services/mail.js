@@ -27,8 +27,8 @@ export async function sendLoginLink(email, link) {
   await transporter.sendMail({
     from: config.smtp.from,
     to: email,
-    subject: 'Twój link do logowania w PeTrace',
-    text: `Cześć!\n\nKliknij, aby zalogować się do PeTrace:\n${link}\n\nLink jest ważny 15 minut i działa tylko raz.\nJeśli to nie Ty prosiłeś o logowanie, zignoruj tę wiadomość.`,
-    html: `<p>Cześć!</p><p><a href="${link}">Kliknij tutaj, aby zalogować się do PeTrace</a>.</p><p>Link jest ważny 15 minut i działa tylko raz. Jeśli to nie Ty prosiłeś o logowanie, zignoruj tę wiadomość.</p>`,
+    subject: 'Twój link do logowania w PetTrace',
+    text: `Cześć!\n\nKliknij, aby zalogować się do PetTrace:\n${link}\n\nLink jest ważny 15 minut i działa tylko raz.\nJeśli to nie Ty prosiłeś o logowanie, zignoruj tę wiadomość.`,
+    html: `<p>Cześć!</p><p><a href="${link}">Kliknij tutaj, aby zalogować się do PetTrace</a>.</p><p>Link jest ważny 15 minut i działa tylko raz. Jeśli to nie Ty prosiłeś o logowanie, zignoruj tę wiadomość.</p>`,
   })
 }

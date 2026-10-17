@@ -19,13 +19,27 @@ function required(name, fallbackForDev) {
   throw new Error(`Brak wymaganej zmiennej środowiskowej ${name}.`)
 }
 
+/*
+  Bezpiecznik: wartości domyślne z docker-compose.yml są wygodne na własnym komputerze,
+  ale na prawdziwej domenie oznaczałyby sekret znany każdemu, kto przeczytał repozytorium.
+*/
+function assertSafeSecret(jwtSecret, appUrl) {
+  const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(appUrl)
+  if (isProduction && !isLocal && (jwtSecret.includes('change-me') || jwtSecret.length < 32)) {
+    throw new Error('JWT_SECRET jest domyślny albo za krótki. Ustaw w .env losowy sekret: openssl rand -hex 32')
+  }
+  return jwtSecret
+}
+
+const appUrl = required('APP_URL', 'http://localhost:5173').replace(/\/$/, '')
+
 export const config = {
   isProduction,
   port: Number(process.env.PORT ?? 3000),
   databaseUrl: required('DATABASE_URL', 'postgres://petrace:petrace@localhost:5434/petrace'),
-  jwtSecret: required('JWT_SECRET', 'dev-only-secret-change-me'),
+  jwtSecret: assertSafeSecret(required('JWT_SECRET', 'dev-only-secret-change-me'), appUrl),
   // Publiczny adres aplikacji — z niego budujemy link w mailu.
-  appUrl: required('APP_URL', 'http://localhost:5173').replace(/\/$/, ''),
+  appUrl,
   // Ciasteczko `Secure` (tylko HTTPS). Domyślnie włączone w produkcji. Przeglądarki traktują
   // http://localhost jako bezpieczny, więc lokalny Docker działa także z `true`.
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProduction,
@@ -35,6 +49,6 @@ export const config = {
     port: Number(process.env.SMTP_PORT ?? 587),
     user: process.env.SMTP_USER ?? '',
     pass: process.env.SMTP_PASS ?? '',
-    from: process.env.MAIL_FROM ?? 'PeTrace <no-reply@petracker.pl>',
+    from: process.env.MAIL_FROM ?? 'PetTrace <no-reply@petracker.pl>',
   },
 }

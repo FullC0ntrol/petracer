@@ -1,0 +1,8 @@
+# Do obrazu frontendu nie kopiujemy rzeczy, które nie są potrzebne do zbudowania aplikacji.
+node_modules
+dist
+server
+plan
+.git
+.env
+*.md

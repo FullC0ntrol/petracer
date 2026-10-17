@@ -64,7 +64,7 @@ function ShareLocation({ code, phone, petName }) {
 
       <p className="flex gap-2 rounded-2xl bg-pine-soft p-4 text-sm text-ink">
         <ShieldCheck size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-pine" />
-        Twoja lokalizacja trafia tylko do treści SMS-a. PeTrace jej nie zapisuje.
+        Twoja lokalizacja trafia tylko do treści SMS-a. PetTrace jej nie zapisuje.
       </p>
 
       {status === 'success' ? (

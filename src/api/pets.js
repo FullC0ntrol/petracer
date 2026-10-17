@@ -1,6 +1,5 @@
 import * as http from './http/pets.js'
 import * as mock from './mock/pets.js'
-import { API_MODE } from './mode.js'
 
 /*
   Zwierzęta zalogowanego właściciela:
@@ -12,6 +11,10 @@ import { API_MODE } from './mode.js'
 
   pet = { id, name, species, breed, birthDate, weightKg, medicalNotes, isLost, lostMessage, tagCode, createdAt }
 */
-const impl = API_MODE === 'http' ? http : mock
+const useHttp = import.meta.env.VITE_API_MODE === 'http'
 
-export const { getPets, getPetById, createPet, updatePet, setLostMode } = impl
+export const getPets = useHttp ? http.getPets : mock.getPets
+export const getPetById = useHttp ? http.getPetById : mock.getPetById
+export const createPet = useHttp ? http.createPet : mock.createPet
+export const updatePet = useHttp ? http.updatePet : mock.updatePet
+export const setLostMode = useHttp ? http.setLostMode : mock.setLostMode

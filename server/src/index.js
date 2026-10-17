@@ -8,7 +8,7 @@ await pool.query('SELECT 1')
 if (config.seedDemoData) await seedDemoDataIfEmpty()
 
 const server = createApp().listen(config.port, () => {
-  console.log(`API PeTrace działa na http://localhost:${config.port} (${config.isProduction ? 'produkcja' : 'dev'})`)
+  console.log(`API PetTrace działa na http://localhost:${config.port} (${config.isProduction ? 'produkcja' : 'dev'})`)
 })
 
 // `docker compose stop` wysyła SIGTERM. Kończymy rozpoczęte żądania i zamykamy połączenia z bazą,
