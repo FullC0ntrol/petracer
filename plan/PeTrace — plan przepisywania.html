@@ -1,0 +1,1634 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>PeTrace — plan przepisywania</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: przewodnik z boczną mapą sesji (desktop) i jedną kolumną treści; tokeny z aplikacji PeTrace. */
+:root{
+  --paper:#faf7f2; --surface:#ffffff; --ink:#1b2420; --muted:#5e6a64; --line:#e7e1d6;
+  --pine:#1f5e4b; --pine-soft:#e3efe9; --ember:#c95a24; --ember-soft:#fbe9de;
+  --alert:#c22f25; --alert-soft:#fce6e3; --amber:#946405; --amber-soft:#f8eed7;
+  --code-bg:#17201c; --code-ink:#e3ebe6; --code-muted:#8fa39a; --code-line:#2b3a33;
+  --hl-key:#f0a574; --hl-str:#a9d98f; --hl-fn:#8cc8f0; --hl-com:#7d918a; --hl-tag:#f2c46b; --hl-attr:#c3a6f0; --hl-num:#f39c9c;
+  --display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --sans:"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111714; --surface:#19211d; --ink:#e7ece9; --muted:#9aa8a1; --line:#2a3530;
+  --pine:#6cc2a2; --pine-soft:#1c362c; --ember:#f08d58; --ember-soft:#3a2418;
+  --alert:#f2736a; --alert-soft:#3c1d1a; --amber:#e3b04a; --amber-soft:#352a12;
+  --code-bg:#0c110f; --code-line:#22302a; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#111714; --surface:#19211d; --ink:#e7ece9; --muted:#9aa8a1; --line:#2a3530;
+  --pine:#6cc2a2; --pine-soft:#1c362c; --ember:#f08d58; --ember-soft:#3a2418;
+  --alert:#f2736a; --alert-soft:#3c1d1a; --amber:#e3b04a; --amber-soft:#352a12;
+  --code-bg:#0c110f; --code-line:#22302a; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:20px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 96px}
+.shell{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:260px minmax(0,1fr);gap:48px;align-items:start}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(2rem,4.5vw,2.9rem);font-weight:800}
+h2{font-size:1.75rem;font-weight:800}
+h3{font-size:1.2rem;font-weight:600}
+h4{font-size:1rem;font-weight:600}
+p{margin:0}
+a{color:var(--pine)}
+code{font-family:var(--mono);font-size:.86em;background:var(--pine-soft);color:var(--ink);padding:.08em .35em;border-radius:5px}
+.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--pine)}
+.muted{color:var(--muted)}
+main{display:flex;flex-direction:column;gap:64px;min-width:0}
+.prose{max-width:72ch}
+
+/* nawigacja boczna */
+nav.toc{position:sticky;top:20px;max-height:calc(100dvh - 40px);overflow:auto;display:flex;flex-direction:column;gap:18px;padding-right:6px;font-size:.88rem}
+.toc .brand{font-family:var(--display);font-weight:800;font-size:1.15rem}
+.toc .prog{display:flex;flex-direction:column;gap:6px}
+.toc .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.toc .bar span{display:block;height:100%;background:var(--pine);width:0}
+.toc .grp{display:flex;flex-direction:column;gap:2px}
+.toc .grp b{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:4px 0 2px}
+.toc a{display:grid;grid-template-columns:14px 1fr;gap:8px;align-items:baseline;text-decoration:none;color:var(--ink);padding:3px 6px;border-radius:7px}
+.toc a:hover{background:var(--surface)}
+.toc a .dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--line);transform:translateY(1px)}
+.toc a.done .dot{background:var(--pine);border-color:var(--pine)}
+.toc a.done{color:var(--muted)}
+.toc a.now{background:var(--ember-soft);font-weight:700}
+.toc a.now .dot{border-color:var(--ember)}
+.toc-mobile{display:none}
+
+/* nagłówek */
+header.hero{display:flex;flex-direction:column;gap:16px}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.how div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;font-size:.92rem}
+.how b{font-family:var(--display);font-size:1rem}
+.youarehere{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--ember-soft);border-radius:14px;padding:14px 18px}
+.youarehere b{font-family:var(--display);font-size:1.05rem}
+
+/* callout */
+.callout{border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;font-size:.95rem}
+.callout.warn{background:var(--alert-soft)}
+.callout.warn > b{color:var(--alert)}
+.callout.tip{background:var(--pine-soft)}
+.callout.note{background:var(--amber-soft)}
+
+/* sesja szczegółowa */
+.session{display:flex;flex-direction:column;gap:22px;scroll-margin-top:20px}
+.s-head{display:flex;flex-direction:column;gap:10px;border-top:3px solid var(--ink);padding-top:18px}
+.s-meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:.85rem;color:var(--muted)}
+.s-num{font-family:var(--display);font-weight:800;color:var(--ember)}
+.goal{font-size:1.08rem;max-width:68ch}
+.donebox{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.88rem;color:var(--ink);cursor:pointer;user-select:none}
+.donebox input{width:18px;height:18px;accent-color:var(--pine)}
+.concepts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.concepts div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:.9rem;display:flex;flex-direction:column;gap:4px}
+.concepts b{font-family:var(--display);font-size:.98rem}
+
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px}
+.step > .n{font-family:var(--display);font-weight:800;width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:.9rem;margin-top:2px}
+.step > .body{display:flex;flex-direction:column;gap:12px;min-width:0}
+.step .what{max-width:72ch}
+
+/* kod */
+.code{border-radius:14px;background:var(--code-bg);overflow:hidden;border:1px solid var(--code-line)}
+.code .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px 8px 16px;border-bottom:1px solid var(--code-line)}
+.code .file{font-family:var(--mono);font-size:.8rem;color:var(--code-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.code .kind{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:99px;margin-right:8px}
+.kind.new{background:#2c5b47;color:#d9f2e6}
+.kind.edit{background:#5b4520;color:#f8e5c0}
+.code button{font:600 .75rem var(--sans);color:var(--code-ink);background:transparent;border:1px solid var(--code-line);border-radius:8px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.code button:hover{border-color:var(--code-muted)}
+.code button:focus-visible{outline:2px solid var(--hl-fn);outline-offset:2px}
+.code pre{margin:0;padding:14px 0;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.6;color:var(--code-ink);tab-size:2}
+.code pre code{background:none;padding:0;color:inherit;font-size:inherit;display:block;counter-reset:ln}
+.code .ln{display:block;padding:0 16px 0 0}
+.code .ln::before{counter-increment:ln;content:counter(ln);display:inline-block;width:3.2em;padding-right:1em;text-align:right;color:var(--code-muted);opacity:.6;user-select:none}
+.code .ln.hl{background:rgb(240 165 116 / .1);box-shadow:inset 3px 0 0 var(--hl-key)}
+.hljs-keyword,.hljs-built_in,.hljs-literal{color:var(--hl-key)}
+.hljs-string,.hljs-regexp{color:var(--hl-str)}
+.hljs-title,.hljs-title.function_{color:var(--hl-fn)}
+.hljs-comment{color:var(--hl-com);font-style:italic}
+.hljs-tag,.hljs-name{color:var(--hl-tag)}
+.hljs-attr{color:var(--hl-attr)}
+.hljs-number{color:var(--hl-num)}
+.hljs-variable.language_,.hljs-params{color:var(--code-ink)}
+
+/* tłumaczenie */
+.explain{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:6px}
+.explain div{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:14px;padding:8px 0 8px 16px;font-size:.92rem}
+.explain div + div{border-top:1px dashed var(--line)}
+.explain .k{font-family:var(--mono);font-size:.78rem;color:var(--pine);font-weight:600;word-break:break-word}
+.check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.check li{display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:.95rem}
+.check li::before{content:"";width:14px;height:14px;border:2px solid var(--pine);border-radius:4px;margin-top:6px}
+.commit{font-family:var(--mono);font-size:.85rem;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.commit span{word-break:break-word}
+.commit button{font:600 .75rem var(--sans);border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:4px 10px;cursor:pointer}
+.mermaid-wrap{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;overflow-x:auto}
+
+/* sesje skrócone */
+.part{display:flex;flex-direction:column;gap:10px}
+.part-head{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+details.s{background:var(--surface);border:1px solid var(--line);border-radius:14px;scroll-margin-top:20px}
+details.s > summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px}
+details.s > summary::-webkit-details-marker{display:none}
+details.s > summary:focus-visible{outline:2px solid var(--pine);outline-offset:-2px;border-radius:14px}
+details.s .sn{font-family:var(--display);font-weight:800;color:var(--muted);font-size:.95rem}
+details.s .st{display:flex;flex-direction:column;min-width:0}
+details.s .st b{font-weight:600}
+details.s .st small{color:var(--muted);font-size:.8rem}
+details.s .time{font-size:.78rem;color:var(--muted);white-space:nowrap}
+details.s.isdone .sn{color:var(--pine)}
+details.s.isdone .st b{color:var(--muted)}
+.s-body{padding:4px 16px 16px 84px;display:flex;flex-direction:column;gap:12px;font-size:.93rem}
+.s-body h4{font-size:.75rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-family:var(--sans);font-weight:700}
+.s-body ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.milestone{display:flex;gap:10px;align-items:center;font-weight:700;font-size:.9rem;color:var(--ember);padding:4px 2px}
+.milestone::before{content:"";width:11px;height:11px;transform:rotate(45deg);background:var(--ember)}
+.traps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.traps div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:.9rem}
+
+@media (max-width:960px){
+  .shell{grid-template-columns:1fr;gap:28px}
+  nav.toc{display:none}
+  .toc-mobile{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+  .toc-mobile summary{padding:12px 16px;font-weight:700;cursor:pointer}
+  .toc-mobile nav{padding:0 12px 12px;display:flex;flex-direction:column;gap:12px;font-size:.9rem}
+}
+@media (max-width:640px){
+  .explain div{grid-template-columns:1fr;gap:2px}
+  .s-body{padding-left:16px}
+  details.s > summary{grid-template-columns:44px minmax(0,1fr)}
+  details.s .time{grid-column:2}
+  .step{grid-template-columns:1fr;gap:8px}
+}
+</style>
+
+<div class="shell">
+  <nav class="toc" aria-label="Sesje" id="toc"></nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">Praca inżynierska · PeTrace</span>
+      <h1>Plan przepisywania</h1>
+      <p class="prose muted" style="font-size:1.05rem">Przepisujesz prototyp z <code>PeTrack/petracer/</code> do nowego projektu <code>PeTracker-FinalVersion/petracer-final/</code>, jedna funkcja na sesję. Najbliższe sesje (16–19, logowanie) mają tu pełny kod dopasowany do Twojego projektu i wytłumaczony fragment po fragmencie. Reszta ma cel, źródło, test i commit.</p>
+      <div class="youarehere">
+        <b>Jesteś tutaj: sesja 16</b>
+        <span class="muted">Sesje 14 i 15 są w repo (lista i karty zwierząt). Kolejny kamień milowy: <strong>M1 — 8 listopada</strong>.</span>
+      </div>
+      <div class="how">
+        <div><b>1 · Przeczytaj pojęcia</b><span class="muted">Każda sesja zaczyna się od kart z nowymi pojęciami. Najpierw je zrozum, potem pisz.</span></div>
+        <div><b>2 · Kroki po kolei</b><span class="muted">Zielona etykieta <em>nowy plik</em>, żółta <em>zmiana</em>. Podświetlone linie to to, co dopisujesz.</span></div>
+        <div><b>3 · Sprawdź i commituj</b><span class="muted"><code>npm run lint</code>, <code>npm run build</code>, test z listy „Gotowe, gdy”, potem commit.</span></div>
+        <div><b>4 · Zaznacz „zrobione”</b><span class="muted">Postęp zapisuje się w tej przeglądarce i widać go w menu po lewej.</span></div>
+      </div>
+    </header>
+
+    <details class="toc-mobile"><summary>Spis sesji</summary><nav id="toc-m" aria-label="Sesje"></nav></details>
+
+    <section class="part" id="czesc-d">
+      <div class="part-head">
+        <span class="eyebrow">Część D · sesje 16–19 · kamień milowy M1</span>
+        <h2>Logowanie bez hasła</h2>
+        <p class="prose muted">Na koniec tej części właściciel loguje się linkiem, panel jest dostępny tylko po zalogowaniu, a po zalogowaniu wraca się tam, skąd się przyszło. Wszystko na danych w localStorage. Prawdziwy serwer zrobi to samo w sesjach 41–42, a strony się nie zmienią.</p>
+      </div>
+      <div class="mermaid-wrap">
+<pre class="mermaid">
+sequenceDiagram
+  actor U as Ty
+  participant L as LoginPage
+  participant A as api/mock/auth.js
+  participant D as localStorage
+  participant V as AuthVerifyPage
+  participant P as AuthProvider
+  U->>L: wpisuje e-mail (sesja 16)
+  L->>A: requestMagicLink(email)
+  A->>D: loginTokens.push(token, email, expiresAt)
+  A-->>L: devLink /auth/verify?token=…
+  U->>V: klika „Symuluj kliknięcie” (sesja 17)
+  V->>P: login(token)
+  P->>A: verifyToken(token)
+  A->>D: token zużyty, konto, sessions.push
+  A->>D: pettrace:auth-token
+  A-->>P: user
+  P-->>U: /panel, „Cześć, Maciej”
+</pre>
+      </div>
+    </section>
+
+    <!-- ============ SESJA 16 ============ -->
+    <article class="session" id="s16" data-session="16">
+      <div class="s-head">
+        <div class="s-meta"><span class="s-num">Sesja 16</span><span>~1,5 h</span><span>logowanie · krok 1 z 4</span><label class="donebox"><input type="checkbox" data-done="16"> Zrobione</label></div>
+        <h2>Proszę o link do logowania</h2>
+        <p class="goal">Wpisuję e-mail na <code>/login</code>, widzę „Sprawdź pocztę” i przycisk „[DEV] Symuluj kliknięcie w link”.</p>
+      </div>
+
+      <div class="concepts">
+        <div><b>Input kontrolowany</b><span>Wartość pola żyje w <code>useState</code>. Pole tylko ją pokazuje (<code>value</code>) i zgłasza zmiany (<code>onChange</code>). Dzięki temu w każdej chwili masz e-mail w zmiennej, bez czytania z DOM.</span></div>
+        <div><b><code>preventDefault()</code></b><span>Formularz HTML domyślnie wysyła się i przeładowuje stronę. W SPA tego nie chcemy, więc w <code>onSubmit</code> blokujemy domyślne zachowanie i robimy wszystko sami.</span></div>
+        <div><b><code>noValidate</code></b><span>Wyłącza dymki walidacji przeglądarki (różne w każdej przeglądarce). Błąd pokazujemy sami pod polem, w stylu aplikacji.</span></div>
+        <div><b><code>navigate(…, { state })</code></b><span>Przekazuje dane do następnej strony bez umieszczania ich w adresie. Znikają po odświeżeniu, dlatego strona docelowa musi obsłużyć ich brak.</span></div>
+        <div><b>Jednorazowy token</b><span>Losowy napis z datą ważności (15 min) i polem <code>usedAt</code>. Kto ma link, ten się loguje, ale tylko raz i tylko przez chwilę.</span></div>
+        <div><b>Konto powstaje dopiero po kliknięciu</b><span>Gdyby prośba o link zakładała konto, każdy mógłby zaśmiecić bazę cudzymi adresami. Token pamięta e-mail, a konto założy <code>verifyToken</code> w sesji 17.</span></div>
+      </div>
+
+      <div class="step"><span class="n">0</span><div class="body">
+        <h3>Najpierw napraw dane przykładowe</h3>
+        <div class="callout warn"><b>To zablokowałoby całą sesję</b><span>Twój <code>seed.js</code> ma tablicę <code>magicLinks</code>, a kod logowania używa <code>db.loginTokens</code> (tak jak tabela <code>login_tokens</code> w bazie). Bez poprawki <code>requestMagicLink</code> rzuci „Cannot read properties of undefined (reading 'push')”.</span></div>
+        <div class="code" data-src="c16-seed" data-file="src/mocks/seed.js" data-kind="edit" data-hl="2"></div>
+        <p class="what">Zmieniłeś kształt danych, a w przeglądarce leży stara wersja z <code>magicLinks</code>. Dlatego podbij wersję klucza: stary zapis zostanie zignorowany i baza wypełni się od nowa.</p>
+        <div class="code" data-src="c16-db" data-file="src/mocks/db.js" data-kind="edit" data-hl="1"></div>
+      </div></div>
+
+      <div class="step"><span class="n">1</span><div class="body">
+        <h3>„Serwer”: zapisz token i zwróć link</h3>
+        <p class="what">Masz już ten plik, ale w starszej wersji: zakłada konto od razu przy prośbie o link. Zamień go w całości na wersję poniżej.</p>
+        <div class="code" data-src="c16-mockauth" data-file="src/api/mock/auth.js" data-kind="edit" data-hl="22-32"></div>
+        <div class="explain">
+          <div><span class="k">EMAIL_PATTERN</span><span>Prosty wzorzec: coś, potem <code>@</code>, coś, kropka, coś. Nie musi łapać każdego dziwnego adresu, ma odsiać literówki. Prawdziwy test to i tak to, czy mail dojdzie.</span></div>
+          <div><span class="k">15 * 60 * 1000</span><span>Czas w milisekundach, bo tak liczy JavaScript (<code>Date.now()</code>). Zapis jako mnożenie czyta się jak „15 minut”.</span></div>
+          <div><span class="k">{ name = '', next = null } = {}</span><span>Drugi argument to obiekt opcji z wartościami domyślnymi. Końcowe <code>= {}</code> sprawia, że można wywołać <code>requestMagicLink(email)</code> bez drugiego argumentu.</span></div>
+          <div><span class="k">await delay()</span><span>Udajemy sieć (200–500 ms), żeby na stronie było widać stan „Wysyłam…”. Serwer też nie odpowiada natychmiast.</span></div>
+          <div><span class="k">.trim().toLowerCase()</span><span>„ Maciej@PetTrace.pl ” i „maciej@pettrace.pl” to ten sam adres. Bez normalizacji jeden człowiek miałby dwa konta.</span></div>
+          <div><span class="k">throw apiError(400, …)</span><span>„Serwer” odrzuca złe dane kodem 400, tak jak zrobi Express. Strona złapie błąd w <code>catch</code> i pokaże <code>message</code>.</span></div>
+          <div><span class="k">crypto.randomUUID()</span><span>Losowy identyfikator z kryptograficznego generatora przeglądarki. Nie do zgadnięcia, w przeciwieństwie do <code>Math.random()</code>.</span></div>
+          <div><span class="k">loginTokens.push({…})</span><span>Wiersz jak w tabeli <code>login_tokens</code>. Zapisujemy e-mail i imię, ale <strong>nie</strong> zakładamy konta.</span></div>
+          <div><span class="k">new URLSearchParams</span><span>Buduje <code>token=…&amp;next=…</code> i sam koduje znaki specjalne. Ręczne sklejanie napisów psuje się na <code>&amp;</code> albo <code>?</code> w danych.</span></div>
+          <div><span class="k">safeRedirect(next)</span><span>Przepuszcza tylko ścieżki zaczynające się od jednego <code>/</code>. Chroni przed „open redirect”: linkiem, który po zalogowaniu wyrzuca na obcą stronę.</span></div>
+          <div><span class="k">devLink</span><span>Tylko na czas pracy bez maila. Prawdziwy serwer w produkcji nigdy nie zwraca linku, bo każdy mógłby zalogować się na cudzy adres.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">2</span><div class="body">
+        <h3>Fasada <code>api/auth.js</code> ze specyfikacją</h3>
+        <p class="what">Dziś plik ma <code>export * from './mock/auth.js'</code>. Zamień to na jawną listę: komentarz jest specyfikacją przyszłego backendu (adres i co zwraca), a jawny eksport pilnuje, żeby strony używały tylko tego, co jest w specyfikacji.</p>
+        <div class="code" data-src="c16-facade" data-file="src/api/auth.js" data-kind="edit"></div>
+      </div></div>
+
+      <div class="step"><span class="n">3</span><div class="body">
+        <h3>Strona logowania</h3>
+        <p class="what">Zamień szkielet z TODO na formularz. Na razie bez sprawdzania, czy ktoś jest już zalogowany (nie ma jeszcze <code>useAuth</code>) i bez konta demo.</p>
+        <div class="code" data-src="c16-login" data-file="src/pages/public/LoginPage.jsx" data-kind="edit"></div>
+        <div class="explain">
+          <div><span class="k">useState × 4</span><span>Cztery niezależne rzeczy, które zmieniają wygląd: dwa pola, błąd i „czy wysyłam”. Każda zmiana stanu przerysowuje komponent.</span></div>
+          <div><span class="k">const next = null</span><span>Miejsce na „dokąd wrócić po zalogowaniu”. W sesji 18 wypełni je <code>RequireAuth</code>.</span></div>
+          <div><span class="k">async function handleSubmit</span><span><code>async</code>, bo czekamy na „serwer” (<code>await requestMagicLink</code>). Funkcja w środku komponentu widzi aktualne <code>email</code> i <code>name</code>.</span></div>
+          <div><span class="k">if (!EMAIL_PATTERN…) return</span><span>Szybka walidacja w przeglądarce: błąd od razu, bez czekania. „Serwer” i tak sprawdzi jeszcze raz, bo przeglądarce nie można ufać.</span></div>
+          <div><span class="k">setIsSubmitting(true)</span><span>Blokuje przycisk. Bez tego podwójne kliknięcie wysłałoby dwa linki.</span></div>
+          <div><span class="k">try / catch</span><span>Błąd z <code>apiError</code> trafia do <code>catch</code>, a jego <code>message</code> pod pole. Przycisk odblokowujemy tylko przy błędzie; przy sukcesie i tak zmieniamy stronę.</span></div>
+          <div><span class="k">navigate(…, { state })</span><span>Przechodzi na „Sprawdź pocztę” i przekazuje e-mail oraz <code>devLink</code> bez wpisywania ich w adres.</span></div>
+          <div><span class="k">Card as="form"</span><span>Twoja karta ma prop <code>as</code>, więc sama staje się elementem <code>&lt;form&gt;</code>. Jeden znacznik mniej, a <code>onSubmit</code> i <code>noValidate</code> przechodzą przez <code>...rest</code>.</span></div>
+          <div><span class="k">error={error}</span><span><code>Input</code> przez <code>FormField</code> pokazuje błąd pod polem i ustawia <code>aria-invalid</code>. To praca z etapu 10, która teraz się zwraca.</span></div>
+          <div><span class="k">type="submit"</span><span>Twój <code>Button</code> ma domyślnie <code>type="button"</code>. Tutaj musi być <code>submit</code>, żeby Enter w polu i kliknięcie wysyłały formularz.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">4</span><div class="body">
+        <h3>Strona „Sprawdź pocztę”</h3>
+        <div class="code" data-src="c16-check" data-file="src/pages/public/CheckEmailPage.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">const { state } = useLocation()</span><span>Odbiera to, co <code>LoginPage</code> przekazała w <code>navigate</code>.</span></div>
+          <div><span class="k">if (!state?.email)</span><span><code>?.</code> nie wywala się, gdy <code>state</code> jest <code>null</code>. Tak jest po odświeżeniu albo po wpisaniu adresu ręcznie. Wtedy pokazujemy prośbę o ponowne wpisanie e-maila.</span></div>
+          <div><span class="k">{state.devLink &amp;&amp; …}</span><span>Renderowanie warunkowe: przycisk [DEV] pojawia się tylko, gdy „serwer” zwrócił link. Produkcyjny serwer go nie zwróci, więc przycisk sam zniknie.</span></div>
+          <div><span class="k">&lt;Link to={devLink}&gt;</span><span><code>Link</code> zmienia stronę bez przeładowania. Link z maila otworzy się jako pełne wejście, ale w SPA wynik jest ten sam.</span></div>
+          <div><span class="k">{' '}</span><span>JSX zjada spację na końcu linii. <code>{' '}</code> wstawia ją jawnie przed linkiem.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">5</span><div class="body">
+        <h3>Podepnij trasy</h3>
+        <div class="code" data-src="c16-router" data-file="src/router.jsx" data-kind="edit" data-hl="1-2,9-10"></div>
+      </div></div>
+
+      <div class="step"><span class="n">✓</span><div class="body">
+        <h3>Gotowe, gdy</h3>
+        <ul class="check">
+          <li>Pusty i błędny e-mail pokazują czerwony błąd pod polem.</li>
+          <li>Poprawny e-mail prowadzi na <code>/login/sprawdz-poczte</code> z Twoim adresem i przyciskiem [DEV].</li>
+          <li>W DevTools → Application → Local Storage → <code>pettrace:db:v2</code> w <code>loginTokens</code> jest token z Twoim e-mailem i <code>expiresAt</code> za 15 minut.</li>
+          <li>Nowy adres <strong>nie</strong> pojawia się w <code>users</code>.</li>
+          <li>Odświeżenie „Sprawdź pocztę” pokazuje „Wróć do logowania”.</li>
+          <li>Przycisk [DEV] prowadzi na razie na placeholder „Weryfikacja logowania”. To normalne, stronę zrobisz w sesji 17.</li>
+        </ul>
+        <div class="commit"><span>feat(auth): formularz prośby o link do logowania</span><button type="button" data-copy="feat(auth): formularz prośby o link do logowania">Kopiuj</button></div>
+      </div></div>
+    </article>
+
+    <!-- ============ SESJA 17 ============ -->
+    <article class="session" id="s17" data-session="17">
+      <div class="s-head">
+        <div class="s-meta"><span class="s-num">Sesja 17</span><span>~2 h</span><span>logowanie · krok 2 z 4</span><label class="donebox"><input type="checkbox" data-done="17"> Zrobione</label></div>
+        <h2>Klikam link i jestem zalogowany</h2>
+        <p class="goal">„Symuluj kliknięcie” loguje mnie i przenosi do panelu, a w sidebarze widzę swoje imię, także po odświeżeniu.</p>
+      </div>
+
+      <div class="concepts">
+        <div><b>Context</b><span>„Kanał” przez całe drzewo komponentów. Provider u góry wkłada wartość, a dowolny komponent niżej czyta ją przez <code>useContext</code>, bez przekazywania przez props.</span></div>
+        <div><b>Prop drilling</b><span>Problem, który Context rozwiązuje: <code>user</code> musiałby iść przez Router → OwnerLayout → Sidebar tylko po to, żeby Sidebar pokazał imię.</span></div>
+        <div><b>Własny hook</b><span>Funkcja zaczynająca się od <code>use</code>, która woła inne hooki. <code>useAuth()</code> ukrywa, skąd dane pochodzą, i daje czytelny błąd, gdy zapomnisz o providerze.</span></div>
+        <div><b><code>useMemo</code></b><span>Zapamiętuje obiekt między renderami i tworzy nowy tylko po zmianie zależności. Bez tego każdy render providera przerysowałby wszystkich użytkowników <code>useAuth</code>.</span></div>
+        <div><b>Stan „jeszcze nie wiadomo”</b><span>Po starcie aplikacji przez chwilę nie wiadomo, czy sesja istnieje. <code>isLoading</code> odróżnia „nie zalogowany” od „jeszcze sprawdzam”.</span></div>
+        <div><b>StrictMode i podwójny efekt</b><span>W trybie dev React celowo uruchamia efekt dwa razy, żeby wyłapać błędy. Token jest jednorazowy, więc drugie wywołanie by go „zużyło”. Pomaga <code>useRef</code>, który przetrwa oba przebiegi.</span></div>
+        <div><b>Sesja w localStorage</b><span>Tylko w trybie mock. Prawdziwy serwer trzyma sesję w ciasteczku <code>httpOnly</code>, którego JavaScript nie widzi (decyzja D8), więc złośliwy skrypt jej nie ukradnie.</span></div>
+      </div>
+
+      <div class="step"><span class="n">1</span><div class="body">
+        <h3>Narzędzia sesji w <code>client.js</code></h3>
+        <p class="what">Dopisz na końcu pliku, pod <code>toPet</code>. To odpowiednik ciasteczka sesji i zapytania „kto jest zalogowany” po stronie serwera.</p>
+        <div class="code" data-src="c17-client" data-file="src/api/mock/client.js" data-kind="edit"></div>
+        <div class="explain">
+          <div><span class="k">TOKEN_KEY</span><span>Osobny klucz niż baza (<code>pettrace:db:v2</code>). Token to „ciasteczko przeglądarki”, a baza to „serwer”. Reset bazy nie powinien kasować tego klucza i odwrotnie.</span></div>
+          <div><span class="k">try { localStorage… } catch</span><span>localStorage potrafi rzucić wyjątek (tryb prywatny w starym Safari, zablokowane dane strony). Aplikacja ma wtedy działać, tylko bez zapamiętania sesji.</span></div>
+          <div><span class="k">token &amp;&amp; db.sessions.find(…)</span><span>Gdy tokenu brak, wynik to <code>null</code> i <code>find</code> się nie wykonuje. Krótki zapis „jeśli jest token, szukaj sesji”.</span></div>
+          <div><span class="k">?? null</span><span><code>find</code> zwraca <code>undefined</code>, gdy nic nie znajdzie. Zamieniamy na <code>null</code>, żeby zawsze było „użytkownik albo null”.</span></div>
+          <div><span class="k">toUser({ id, email, name, phone })</span><span>Wybiera tylko pola, które API ma zwracać. Gdy w bazie dojdzie coś prywatnego (np. <code>city</code> w Twoim seedzie), nie wycieknie na stronę.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">2</span><div class="body">
+        <h3>Weryfikacja, „kim jestem” i wylogowanie</h3>
+        <p class="what">Rozszerz import z <code>client.js</code> i dopisz trzy funkcje pod <code>requestMagicLink</code>.</p>
+        <div class="code" data-src="c17-mockauth" data-file="src/api/mock/auth.js" data-kind="edit" data-hl="4"></div>
+        <div class="explain">
+          <div><span class="k">!link || link.usedAt || isExpired</span><span>Trzy powody odmowy w jednym komunikacie. Nie mówimy, który zaszedł, żeby nie podpowiadać atakującemu.</span></div>
+          <div><span class="k">link.usedAt = …</span><span>Oznaczamy token jako zużyty. Działa, bo <code>getDb()</code> zwraca kopię, którą wolno zmieniać, a <code>saveDb(db)</code> zapisuje ją na końcu.</span></div>
+          <div><span class="k">if (!user) { … push }</span><span>Rejestracja przy pierwszym logowaniu: konto powstaje dopiero teraz, gdy ktoś udowodnił, że ma dostęp do skrzynki.</span></div>
+          <div><span class="k">link.name || email.split('@')[0]</span><span>Bez podanego imienia bierzemy część adresu przed <code>@</code>: „ola@x.pl” wita się jako „ola”.</span></div>
+          <div><span class="k">sessions.push + setAuthToken</span><span>Dwie strony sesji: „serwer” pamięta, że ten token należy do Macieja, a „przeglądarka” trzyma token. Tak samo będzie z ciasteczkiem.</span></div>
+          <div><span class="k">getCurrentUser → null</span><span>Brak sesji to zwykła odpowiedź, a nie błąd. Strony publiczne też pytają „kim jestem”.</span></div>
+          <div><span class="k">sessions.filter(…)</span><span>Wylogowanie usuwa sesje użytkownika po stronie „serwera” i token po stronie przeglądarki.</span></div>
+        </div>
+        <div class="code" data-src="c17-facade" data-file="src/api/auth.js" data-kind="edit" data-hl="2"></div>
+      </div></div>
+
+      <div class="step"><span class="n">3</span><div class="body">
+        <h3>Context: jedno miejsce z „kto jest zalogowany”</h3>
+        <p class="what">Trzy małe pliki. Utwórz folder <code>src/context/</code>.</p>
+        <div class="code" data-src="c17-ctx" data-file="src/context/AuthContext.js" data-kind="new"></div>
+        <div class="code" data-src="c17-provider" data-file="src/context/AuthProvider.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">useState(true) dla isLoading</span><span>Startujemy w „nie wiem”, a nie w „nie zalogowany”. Gdyby było <code>false</code>, odświeżenie <code>/panel</code> przez ułamek sekundy wyglądałoby jak brak sesji.</span></div>
+          <div><span class="k">useEffect(…, [])</span><span>Pusta tablica zależności: efekt uruchamia się raz, po pierwszym wyświetleniu. Pytamy „kim jestem” przy starcie aplikacji.</span></div>
+          <div><span class="k">let ignore = false</span><span>Ten sam wzór co w <code>useAsync</code>: gdy komponent zniknie przed odpowiedzią, nie ustawiamy już stanu.</span></div>
+          <div><span class="k">.catch(() =&gt; {})</span><span>Gdy „serwer” nie odpowie, traktujemy to jak brak sesji. Strona główna i zawieszka mają działać nawet wtedy.</span></div>
+          <div><span class="k">.finally(…)</span><span>Wykonuje się po sukcesie i po błędzie, więc <code>isLoading</code> zawsze w końcu spadnie na <code>false</code>.</span></div>
+          <div><span class="k">async login(token)</span><span>Strony nie wołają <code>verifyToken</code> same. Wołają <code>login</code> z kontekstu, który przy okazji ustawia <code>user</code>, więc sidebar od razu wie, kto się zalogował.</span></div>
+          <div><span class="k">&lt;AuthContext value={value}&gt;</span><span>Zapis z React 19. W starszych tutorialach zobaczysz <code>&lt;AuthContext.Provider value={…}&gt;</code>; robi to samo.</span></div>
+        </div>
+        <div class="code" data-src="c17-useauth" data-file="src/hooks/useAuth.js" data-kind="new"></div>
+        <p class="what">Dlaczego <code>AuthContext.js</code> to osobny plik? Vite odświeża na żywo tylko pliki <code>.jsx</code>, które eksportują same komponenty. Gdyby <code>createContext</code> siedział w <code>AuthProvider.jsx</code>, lint zgłosi <code>react-refresh/only-export-components</code>.</p>
+      </div></div>
+
+      <div class="step"><span class="n">4</span><div class="body">
+        <h3>Owiń aplikację w provider</h3>
+        <div class="code" data-src="c17-main" data-file="src/main.jsx" data-kind="edit" data-hl="7,12,14"></div>
+        <p class="what"><code>AuthProvider</code> jest <strong>nad</strong> routerem, bo kontekst muszą widzieć wszystkie strony i layouty. Kolejność ma znaczenie: hook może czytać tylko kontekst, który jest wyżej w drzewie.</p>
+      </div></div>
+
+      <div class="step"><span class="n">5</span><div class="body">
+        <h3>Strona, na którą prowadzi link</h3>
+        <div class="code" data-src="c17-verify" data-file="src/pages/public/AuthVerifyPage.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">useSearchParams()</span><span>Czyta część adresu po <code>?</code>. Z <code>/auth/verify?token=abc&amp;next=/ustawienia</code> wyciąga <code>token</code> i <code>next</code>.</span></div>
+          <div><span class="k">safeRedirect(…get('next'))</span><span>Adres z linku mógł zostać podmieniony. Sprawdzamy go jeszcze raz, zanim po nim przekierujemy.</span></div>
+          <div><span class="k">useRef(false)</span><span><code>ref</code> to pudełko, które przetrwa rendery i nie wywołuje nowego renderu po zmianie. Przy drugim przebiegu StrictMode <code>hasStarted.current</code> już jest <code>true</code>, więc nie zużyjemy tokenu drugi raz.</span></div>
+          <div><span class="k">login(token ?? '')</span><span>Bez tokenu w adresie wysyłamy pusty napis. „Serwer” odpowie błędem i pokażemy „Nie udało się zalogować”.</span></div>
+          <div><span class="k">navigate(…, { replace: true })</span><span><code>replace</code> podmienia wpis w historii. Strzałka „wstecz” z panelu nie wróci na zużyty link.</span></div>
+        </div>
+        <div class="code" data-src="c17-router" data-file="src/router.jsx" data-kind="edit" data-hl="1,7"></div>
+      </div></div>
+
+      <div class="step"><span class="n">6</span><div class="body">
+        <h3>Pokaż, kto jest zalogowany</h3>
+        <p class="what">W sidebarze i nagłówku panelu. Pisz na razie <code>user?.name</code> ze znakiem zapytania: do sesji 18 da się wejść na <code>/panel</code> bez logowania, a wtedy <code>user</code> to <code>null</code> i zwykłe <code>user.name</code> wywali stronę.</p>
+        <div class="code" data-src="c17-sidebar" data-file="src/components/layout/Sidebar.jsx" data-kind="edit" data-hl="1,5,10-12"></div>
+        <div class="code" data-src="c17-dash" data-file="src/pages/owner/DashboardPage.jsx" data-kind="edit" data-hl="1,4,9"></div>
+      </div></div>
+
+      <div class="step"><span class="n">✓</span><div class="body">
+        <h3>Gotowe, gdy</h3>
+        <ul class="check">
+          <li>Po kliknięciu linku jesteś na <code>/panel</code> z „Cześć, Maciej”, a w sidebarze „Zalogowano jako Maciej”.</li>
+          <li>Po odświeżeniu nadal jesteś zalogowany.</li>
+          <li>Ponowne otwarcie tego samego linku pokazuje „Nie udało się zalogować”.</li>
+          <li>Link dla nowego adresu z imieniem „Ola” zakłada konto (widać je w <code>users</code>) i wita „Cześć, Ola”. Panel Oli pokazuje na razie Lunę i Mruczka; filtr po właścicielu dojdzie w sesji 18.</li>
+          <li>W konsoli brak błędów mimo <code>StrictMode</code>.</li>
+        </ul>
+        <div class="commit"><span>feat(auth): weryfikacja linku i kontekst zalogowanego użytkownika</span><button type="button" data-copy="feat(auth): weryfikacja linku i kontekst zalogowanego użytkownika">Kopiuj</button></div>
+      </div></div>
+    </article>
+
+    <!-- ============ SESJA 18 ============ -->
+    <article class="session" id="s18" data-session="18">
+      <div class="s-head">
+        <div class="s-meta"><span class="s-num">Sesja 18</span><span>~1,5 h</span><span>logowanie · krok 3 z 4</span><label class="donebox"><input type="checkbox" data-done="18"> Zrobione</label></div>
+        <h2>Panel tylko dla zalogowanych, powrót po logowaniu i wylogowanie</h2>
+        <p class="goal">Niezalogowany trafia z <code>/panel</code> na <code>/login</code>, po zalogowaniu wraca tam, skąd przyszedł; „Wyloguj się” działa.</p>
+      </div>
+
+      <div class="concepts">
+        <div><b><code>&lt;Navigate&gt;</code></b><span>Przekierowanie zapisane jako komponent. Wyrenderowanie <code>&lt;Navigate to="/login" /&gt;</code> od razu zmienia stronę. Używasz go w JSX, a <code>navigate()</code> w obsłudze zdarzeń.</span></div>
+        <div><b><code>replace</code></b><span>Zamiast dopisywać nowy wpis do historii, podmienia bieżący. Bez tego „wstecz” z <code>/login</code> wróciłoby na <code>/panel</code>, które znów przekierowuje: pętla.</span></div>
+        <div><b>Strażnik tras (layout route)</b><span>Trasa bez <code>path</code> z <code>element: &lt;RequireAuth /&gt;</code>. Albo przepuszcza dzieci przez <code>&lt;Outlet /&gt;</code>, albo przekierowuje. Jedna linijka chroni całą grupę stron.</span></div>
+        <div><b>Open redirect</b><span>Gdyby <code>next</code> mógł być dowolnym adresem, ktoś wysłałby link „zaloguj się w PeTrace” kończący się na stronie-podróbce. <code>safeRedirect</code> przepuszcza tylko ścieżki wewnątrz aplikacji.</span></div>
+        <div><b>401</b><span>Kod HTTP „nie wiem, kim jesteś”. Funkcje tylko dla zalogowanych rzucają go, gdy nie ma sesji. 403 znaczyłoby „wiem, kim jesteś, ale nie wolno ci”.</span></div>
+        <div><b>Najpierw nawigacja, potem wylogowanie</b><span>Gdy najpierw usuniesz użytkownika, <code>RequireAuth</code> zdąży zobaczyć brak sesji i przerzuci Cię na <code>/login</code>, a nie na stronę główną.</span></div>
+      </div>
+
+      <div class="step"><span class="n">1</span><div class="body">
+        <h3>Strażnik tras</h3>
+        <div class="code" data-src="c18-require" data-file="src/components/layout/RequireAuth.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">if (isLoading) return …Spinner</span><span>Najważniejsza linijka. Bez niej odświeżenie dowolnej strony panelu zawsze kończyłoby się na <code>/login</code>, bo przez chwilę <code>user</code> jest <code>null</code>.</span></div>
+          <div><span class="k">state={{ from: location }}</span><span>Zapamiętuje cały adres (ścieżkę i <code>?tab=…</code>), na który ktoś próbował wejść. <code>LoginPage</code> go odczyta.</span></div>
+          <div><span class="k">&lt;Outlet /&gt;</span><span>„Tu wstaw dziecko”. Zalogowany widzi <code>OwnerLayout</code> z właściwą stroną, tak jakby strażnika nie było.</span></div>
+        </div>
+        <p class="what">W routerze grupa właściciela ma już miejsce na strażnika (komentarz <code>// RequireAuth</code>). Wystarczy dodać <code>element</code>:</p>
+        <div class="code" data-src="c18-router" data-file="src/router.jsx" data-kind="edit" data-hl="1,6"></div>
+      </div></div>
+
+      <div class="step"><span class="n">2</span><div class="body">
+        <h3>Każdy widzi tylko swoje zwierzęta</h3>
+        <p class="what">Dopisz <code>requireUser</code> do <code>client.js</code> (pod <code>findSessionUser</code>) i użyj go w <code>getPets</code>. TODO z ostatnich poprawek możesz usunąć.</p>
+        <div class="code" data-src="c18-client" data-file="src/api/mock/client.js" data-kind="edit"></div>
+        <div class="code" data-src="c18-pets" data-file="src/api/mock/pets.js" data-kind="edit" data-hl="2,7,8"></div>
+        <div class="explain">
+          <div><span class="k">requireUser(db)</span><span>Każda funkcja panelu zaczyna od tego samego: „kto pyta?”. To przyszły middleware <code>requireAuth</code> w Expressie.</span></div>
+          <div><span class="k">.filter(… ownerId === user.id)</span><span>Odpowiednik <code>WHERE owner_id = $1</code>. Filtrujemy na „serwerze”, a nie na stronie: przeglądarka nigdy nie dostaje cudzych danych.</span></div>
+          <div><span class="k">.map(toPet)</span><span>Usuwa <code>ownerId</code> i dokleja kod zawieszki. Strona dostaje dokładnie kształt z dokumentacji API.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">3</span><div class="body">
+        <h3>Logowanie pamięta, skąd przyszedłeś</h3>
+        <p class="what">W <code>LoginPage</code> zamień <code>const next = null</code> na odczyt z <code>location.state</code> i dodaj przekierowanie dla zalogowanych.</p>
+        <div class="code" data-src="c18-login" data-file="src/pages/public/LoginPage.jsx" data-kind="edit" data-hl="2,4,7-8,14-15,17"></div>
+        <div class="explain">
+          <div><span class="k">location.state?.from</span><span>To, co <code>RequireAuth</code> zapisał w <code>state</code>. Wejście na <code>/login</code> z palca daje <code>undefined</code> i wtedy po zalogowaniu idziemy do <code>/panel</code>.</span></div>
+          <div><span class="k">pathname + search</span><span>Ścieżka plus parametry: <code>/zwierzeta/luna</code> + <code>?tab=health</code>. Wrócisz dokładnie na tę zakładkę.</span></div>
+          <div><span class="k">if (user) return &lt;Navigate …&gt;</span><span>Zalogowany nie ma czego szukać na <code>/login</code>. Musi stać <strong>po</strong> wszystkich hookach: hooki zawsze wywołujemy w tej samej kolejności, bez wcześniejszego <code>return</code>.</span></div>
+          <div><span class="k">requestMagicLink(email, { name, next })</span><span><code>next</code> trafia do linku w mailu. Powrót zadziała nawet wtedy, gdy link otworzysz w innej karcie.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">4</span><div class="body">
+        <h3>Ustawienia z przyciskiem „Wyloguj się”</h3>
+        <p class="what">Na razie tylko wylogowanie. Formularz z imieniem i telefonem dopiszesz w sesji 23.</p>
+        <div class="code" data-src="c18-settings" data-file="src/pages/owner/SettingsPage.jsx" data-kind="new"></div>
+        <div class="code" data-src="c18-router2" data-file="src/router.jsx" data-kind="edit" data-hl="1,3"></div>
+        <p class="what">Teraz <code>user</code> w panelu zawsze istnieje, więc w <code>Sidebar</code> i <code>DashboardPage</code> możesz wrócić z <code>user?.name</code> do <code>user.name</code>.</p>
+      </div></div>
+
+      <div class="step"><span class="n">✓</span><div class="body">
+        <h3>Gotowe, gdy</h3>
+        <ul class="check">
+          <li>Wylogowany wchodzi na <code>/ustawienia</code> → ląduje na <code>/login</code> → „Symuluj kliknięcie” → wraca na <strong><code>/ustawienia</code></strong>.</li>
+          <li>Odświeżenie zalogowanej strony nie wyrzuca na <code>/login</code>.</li>
+          <li>Wylogowanie przenosi na <code>/</code>, a „wstecz” nie wpuszcza z powrotem do panelu.</li>
+          <li>Nowe konto (inny e-mail) widzi pusty panel z <code>EmptyState</code>.</li>
+        </ul>
+        <div class="commit"><span>feat(auth): ochrona panelu, powrót po zalogowaniu i wylogowanie</span><button type="button" data-copy="feat(auth): ochrona panelu, powrót po zalogowaniu i wylogowanie">Kopiuj</button></div>
+      </div></div>
+    </article>
+
+    <!-- ============ SESJA 19 ============ -->
+    <article class="session" id="s19" data-session="19">
+      <div class="s-head">
+        <div class="s-meta"><span class="s-num">Sesja 19</span><span>~0,5 h</span><span>logowanie · krok 4 z 4</span><label class="donebox"><input type="checkbox" data-done="19"> Zrobione</label></div>
+        <h2>Wchodzę na konto demo jednym przyciskiem</h2>
+        <p class="goal">Na <code>/login</code> jest przycisk „Wejdź na konto demo”, który od razu loguje na konto Macieja. Przyda się na obronie.</p>
+      </div>
+
+      <div class="concepts">
+        <div><b>Komponent, który sam decyduje, czy się pokazać</b><span><code>DemoLogin</code> pyta „serwer”, czy demo jest włączone, i zwraca <code>null</code>, gdy nie. Strona logowania nie musi o tym wiedzieć.</span></div>
+        <div><b>Reakcja na zmianę kontekstu</b><span>Po <code>loginAsDemo()</code> zmienia się <code>user</code> w kontekście, <code>LoginPage</code> się przerysowuje i jej <code>&lt;Navigate&gt;</code> sam przenosi do panelu. Nie wołasz <code>navigate()</code>.</span></div>
+      </div>
+
+      <div class="step"><span class="n">1</span><div class="body">
+        <h3>„Serwer”: konto demo</h3>
+        <p class="what">Dopisz na końcu <code>api/mock/auth.js</code> i dodaj obie funkcje do fasady <code>api/auth.js</code>.</p>
+        <div class="code" data-src="c19-mockauth" data-file="src/api/mock/auth.js" data-kind="edit"></div>
+        <div class="code" data-src="c19-facade" data-file="src/api/auth.js" data-kind="edit" data-hl="2"></div>
+        <div class="explain">
+          <div><span class="k">getDemoLogin()</span><span>W mocku zawsze włączone. Prawdziwy serwer odczyta to ze zmiennej <code>DEMO_LOGIN</code> i na produkcji może demo wyłączyć.</span></div>
+          <div><span class="k">404 „Konto demo nie istnieje”</span><span>Gdy usuniesz Macieja z danych, przycisk pokaże zrozumiały błąd zamiast wywalić stronę.</span></div>
+          <div><span class="k">sessions.push + setAuthToken</span><span>To samo co w <code>verifyToken</code>, tylko bez tokenu z maila.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">2</span><div class="body">
+        <h3>Kontekst: <code>loginAsDemo</code></h3>
+        <div class="code" data-src="c19-provider" data-file="src/context/AuthProvider.jsx" data-kind="edit" data-hl="2,10-13"></div>
+      </div></div>
+
+      <div class="step"><span class="n">3</span><div class="body">
+        <h3>Przycisk pod formularzem</h3>
+        <div class="code" data-src="c19-login" data-file="src/pages/public/LoginPage.jsx" data-kind="edit"></div>
+        <div class="explain">
+          <div><span class="k">useAsync(getDemoLogin, [])</span><span>Twój hook z sesji 14 w nowym miejscu. <code>data</code> jest <code>undefined</code> w trakcie ładowania, więc przycisk po prostu pojawi się chwilę później.</span></div>
+          <div><span class="k">if (!data?.enabled) return null</span><span>Stoi po hookach, tak jak <code>Navigate</code> w <code>LoginPage</code>. Komponent zwracający <code>null</code> nic nie rysuje.</span></div>
+          <div><span class="k">role="alert"</span><span>Czytnik ekranu od razu przeczyta błąd, bez szukania go na stronie.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">✓</span><div class="body">
+        <h3>Gotowe, gdy</h3>
+        <ul class="check">
+          <li>Jedno kliknięcie na <code>/login</code> przenosi do panelu z Luną i Mruczkiem.</li>
+          <li>Wejście na <code>/ustawienia</code> bez sesji → „Wejdź na konto demo” → wraca na <code>/ustawienia</code>.</li>
+          <li><code>npm run lint</code> i <code>npm run build</code> przechodzą.</li>
+        </ul>
+        <div class="commit"><span>feat(auth): logowanie na konto demo jednym przyciskiem</span><button type="button" data-copy="feat(auth): logowanie na konto demo jednym przyciskiem">Kopiuj</button></div>
+        <div class="milestone">Kamień milowy M1: logowanie na danych przykładowych, ochrona tras, powrót na stronę sprzed logowania</div>
+      </div></div>
+    </article>
+
+
+
+
+    <section class="part" id="rest"></section>
+
+    <section class="part" id="pulapki">
+      <div class="part-head"><span class="eyebrow">Dodatek</span><h2>Pułapki i rzeczy, których nie kopiujemy</h2></div>
+      <div class="traps">
+        <div><b>React Router v7</b><br>Importy z <code>react-router</code>, nie z <code>react-router-dom</code>.</div>
+        <div><b>Tailwind v4</b><br>Nie ma <code>tailwind.config.js</code>. Konfiguracja jest w <code>@theme</code> w CSS.</div>
+        <div><b>Nie przepisuj</b><br><code>SketchBox.jsx</code> ani <code>fromSeed</code> i <code>describeHealth</code> z <code>mocks/db.js</code>.</div>
+        <div><b>Ścieżki</b><br>Prototyp ma frontend w korzeniu. Ty masz go w <code>petracer-final/</code>, a od sesji 36 w <code>client/</code>.</div>
+        <div><b>Incognito w trybie mock</b><br>To „inny komputer” z osobnym localStorage. Wspólne dane będą dopiero w trybie <code>http</code>.</div>
+        <div><b>Express 5, nie 4</b><br>Błąd rzucony w funkcji <code>async</code> sam trafia do obsługi błędów. Nie potrzebujesz <code>try/catch</code> + <code>next(error)</code> jak w starych tutorialach.</div>
+        <div><b>SQL zawsze z parametrami</b><br><code>$1</code>, <code>$2</code>. Nigdy nie sklejaj zapytania z danymi od użytkownika.</div>
+        <div><b>Schemat bazy wczytuje się raz</b><br>Po zmianie <code>001_init.sql</code>: <code>docker compose -f docker-compose.dev.yml down -v</code> i <code>up -d</code>.</div>
+        <div><b>Hasło do bazy</b><br>Ustawia się tylko przy pierwszym starcie. Zmiana później daje <code>password authentication failed</code>; pomaga <code>down -v</code> (kasuje dane).</div>
+        <div><b>Port 5434, nie 5432</b><br>Na Windowsie często działa już systemowy PostgreSQL.</div>
+        <div><b>Dwa projekty na serwerze</b><br>Prototyp ma <code>name: petrace</code>, Twój <code>name: pettrace</code>, inaczej Docker pomiesza kontenery.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="text/plain" id="c16-seed">
+    // Tabele „techniczne” logowania — puste na starcie, wypełniają je funkcje z `api/auth.js`.
+    loginTokens: [],
+    sessions: [],
+</script>
+<script type="text/plain" id="c16-db">
+const STORAGE_KEY = 'pettrace:db:v2'
+</script>
+<script type="text/plain" id="c16-mockauth">
+import { getDb, saveDb } from '../../mocks/db.js'
+import { safeRedirect } from '../../lib/redirect.js'
+import { apiError } from '../errors.js'
+import { delay } from './client.js'
+
+/*
+  Logowanie bez hasła („magic link”) — odpowiednik przyszłego server/src/routes/auth.js:
+    1. requestMagicLink — „serwer” zapisuje jednorazowy token i „wysyła” e-mail z linkiem
+       /auth/verify?token=…  (e-maila nie ma, link wraca jako `devLink`)
+    2. verifyToken — sprawdza token i zakłada sesję (sesja 17)
+*/
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const LINK_TTL_MS = 15 * 60 * 1000
+
+export async function requestMagicLink(email, { name = '', next = null } = {}) {
+  await delay()
+  const normalizedEmail = email.trim().toLowerCase()
+  if (!EMAIL_PATTERN.test(normalizedEmail)) throw apiError(400, 'Wpisz poprawny adres e-mail.')
+
+  const db = getDb()
+  // Konta jeszcze nie zakładamy: token pamięta e-mail i imię, a konto powstanie
+  // w verifyToken — dopiero gdy ktoś kliknie link ze swojej skrzynki.
+  const token = crypto.randomUUID()
+  db.loginTokens.push({
+    token,
+    email: normalizedEmail,
+    name: name.trim(),
+    expiresAt: new Date(Date.now() + LINK_TTL_MS).toISOString(),
+    usedAt: null,
+  })
+  saveDb(db)
+
+  const params = new URLSearchParams({ token })
+  const safeNext = safeRedirect(next)
+  if (safeNext) params.set('next', safeNext)
+
+  // Prawdziwy serwer w produkcji NIGDY nie zwraca linku — wysyła go e-mailem.
+  // `devLink` istnieje tylko po to, żeby przycisk „[DEV] Symuluj kliknięcie w link” miał dokąd prowadzić.
+  return { email: normalizedEmail, devLink: `/auth/verify?${params}` }
+}
+</script>
+<script type="text/plain" id="c16-facade">
+/*
+  Logowanie bez hasła (magic link) i dane konta. Ten komentarz to specyfikacja przyszłego backendu:
+    requestMagicLink(email, { name, next }) → { email, devLink? }   POST /api/auth/request-link
+    verifyToken(token)                      → { user }              POST /api/auth/verify
+    getCurrentUser()                        → user | null           GET  /api/auth/me
+    logout()                                                        POST /api/auth/logout
+    updateSettings({ name, phone })         → user                  PATCH /api/me
+    getDemoLogin()                          → { enabled, email }    GET  /api/auth/demo
+    loginAsDemo()                           → { user }              POST /api/auth/demo
+
+  Strony importują tylko stąd. Dziś każda funkcja pochodzi z mock/, a w sesji 41 przełączysz
+  je po kolei na http/ — strony się nie zmienią.
+*/
+export { requestMagicLink } from './mock/auth.js'
+</script>
+<script type="text/plain" id="c16-login">
+import { useState } from 'react'
+import { useNavigate } from 'react-router'
+import { requestMagicLink } from '../../api/auth.js'
+import PageHeader from '../../components/layout/PageHeader.jsx'
+import Button from '../../components/ui/Button.jsx'
+import Card from '../../components/ui/Card.jsx'
+import Input from '../../components/ui/Input.jsx'
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export default function LoginPage() {
+  const navigate = useNavigate()
+  // Inputy kontrolowane: wartość pola żyje w stanie, a pole tylko ją pokazuje i zgłasza zmiany.
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [error, setError] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Dokąd wrócić po zalogowaniu — w sesji 18 wypełni to RequireAuth.
+  const next = null
+
+  async function handleSubmit(event) {
+    // Bez tego przeglądarka wysłałaby formularz „po staremu” i przeładowała całą stronę.
+    event.preventDefault()
+
+    // Sprawdzamy od razu w przeglądarce (szybka odpowiedź), a „serwer” i tak sprawdzi jeszcze raz.
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setError('Wpisz poprawny adres e-mail, np. maciej@pettrace.pl.')
+      return
+    }
+
+    setError(null)
+    setIsSubmitting(true)
+    try {
+      const result = await requestMagicLink(email, { name, next })
+      navigate('/login/sprawdz-poczte', { state: { email: result.email, devLink: result.devLink } })
+    } catch (requestError) {
+      setError(requestError.message)
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-sm">
+      <PageHeader title="Zaloguj się" description="Wyślemy Ci na e-mail link do logowania — bez hasła." />
+      {/* noValidate: wyłączamy dymki walidacji przeglądarki, żeby błąd wyglądał tak jak reszta aplikacji. */}
+      <Card as="form" onSubmit={handleSubmit} noValidate className="space-y-4">
+        <Input
+          label="Adres e-mail"
+          type="email"
+          name="email"
+          autoComplete="email"
+          placeholder="maciej@pettrace.pl"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          error={error}
+          hint="Konto demo: maciej@pettrace.pl. Inny adres założy nowe konto."
+        />
+        <Input
+          label="Imię (opcjonalnie)"
+          name="name"
+          autoComplete="given-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          hint="Tylko przy pierwszym logowaniu — możesz je później zmienić w ustawieniach."
+        />
+        <Button type="submit" size="lg" fullWidth disabled={isSubmitting}>
+          {isSubmitting ? 'Wysyłam…' : 'Wyślij link do logowania'}
+        </Button>
+      </Card>
+    </div>
+  )
+}
+</script>
+<script type="text/plain" id="c16-check">
+import { Link, useLocation } from 'react-router'
+import { MailCheck } from 'lucide-react'
+import Button from '../../components/ui/Button.jsx'
+
+export default function CheckEmailPage() {
+  // Dane przekazane przez LoginPage w `navigate(..., { state })`. Po odświeżeniu strony
+  // albo wejściu z palca na ten adres `state` jest puste — wtedy prosimy o nowy link.
+  const { state } = useLocation()
+
+  if (!state?.email) {
+    return (
+      <div className="mx-auto max-w-sm space-y-4 text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Nie wiemy, na jaki adres wysłać link</h1>
+        <p className="text-ink-muted">Wpisz swój e-mail jeszcze raz.</p>
+        <Button to="/login" size="lg">
+          Wróć do logowania
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto max-w-sm space-y-6 text-center">
+      <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-pine-soft text-pine">
+        <MailCheck size={32} aria-hidden="true" />
+      </span>
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Sprawdź pocztę</h1>
+        <p className="text-ink-muted">
+          Wysłaliśmy link do logowania na <strong className="text-ink">{state.email}</strong>. Kliknij go, aby przejść
+          do panelu. Link jest ważny 15 minut i działa tylko raz.
+        </p>
+      </div>
+      {/* `devLink` zwraca tylko tryb mock i serwer w trybie deweloperskim. W produkcji
+          link przychodzi wyłącznie e-mailem, więc ten przycisk się nie pojawi. */}
+      {state.devLink && (
+        <Link
+          to={state.devLink}
+          className="inline-flex min-h-12 items-center rounded-xl border-2 border-dashed border-amber px-5 font-semibold text-ink transition-colors hover:bg-ember-soft"
+        >
+          [DEV] Symuluj kliknięcie w link
+        </Link>
+      )}
+      <p className="text-sm text-ink-muted">
+        Nie widzisz wiadomości? Zajrzyj do folderu spam albo{' '}
+        <Link to="/login" className="font-semibold text-pine underline-offset-4 hover:underline">
+          wyślij link ponownie
+        </Link>
+        .
+      </p>
+    </div>
+  )
+}
+</script>
+<script type="text/plain" id="c16-router">
+import LoginPage from './pages/public/LoginPage'
+import CheckEmailPage from './pages/public/CheckEmailPage'
+
+// … w grupie PublicLayout:
+      {
+        element: <PublicLayout />,
+        children: [
+          { index: true, element: <LandingPage />},
+          { path: 'login', element: <LoginPage /> },
+          { path: 'login/sprawdz-poczte', element: <CheckEmailPage /> },
+          { path: 'auth/verify', element: <Placeholder title="Weryfikacja logowania" />},
+</script>
+
+<script type="text/plain" id="c17-client">
+/*
+  Token sesji w localStorage. Prawdziwy serwer trzyma sesję w ciasteczku httpOnly, którego
+  JavaScript nie widzi (decyzja D8). Bez serwera nie da się ustawić takiego ciasteczka,
+  więc w trybie mock to jedyne wyjście — ale tylko tutaj, nigdy w trybie http.
+*/
+const TOKEN_KEY = 'pettrace:auth-token'
+
+export function getAuthToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setAuthToken(token) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token)
+  } catch {
+    // Bez localStorage sesja nie przetrwa odświeżenia — w trybie mock to akceptowalne.
+  }
+}
+
+export function clearAuthToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    // jw.
+  }
+}
+
+// Zalogowany użytkownik albo `null` — dla tras, które działają też bez logowania (np. strona tagu).
+export function findSessionUser(db) {
+  const token = getAuthToken()
+  const session = token && db.sessions.find((item) => item.token === token)
+  if (!session) return null
+  return db.users.find((user) => user.id === session.userId) ?? null
+}
+
+// Użytkownik w kształcie z API: tylko pola, które wolno pokazać na stronie.
+export function toUser({ id, email, name, phone }) {
+  return { id, email, name, phone }
+}
+</script>
+<script type="text/plain" id="c17-mockauth">
+import { getDb, saveDb } from '../../mocks/db.js'
+import { safeRedirect } from '../../lib/redirect.js'
+import { apiError } from '../errors.js'
+import { clearAuthToken, delay, findSessionUser, setAuthToken, toUser } from './client.js'
+
+// … EMAIL_PATTERN, LINK_TTL_MS i requestMagicLink bez zmian …
+
+export async function verifyToken(token) {
+  await delay()
+  const db = getDb()
+  const link = db.loginTokens.find((item) => item.token === token)
+  const isExpired = link && new Date(link.expiresAt) < new Date()
+
+  if (!link || link.usedAt || isExpired) {
+    throw apiError(400, 'Ten link jest nieprawidłowy, wygasł albo został już użyty. Poproś o nowy.')
+  }
+
+  // Link jest jednorazowy — drugie kliknięcie w ten sam e-mail już nie zaloguje.
+  link.usedAt = new Date().toISOString()
+
+  // Pierwsze logowanie zakłada konto. Istniejące konto zostaje bez zmian (także imię).
+  let user = db.users.find((item) => item.email === link.email)
+  if (!user) {
+    user = { id: crypto.randomUUID(), email: link.email, name: link.name || link.email.split('@')[0], phone: '' }
+    db.users.push(user)
+  }
+
+  const sessionToken = crypto.randomUUID()
+  db.sessions.push({ token: sessionToken, userId: user.id, createdAt: new Date().toISOString() })
+  saveDb(db)
+  setAuthToken(sessionToken)
+
+  return { user: toUser(user) }
+}
+
+export async function getCurrentUser() {
+  await delay()
+  const user = findSessionUser(getDb())
+  return user ? toUser(user) : null
+}
+
+export async function logout() {
+  await delay()
+  const db = getDb()
+  const user = findSessionUser(db)
+  if (user) {
+    db.sessions = db.sessions.filter((session) => session.userId !== user.id)
+    saveDb(db)
+  }
+  clearAuthToken()
+}
+</script>
+<script type="text/plain" id="c17-facade">
+// … komentarz ze specyfikacją bez zmian …
+export { requestMagicLink, verifyToken, getCurrentUser, logout } from './mock/auth.js'
+</script>
+<script type="text/plain" id="c17-ctx">
+import { createContext } from 'react'
+
+// Sam „kanał”, którym AuthProvider przekazuje dane w dół drzewa. Osobny plik, bo plik .jsx
+// z komponentami powinien eksportować tylko komponenty (wymóg odświeżania na żywo w Vite).
+export const AuthContext = createContext(null)
+</script>
+<script type="text/plain" id="c17-provider">
+import { useEffect, useMemo, useState } from 'react'
+import { getCurrentUser, logout as apiLogout, verifyToken } from '../api/auth.js'
+import { AuthContext } from './AuthContext.js'
+
+/*
+  Trzyma informację „kto jest zalogowany” w jednym miejscu dla całej aplikacji.
+  Bez Contextu trzeba by przekazywać `user` przez props przez każdy layout i stronę (prop drilling).
+
+  `isLoading` jest true, dopóki nie wiemy, czy sesja istnieje. Bez tego po odświeżeniu /panel
+  strażnik tras przez ułamek sekundy widziałby `user = null` i wyrzucał na /login.
+*/
+export default function AuthProvider({ children }) {
+  const [user, setUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let ignore = false
+    getCurrentUser()
+      .then((currentUser) => {
+        if (!ignore) setUser(currentUser)
+      })
+      // Brak połączenia z serwerem traktujemy jak brak sesji — strony publiczne nadal działają.
+      .catch(() => {})
+      .finally(() => {
+        if (!ignore) setIsLoading(false)
+      })
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  // useMemo: nowy obiekt `value` tylko wtedy, gdy zmieni się user lub isLoading. Inaczej każdy
+  // render providera tworzyłby nowy obiekt i przerysowywał wszystkich, którzy używają useAuth.
+  const value = useMemo(
+    () => ({
+      user,
+      isLoading,
+      async login(token) {
+        const result = await verifyToken(token)
+        setUser(result.user)
+      },
+      async logout() {
+        await apiLogout()
+        setUser(null)
+      },
+      // Po zapisaniu ustawień (sesja 23) — żeby sidebar od razu pokazał nowe dane.
+      updateUser: setUser,
+    }),
+    [user, isLoading],
+  )
+
+  // React 19: kontekst renderujemy bezpośrednio jako komponent (starszy zapis: <AuthContext.Provider>).
+  return <AuthContext value={value}>{children}</AuthContext>
+}
+</script>
+<script type="text/plain" id="c17-useauth">
+import { useContext } from 'react'
+import { AuthContext } from '../context/AuthContext.js'
+
+// Własny hook: komponent pisze `useAuth()` i nie musi wiedzieć, skąd dane pochodzą.
+// Błąd przypomina o owinięciu aplikacji w <AuthProvider> (patrz main.jsx).
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) throw new Error('useAuth musi być użyty wewnątrz <AuthProvider>.')
+  return context
+}
+</script>
+<script type="text/plain" id="c17-main">
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router'
+import '@fontsource-variable/bricolage-grotesque'
+import '@fontsource-variable/plus-jakarta-sans'
+import './index.css'
+import AuthProvider from './context/AuthProvider.jsx'
+import { router } from './router'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  </StrictMode>,
+)
+</script>
+<script type="text/plain" id="c17-verify">
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
+import Button from '../../components/ui/Button.jsx'
+import Spinner from '../../components/ui/Spinner.jsx'
+import { useAuth } from '../../hooks/useAuth.js'
+import { safeRedirect } from '../../lib/redirect.js'
+
+// Tu trafia kliknięcie w link z e-maila: /auth/verify?token=…&next=/strona-sprzed-logowania
+export default function AuthVerifyPage() {
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token')
+  const next = safeRedirect(searchParams.get('next'))
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const [error, setError] = useState(null)
+
+  /*
+    Token jest jednorazowy, a StrictMode w trybie dev celowo uruchamia każdy efekt dwa razy.
+    Drugie wywołanie trafiłoby na zużyty token i pokazało błąd. Ref przetrwa to podwójne
+    uruchomienie, więc zapamiętujemy w nim, że weryfikacja już wystartowała.
+    (Flaga `ignore` z useAsync tu nie pomoże — odrzuciłaby wynik, ale token byłby już zużyty.)
+  */
+  const hasStarted = useRef(false)
+
+  useEffect(() => {
+    if (hasStarted.current) return
+    hasStarted.current = true
+
+    login(token ?? '').then(
+      () => navigate(next ?? '/panel', { replace: true }),
+      (loginError) => setError(loginError.message),
+    )
+  }, [login, token, next, navigate])
+
+  if (error) {
+    return (
+      <div role="alert" className="mx-auto max-w-sm space-y-4 text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Nie udało się zalogować</h1>
+        <p className="text-ink-muted">{error}</p>
+        <Button to="/login" size="lg">
+          Wyślij nowy link
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid place-items-center py-12">
+      <Spinner size="lg" showLabel label="Weryfikuję link…" />
+    </div>
+  )
+}
+</script>
+<script type="text/plain" id="c17-router">
+import AuthVerifyPage from './pages/public/AuthVerifyPage'
+
+// … w grupie PublicLayout:
+          { index: true, element: <LandingPage />},
+          { path: 'login', element: <LoginPage /> },
+          { path: 'login/sprawdz-poczte', element: <CheckEmailPage /> },
+          { path: 'auth/verify', element: <AuthVerifyPage /> },
+</script>
+<script type="text/plain" id="c17-sidebar">
+import { useAuth } from '../../hooks/useAuth.js'
+// … pozostałe importy bez zmian …
+
+export default function Sidebar() {
+  const { user } = useAuth()
+
+  return (
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-line bg-surface p-6 lg:flex">
+      <Logo to="/panel" />
+      <p className="-mt-4 text-sm text-ink-muted">
+        Zalogowano jako <span className="font-semibold text-ink">{user?.name}</span>
+      </p>
+
+      <nav aria-label="Nawigacja główna">
+      {/* … reszta bez zmian … */}
+</script>
+<script type="text/plain" id="c17-dash">
+import { useAuth } from '../../hooks/useAuth.js'
+
+export default function DashboardPage() {
+  const { user } = useAuth()
+
+  return (
+    <>
+      <PageHeader
+        title={`Cześć, ${user?.name ?? ''}`}
+        description="Twoje zwierzęta i ostatnie skanowania zawieszek."
+</script>
+
+<script type="text/plain" id="c18-require">
+import { Navigate, Outlet, useLocation } from 'react-router'
+import { useAuth } from '../../hooks/useAuth.js'
+import Spinner from '../ui/Spinner.jsx'
+
+// Strażnik tras właściciela. Zapamiętujemy w `state`, dokąd użytkownik chciał wejść,
+// żeby po zalogowaniu tam wrócić (LoginPage przekazuje to dalej do magic linka).
+export default function RequireAuth() {
+  const { user, isLoading } = useAuth()
+  const location = useLocation()
+
+  // Dopóki nie wiadomo, czy sesja istnieje, nie przekierowujemy — inaczej odświeżenie
+  // dowolnej strony panelu zawsze kończyłoby się na /login.
+  if (isLoading) {
+    return (
+      <div className="grid min-h-dvh place-items-center">
+        <Spinner size="lg" label="Sprawdzam sesję…" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  return <Outlet />
+}
+</script>
+<script type="text/plain" id="c18-router">
+import RequireAuth from './components/layout/RequireAuth'
+
+// … na końcu tablicy w RootLayout:
+      {
+        // Trasa bez `path`: nie zmienia adresu, tylko pilnuje dostępu do wszystkich dzieci.
+        element: <RequireAuth />,
+        children: [
+          {
+            element: <OwnerLayout />,
+            children: [
+              { path: 'panel', element: <DashboardPage />},
+              // … reszta tras właściciela bez zmian …
+</script>
+<script type="text/plain" id="c18-client">
+import { apiError } from '../errors.js'
+
+// … delay, toPet, getAuthToken, findSessionUser, toUser bez zmian …
+
+// To samo co findSessionUser, ale dla tras tylko dla zalogowanych — brak sesji kończy się błędem 401.
+export function requireUser(db) {
+  const user = findSessionUser(db)
+  if (!user) throw apiError(401, 'Sesja wygasła. Zaloguj się ponownie.')
+  return user
+}
+</script>
+<script type="text/plain" id="c18-pets">
+import { getDb } from '../../mocks/db'
+import { delay, requireUser, toPet } from './client'
+
+export async function getPets() {
+  await delay()
+  const db = getDb()
+  const user = requireUser(db)
+  return db.pets.filter((pet) => pet.ownerId === user.id).map((pet) => toPet(db, pet))
+}
+</script>
+<script type="text/plain" id="c18-login">
+import { useState } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router'
+// … pozostałe importy bez zmian …
+import { useAuth } from '../../hooks/useAuth.js'
+
+export default function LoginPage() {
+  const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  // … name, error, isSubmitting bez zmian …
+
+  // RequireAuth zapisał tu stronę, na którą użytkownik próbował wejść przed zalogowaniem.
+  const from = location.state?.from
+  const next = from ? from.pathname + from.search : null
+
+  if (user) return <Navigate to={next ?? '/panel'} replace />
+
+  async function handleSubmit(event) {
+    // … bez zmian …
+</script>
+<script type="text/plain" id="c18-settings">
+import { useNavigate } from 'react-router'
+import { LogOut } from 'lucide-react'
+import PageHeader from '../../components/layout/PageHeader.jsx'
+import Button from '../../components/ui/Button.jsx'
+import { useAuth } from '../../hooks/useAuth.js'
+
+export default function SettingsPage() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  // Najpierw wychodzimy z panelu, potem kasujemy sesję. W odwrotnej kolejności RequireAuth
+  // zdążyłby zauważyć brak użytkownika i przerzucić nas na /login zamiast na stronę główną.
+  async function handleLogout() {
+    navigate('/', { replace: true })
+    await logout()
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <PageHeader title="Ustawienia" description={`Zalogowano jako ${user.email}`} />
+      <Button variant="danger" size="lg" icon={LogOut} onClick={handleLogout}>
+        Wyloguj się
+      </Button>
+    </div>
+  )
+}
+</script>
+<script type="text/plain" id="c18-router2">
+import SettingsPage from './pages/owner/SettingsPage'
+// … w grupie OwnerLayout:
+              { path: 'ustawienia', element: <SettingsPage /> }
+</script>
+
+<script type="text/plain" id="c19-mockauth">
+// Konto demo z danych przykładowych — odpowiednik GET/POST /api/auth/demo na serwerze.
+const DEMO_EMAIL = 'maciej@pettrace.pl'
+
+export async function getDemoLogin() {
+  return { enabled: true, email: DEMO_EMAIL }
+}
+
+export async function loginAsDemo() {
+  await delay()
+  const db = getDb()
+  const user = db.users.find((item) => item.email === DEMO_EMAIL)
+  if (!user) throw apiError(404, 'Konto demo nie istnieje. Wyczyść dane w localStorage.')
+
+  const sessionToken = crypto.randomUUID()
+  db.sessions.push({ token: sessionToken, userId: user.id, createdAt: new Date().toISOString() })
+  saveDb(db)
+  setAuthToken(sessionToken)
+  return { user: toUser(user) }
+}
+</script>
+<script type="text/plain" id="c19-facade">
+// … komentarz ze specyfikacją bez zmian …
+export { requestMagicLink, verifyToken, getCurrentUser, logout, getDemoLogin, loginAsDemo } from './mock/auth.js'
+</script>
+<script type="text/plain" id="c19-provider">
+import { useEffect, useMemo, useState } from 'react'
+import { getCurrentUser, loginAsDemo as apiLoginAsDemo, logout as apiLogout, verifyToken } from '../api/auth.js'
+
+  // … stan i useEffect bez zmian …
+  const value = useMemo(
+    () => ({
+      user,
+      isLoading,
+      async login(token) { /* … bez zmian … */ },
+      async loginAsDemo() {
+        const result = await apiLoginAsDemo()
+        setUser(result.user)
+      },
+      async logout() { /* … bez zmian … */ },
+      updateUser: setUser,
+    }),
+    [user, isLoading],
+  )
+</script>
+<script type="text/plain" id="c19-login">
+import { PawPrint } from 'lucide-react'
+import { getDemoLogin, requestMagicLink } from '../../api/auth.js'
+import { useAsync } from '../../hooks/useAsync.js'
+// … pozostałe importy bez zmian …
+
+// W JSX komponentu LoginPage, zaraz pod </Card>:
+      <DemoLogin />
+    </div>
+  )
+}
+
+/*
+  Wejście na konto demonstracyjne bez maila — do pokazu i testów. Serwer mówi, czy jest włączone,
+  i loguje wyłącznie na konto demo. Po zalogowaniu `user` w kontekście się zmienia,
+  a `<Navigate>` na górze LoginPage sam przenosi do panelu.
+*/
+function DemoLogin() {
+  const { loginAsDemo } = useAuth()
+  const { data } = useAsync(getDemoLogin, [])
+  const [error, setError] = useState(null)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+
+  if (!data?.enabled) return null
+
+  async function handleClick() {
+    setError(null)
+    setIsLoggingIn(true)
+    try {
+      await loginAsDemo()
+    } catch (loginError) {
+      setError(loginError.message)
+      setIsLoggingIn(false)
+    }
+  }
+
+  return (
+    <Card className="mt-4 space-y-3 text-center">
+      <p className="text-sm text-ink-muted">
+        Chcesz tylko obejrzeć aplikację? Wejdź na konto demonstracyjne z Luną i Mruczkiem.
+      </p>
+      <Button variant="secondary" size="lg" icon={PawPrint} fullWidth onClick={handleClick} disabled={isLoggingIn}>
+        {isLoggingIn ? 'Loguję…' : 'Wejdź na konto demo'}
+      </Button>
+      {error && (
+        <p role="alert" className="text-sm font-medium text-alert">
+          {error}
+        </p>
+      )}
+    </Card>
+  )
+}
+</script>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function(){
+const DETAILED = [16,17,18,19];
+const CURRENT = 16;
+
+// Sesje skrócone: [nr, tytuł, czas, cel, źródło[], pojęcia, gotowe gdy, commit]
+const PARTS = [
+ {id:"A", name:"Fundamenty", note:"Etapy 0–3 · zrobione we wrześniu", items:[
+  [0,"Nowy projekt Vite + React","","","","","","chore: utwórz projekt Vite + React"],
+  [1,"Tailwind, kolory i fonty","","","","","","feat: Tailwind z tokenami kolorów i fontami"],
+  [2,"Router i pierwsze strony","","","","","","feat: routing ze stroną główną i 404"],
+  [3,"Pełna mapa tras","","","","","","feat: pełna mapa tras z placeholderami"]]},
+ {id:"B", name:"Layout", note:"Etapy 4–7 · zrobione", items:[
+  [4,"RootLayout, PublicLayout, Logo"],[5,"FinderLayout, VetLayout, PageHeader"],[6,"Nawigacja boczna (desktop)"],[7,"Nawigacja mobilna i przycisk szybkiej akcji"]]},
+ {id:"C", name:"Komponenty UI", note:"Etapy 8–12 · zrobione", items:[
+  [8,"Card, Badge, Spinner + galeria /dev/ui"],[9,"Button"],[10,"Input, Textarea, Select"],[11,"Toggle, Tabs"],[12,"Modal, EmptyState, StatTile"]]},
+ {id:"D", name:"Dane i logowanie", note:"Sesje 13–19 · M1 do 8.11", items:[
+  [13,"Dane przykładowe","~1 h"],[14,"Panel pokazuje moje zwierzęta","~2 h"],[15,"Karty zwierząt z wiekiem, zaginięciem i zawieszką","~1,5 h"],
+  [16,"Proszę o link do logowania","~1,5 h"],[17,"Klikam link i jestem zalogowany","~2 h"],[18,"Panel tylko dla zalogowanych, powrót i wylogowanie","~1,5 h"],[19,"Konto demo jednym przyciskiem","~0,5 h"]], ms:"M1 · logowanie i dane działają · 8.11"},
+ {id:"E", name:"Panel właściciela", note:"Sesje 20–23 · M2 do 22.11", items:[
+  [20,"Profil zwierzęcia — dane i zdrowie","~1,5 h","Klikam kartę Luny i widzę profil z zakładkami „Dane” i „Zdrowie”, a zakładka zostaje po odświeżeniu.",
+   ["<code>api/mock/client.js</code> — <code>findOwnPet</code>","<code>api/mock/pets.js</code> — <code>getPetById</code>; dopisz do fasady","<code>lib/format.js</code> — <code>formatDate</code>, <code>formatWeight</code>","<code>pages/owner/PetProfilePage.jsx</code> — <code>TABS</code> (bez <code>activity</code>), <code>PetProfilePage</code> bez <code>updatedPet</code> i <code>LostModeSwitch</code>, <code>ProfileHeader</code>, <code>ProfileTabs</code>, <code>InfoTab</code>, <code>HealthTab</code>","<code>router.jsx</code> — trasa <code>zwierzeta/:id</code>"],
+   "Pobieranie zależne od parametru URL (<code>useParams</code> + <code>useAsync</code>), stan w adresie (<code>?tab=health</code>) zamiast w <code>useState</code>, <code>replace</code> przy zmianie zakładki, <code>&lt;dl&gt;</code>, <code>whitespace-pre-line</code>, „cudze = 404”.",
+   "<code>/zwierzeta/luna?tab=health</code> pokazuje uwagi medyczne; przełączanie zakładek zmienia adres, a odświeżenie zostawia tę samą; <code>/zwierzeta/xyz</code> pokazuje „Nie znaleziono zwierzęcia”.","feat(owner): profil zwierzęcia z zakładkami w adresie"],
+  [21,"Dodaję nowe zwierzę","~2–3 h","Przycisk „Dodaj zwierzę” otwiera formularz, a po zapisie widzę profil nowego zwierzęcia.",
+   ["<code>api/mock/pets.js</code> — <code>EDITABLE_FIELDS</code>, <code>pickEditable</code>, <code>validate</code>, <code>createPet</code>; dopisz do fasady","<code>components/ui/Notice.jsx</code> — cały plik","<code>components/pets/PetForm.jsx</code> — cały plik","<code>pages/owner/PetNewPage.jsx</code> — cały plik; trasa <code>zwierzeta/nowe</code>","<code>DashboardPage.jsx</code> — przycisk w <code>EmptyState</code> (w nagłówku już masz)"],
+   "Stan formularza jako obiekt, jeden <code>handleChange</code> po atrybucie <code>name</code>, walidacja w przeglądarce i „na serwerze”, <code>null</code> → <code>''</code> w polach, błąd z API w formularzu, lista dozwolonych pól.",
+   "Pusty formularz pokazuje błąd przy imieniu; waga „12,5” się zapisuje; data z przyszłości daje błąd; po zapisie jesteś na profilu, a w panelu jest karta (także po odświeżeniu).","feat(owner): dodawanie zwierzęcia"],
+  [22,"Edytuję zwierzę","~1 h","Przycisk „Edytuj” w profilu otwiera ten sam formularz z danymi i zapisuje zmiany.",
+   ["<code>api/mock/pets.js</code> — <code>updatePet</code>; dopisz do fasady","<code>pages/owner/PetEditPage.jsx</code> — cały plik; trasa <code>zwierzeta/:id/edytuj</code>"],
+   "Jeden komponent w dwóch trybach, <code>key</code> do zresetowania stanu formularza, aktualizacja bez mutacji (<code>{ ...pet, ...zmiany }</code>).",
+   "Zmiana rasy Luny jest widoczna w profilu i po odświeżeniu; „Anuluj” wraca bez zmian.","feat(owner): edycja profilu zwierzęcia"],
+  [23,"Ustawiam numer telefonu dla znalazcy","~1 h","W ustawieniach zmieniam imię i telefon, a panel ostrzega, gdy telefonu brak.",
+   ["<code>api/mock/auth.js</code> — <code>PHONE_PATTERN</code>, <code>updateSettings</code>; dopisz do fasady","<code>context/AuthProvider.jsx</code> — <code>updateUser</code> (już masz z sesji 17)","<code>pages/owner/SettingsPage.jsx</code> — cały plik (formularz + wylogowanie)","<code>DashboardPage.jsx</code> — <code>Notice</code> „Dodaj numer telefonu”"],
+   "Aktualizacja danych w kontekście po zapisie, status formularza jako jeden napis (<code>idle</code> / <code>saving</code> / <code>saved</code> / <code>error</code>), <code>type=\"tel\"</code> i <code>autoComplete</code>.",
+   "Zmiana imienia od razu zmienia sidebar; błędny numer pokazuje błąd; konto bez telefonu widzi żółte ostrzeżenie, które znika po zapisaniu numeru.","feat(owner): ustawienia z imieniem i numerem telefonu"]], ms:"M2 · panel właściciela · 22.11"},
+ {id:"F", name:"Zawieszka i znalazca", note:"Sesje 24–34 · M3 do 6.12 · serce pracy", items:[
+  [24,"Znalazca skanuje tag i widzi profil zwierzaka","~2 h","Niezalogowana osoba wchodzi na <code>/t/LUNA-7K2Q</code> i widzi imię, uwagi medyczne i przycisk „Zadzwoń do opiekuna”.",
+   ["<code>api/mock/tags.js</code> — <code>resolveTag</code> bez <code>recordScan</code> i bez gałęzi <code>owner</code> i <code>lost</code>; fasada <code>api/tags.js</code> z komentarzem o wariantach","<code>lib/sms.js</code> — <code>normalizePhone</code>, <code>buildTelLink</code>","<code>components/finder/</code> — <code>ActionLink</code>, <code>MedicalNotes</code>, <code>InactiveTagView</code>, <code>FoundView</code>","<code>pages/finder/TagPage.jsx</code> — <code>TagContent</code> (warianty <code>found</code>, <code>inactive</code>) i <code>Loading</code>","<code>router.jsx</code> — trasa <code>t/:tagId</code>"],
+   "Routing kontekstowy (D6): o widoku decyduje „serwer”, nie strona; zwracanie tylko potrzebnych danych; <code>switch</code> po wariancie; <code>tel:</code> jako <code>&lt;a href&gt;</code>; projektowanie pod stres.",
+   "Po wylogowaniu <code>/t/LUNA-7K2Q</code> pokazuje Lunę z przyciskiem ≥ 56 px do <code>tel:+48600123456</code>, bez numeru i imienia opiekuna na ekranie; <code>/t/XXXX-0000</code> i <code>/t/ABCD-EFGH</code> → „Ten tag nie jest aktywny”; małe litery też działają.","feat(finder): profil zwierzaka po zeskanowaniu zawieszki"],
+  [25,"Zaginione zwierzę — alarm dla znalazcy","~1 h","Zawieszka zaginionego Mruczka pokazuje czerwony alarm z komunikatem i numerem opiekuna.",
+   ["<code>api/mock/tags.js</code> — gałąź <code>lost</code> (z <code>phone</code> i <code>message</code>)","<code>components/finder/LostView.jsx</code> — cały plik","<code>TagPage.jsx</code> — <code>case 'lost'</code>"],
+   "Jednoznaczny komunikat alarmowy, kiedy numer jest widoczny, a kiedy nie (D5), <code>state</code> przekazany w <code>&lt;Link&gt;</code>.",
+   "Po wylogowaniu <code>/t/MRCZ-4P9D</code> pokazuje „Zaginione zwierzę”, komunikat, numer i przyciski „Wyślij SMS z lokalizacją” oraz „Zadzwoń”.","feat(finder): widok alarmowy dla zaginionego zwierzęcia"],
+  [26,"Włączam tryb zaginięcia w profilu","~1,5 h","Przestawiam „Zaginione”, potwierdzam w oknie z komunikatem, a zawieszka pokazuje alarm.",
+   ["<code>api/mock/pets.js</code> — <code>setLostMode</code>; dopisz do fasady","<code>components/pets/LostModeSwitch.jsx</code> — cały plik","<code>PetProfilePage.jsx</code> — <code>updatedPet</code>, <code>&lt;LostModeSwitch&gt;</code>, odznaka w <code>ProfileHeader</code>"],
+   "Potwierdzenie w <code>Modal</code>, przełącznik, który nie zmienia stanu od razu, aktualizacja widoku danymi z API, <code>key</code> przy zmianie zwierzęcia.",
+   "Włączenie trybu dla Luny daje czerwone oznaczenie w profilu i na karcie, a <code>/t/LUNA-7K2Q</code> pokazuje alarm z Twoim komunikatem. Wyłączenie też wymaga potwierdzenia.","feat(owner): przełącznik trybu zaginięcia z potwierdzeniem"],
+  [27,"Znalazca wysyła mi SMS z lokalizacją","~2–3 h","Z widoku alarmowego znalazca pobiera pozycję i otwiera gotowy SMS z linkiem do mapy.",
+   ["<code>hooks/useGeolocation.js</code> — cały plik","<code>lib/sms.js</code> — <code>isIOS</code>, <code>buildSmsLink</code>, <code>mapsLink</code>, <code>buildFinderMessage</code>","<code>pages/finder/ShareLocationPage.jsx</code> — cały plik; trasa <code>t/:tagId/lokalizacja</code>"],
+   "Geolocation API (zgoda, kody błędów), tylko HTTPS/localhost, <code>sms:</code> na Androidzie i iOS, <code>encodeURIComponent</code>, wyjście awaryjne bez lokalizacji, dane, które celowo nie trafiają do bazy (D4, RODO).",
+   "W DevTools → Sensors ustawiasz pozycję, a „Otwórz SMS” zawiera numer i <code>https://maps.google.com/?q=…</code>; przy „Block” jest SMS bez lokalizacji; iPhone: <code>&amp;body=</code>, Android: <code>?body=</code>.","feat(finder): SMS z lokalizacją do opiekuna"],
+  [28,"Skanuję własny tag i zapisuję karmienie","~1,5 h","Zalogowany właściciel na swojej zawieszce widzi „Karmienie” i „Spacer”, a kliknięcie zapisuje aktywność.",
+   ["<code>api/mock/tags.js</code> — <code>isOwner</code> i gałąź <code>owner</code> <strong>przed</strong> <code>lost</code>","<code>api/mock/activities.js</code> — <code>logActivity</code>; fasada <code>api/activities.js</code>","<code>components/finder/OwnerQuickLog.jsx</code> — cały plik","<code>lib/format.js</code> — <code>formatRelative</code>","<code>TagPage.jsx</code> — czekanie na <code>isLoading</code>, <code>key={user?.id ?? 'anonymous'}</code>, <code>case 'owner'</code>"],
+   "Kolejność warunków w routingu kontekstowym, <code>key</code> do ponownego pobrania po zmianie użytkownika, stan „zapisano”, blokowanie przycisków w trakcie zapisu.",
+   "Zalogowany na <code>/t/LUNA-7K2Q</code> widzi szybki zapis i „Zapisano karmienie (dziś, …)”; inne konto widzi zwykły profil; właściciel zaginionego Mruczka widzi szybki zapis, a nie alarm.","feat(finder): szybki zapis aktywności po zeskanowaniu własnej zawieszki"],
+  [29,"Widzę aktywność z ostatnich 7 dni","~1,5 h","Zakładka „Aktywność” w profilu pokazuje podsumowanie i listę z tygodnia.",
+   ["<code>api/mock/activities.js</code> — <code>getActivities</code>","<code>lib/format.js</code> — <code>formatDuration</code>, <code>formatDistance</code>","<code>components/pets/ActivityList.jsx</code> — cały plik","<code>PetProfilePage.jsx</code> — zakładka <code>activity</code> i <code>ActivityTab</code>"],
+   "Filtrowanie po dacie, sortowanie napisów ISO (<code>localeCompare</code>), <code>reduce</code>, <code>StatTile</code> i <code>tabular-nums</code>.",
+   "Luna ma kafelki „Spacery / Karmienia / Czas spacerów” i listę z 7 dni; karmienie z sesji 28 jest na górze z odznaką „Po skanie”; nowe zwierzę widzi stan pusty.","feat(owner): aktywność zwierzęcia z ostatnich 7 dni"],
+  [30,"Każde skanowanie zapisuje się, a ja widzę je w panelu","~1,5 h","Każde otwarcie zawieszki zapisuje skan, a panel pokazuje ostatnie skanowania z przeglądarką.",
+   ["<code>api/mock/tags.js</code> — <code>DUPLICATE_SCAN_MS</code>, <code>recordScan</code>, <code>scansOf</code>, <code>getRecentScans</code>","<code>lib/format.js</code> — <code>describeUserAgent</code>","<code>components/tags/ScanList.jsx</code> — cały plik","<code>DashboardPage.jsx</code> — <code>RecentScans</code>"],
+   "Audyt bezpieczeństwa (UC8), minimalizacja danych (bez IP i lokalizacji), ochrona przed podwójnym zapisem, łączenie trzech kolekcji jak <code>JOIN</code>, User-Agent.",
+   "Panel pokazuje „Safari · iOS”, „Chrome · Android”; skan po wylogowaniu jest na górze jako „Inna osoba”, własny jako „Ty”. Nie testuj w incognito.","feat(owner): zapis skanowań i ostatnie skanowania w panelu"],
+  [31,"Tworzę zawieszkę z kodem QR","~2 h","Dla nowego zwierzęcia klikam „Utwórz zawieszkę” i dostaję kod, QR, adres do NFC i plik do druku.",
+   ["<code>npm install qrcode.react</code>","<code>api/mock/tags.js</code> — <code>ALPHABET</code>, <code>generateTagCode</code>, <code>createTag</code>","<code>pages/owner/PetTagPage.jsx</code> — bez <code>ScanHistory</code> i bez wymiany kodu","<code>router.jsx</code> — trasa <code>zwierzeta/:id/tag</code>"],
+   "<code>crypto.getRandomValues</code>, alfabet bez mylących znaków, <code>QRCodeSVG</code>, <code>window.location.origin</code>, <code>navigator.clipboard</code>, pobieranie z <code>Blob</code>, hook z logiką akcji, warunek wstępny (bez telefonu nie ma zawieszki).",
+   "Kod bez <code>0 O 1 I L</code>; „Kopiuj” kopiuje adres; „Pobierz QR (SVG)” zapisuje plik; telefon odczytuje QR z ekranu; konto bez telefonu widzi prośbę o uzupełnienie.","feat(tags): generowanie zawieszki z kodem QR"],
+  [32,"Historia skanowań zawieszki i nowy kod","~1 h","Widzę wszystkie skanowania zawieszki i mogę wygenerować nowy kod, który wyłącza stary.",
+   ["<code>api/mock/tags.js</code> — <code>getTagScans</code>","<code>PetTagPage.jsx</code> — <code>ScanHistory</code> (z <code>key={pet.tagCode}</code>), „Nowy kod”, <code>Modal</code>, <code>handleRegenerate</code>"],
+   "Akcja nieodwracalna w oknie potwierdzenia, <code>key</code> do przeładowania sekcji, stary kod zostaje jako nieaktywny.",
+   "Historia pokazuje przeglądarkę i „Ty / Inna osoba”; po „Nowy kod” stary adres jest nieaktywny, a nowy działa.","feat(tags): historia skanowań i wymiana kodu zawieszki"],
+  [33,"Panel DEV do pokazu (opcjonalnie)","~1 h","W rogu ekranu w <code>npm run dev</code> mam panel, którym pokazuję wszystkie warianty zawieszki.",
+   ["<code>api/mock/dev.js</code> — cały plik","<code>dev/DevPanel.jsx</code> — bez gałęzi dla trybu http","<code>RootLayout.jsx</code> — <code>{import.meta.env.DEV &amp;&amp; &lt;DevPanel /&gt;}</code>"],
+   "<code>import.meta.env.DEV</code>, wycinanie kodu z wersji produkcyjnej, <code>sessionStorage</code>, Escape przez <code>addEventListener</code> ze sprzątaniem.",
+   "Panel przełącza logowanie i tryb zaginięcia, resetuje dane; po <code>npm run build &amp;&amp; npm run preview</code> go nie ma.","feat(dev): panel deweloperski do demonstracji wariantów"],
+  [34,"Strona główna z ilustracją (opcjonalnie)","~1–1,5 h","Strona główna ma ilustrację zawieszki i telefonu oraz trzy kroki „Jak działa tag”.",
+   ["<code>components/landing/HeroIllustration.jsx</code>, <code>HowItWorksStep.jsx</code>","<code>pages/public/LandingPage.jsx</code> — cały plik"],
+   "SVG w JSX (<code>viewBox</code>, <code>path</code>), kolory z tokenów w SVG (<code>fill-pine</code>), <code>role=\"img\"</code> + <code>aria-label</code>, <code>&lt;ol&gt;</code> jako kroki.",
+   "Na 375 px ilustracja jest pod tekstem, na komputerze obok; DevTools → Accessibility pokazuje opis obrazka.","feat(public): ilustracja i kroki na stronie głównej"]], ms:"M3 · rdzeń aplikacji klienckiej · 6.12"},
+ {id:"G", name:"PWA i pierwsze wdrożenie", note:"Sesje 35–38 · M4 do 13.12 · sam frontend na danych przykładowych", items:[
+  [35,"Instaluję aplikację na telefonie (PWA)","~1,5 h","Aplikację da się zainstalować z przeglądarki, ma ikonę i otwiera się bez paska adresu.",
+   ["<code>npm install -D vite-plugin-pwa</code>","<code>scripts/generate-icons.mjs</code> albo własne ikony 192, 512, maskable 512, apple-touch 180","<code>vite.config.js</code> — blok <code>VitePWA({ … })</code>","<code>index.html</code> — <code>&lt;link rel=\"apple-touch-icon\"&gt;</code>"],
+   "Manifest, service worker, precache, ikona maskable, dlaczego <code>/api</code> nie trafia do cache.",
+   "Po <code>npm run build &amp;&amp; npm run preview</code> w Application widać manifest i aktywny service worker, jest ikona instalacji, w trybie Offline strona się otwiera.","feat(pwa): manifest, ikony i service worker"],
+  [36,"Aplikacja działa w Dockerze na moim komputerze","~2–3 h","<code>docker compose up --build</code> uruchamia zbudowaną aplikację pod <code>http://localhost:8080</code>.",
+   ["Porządek (D18): <code>petracer-final/</code> → <code>client/</code> (<code>git mv</code>), w <code>client/</code> <code>npm install</code>","<code>client/Dockerfile</code> — bez <code>ENV VITE_API_MODE=http</code>","<code>client/Caddyfile</code> — bez bloku <code>handle /api/*</code>","<code>client/.dockerignore</code>","<code>docker-compose.yml</code> — <code>name: pettrace</code> i usługa <code>caddy</code> z wolumenami"],
+   "Obraz i kontener, budowanie wieloetapowe, wolumen, reverse proxy, SPA i <code>try_files</code>, cache plików z hashem, <code>trusted_proxies</code>.",
+   "<code>http://localhost:8080/t/LUNA-7K2Q</code> działa, odświeżenie podstrony nie daje 404, <code>down</code> i <code>up</code> uruchamiają wszystko ponownie.","chore(deploy): obraz Docker z Caddy dla frontendu"],
+  [37,"Aplikacja działa pod app.petracker.pl","~2 h","Moja wersja działa na serwerze przez HTTPS, obok prototypu.",
+   ["Rekord DNS <strong>A</strong>: <code>app</code> → IP serwera","Na serwerze <code>git clone … ~/pettrace</code>, <code>.env</code>: <code>SITE_ADDRESS=:80</code>, <code>HTTP_PORT=127.0.0.1:8081</code>, <code>HTTPS_PORT=127.0.0.1:8444</code>, <code>docker compose up -d --build</code>","nginx: <code>proxy_pass http://127.0.0.1:8081</code>, <code>ln -s</code> do <code>sites-enabled</code>, <code>nginx -t</code>, reload","<code>sudo certbot --nginx -d app.petracker.pl</code>"],
+   "SSH, DNS, subdomena, nginx jako reverse proxy, Let's Encrypt, port tylko z serwera (<code>127.0.0.1</code>), <code>.env</code> poza repo, <code>git pull</code> jako aktualizacja.",
+   "<code>https://app.petracker.pl</code> ma kłódkę, aplikację da się zainstalować na telefonie, prototyp pod <code>petracker.pl</code> działa dalej.","docs(deploy): wdrożenie frontendu na app.petracker.pl"],
+  [38,"Prawdziwa zawieszka otwiera aplikację","~1–2 h","Przykładam telefon do tagu NFC albo skanuję QR i otwiera się strona zawieszki.",
+   ["<code>DEPLOY.md</code> w prototypie, sekcja 12","Tabela w <code>plan/09-testy.md</code>"],
+   "NDEF i rekord URL, NTAG213/215/216, dlaczego nie blokować tagu, czytelność kodu QR.",
+   "Tag z <code>https://app.petracker.pl/t/LUNA-7K2Q</code> i wydrukowany QR otwierają stronę na Androidzie i iPhonie; wyniki T1–T9, T15–T16 są w tabeli.","docs(tests): pierwsza seria testów na urządzeniach"]], ms:"M4 · aplikacja online jako PWA · 13.12"},
+ {id:"H", name:"Backend, plaster po plastrze", note:"Sesje 39–48 · M5 do 3.01 · każda sesja przenosi jedną funkcję z mocka na serwer", items:[
+  [39,"Serwer odpowiada","~1,5 h","Własny serwer Express odpowiada pod <code>http://localhost:5173/api/health</code>.",
+   ["<code>server/package.json</code> — <code>\"type\": \"module\"</code>, skrypty <code>dev</code> i <code>start</code>; <code>npm install express</code>","<code>server/src/app.js</code> — <code>createApp</code> z samą trasą <code>/api/health</code>","<code>server/src/index.js</code> — tylko <code>listen</code>","<code>server/eslint.config.js</code>, <code>.gitignore</code>","<code>client/vite.config.js</code> — <code>server.proxy</code>"],
+   "Node.js, moduły ES w Node, HTTP (metoda, adres, nagłówki, kod, treść), Express: trasa, <code>req</code>, <code>res.json</code>, proxy Vite (jedna domena = brak CORS).",
+   "<code>curl http://localhost:3000/api/health</code> i adres przez Vite zwracają <code>{\"ok\":true}</code>; zmiana w trasie przeładowuje serwer.","feat(server): szkielet serwera Express z trasą health"],
+  [40,"Baza danych z tabelami i Luną w środku","~2–3 h","PostgreSQL działa w Dockerze, ma tabele i dane przykładowe, serwer łączy się przy starcie.",
+   ["<code>docker-compose.dev.yml</code> (port 5434)","<code>server/sql/001_init.sql</code> — po jednej tabeli, porównując z <code>seed.js</code>","<code>server/sql/seed.sql</code>","<code>server/.env.example</code> → <code>.env</code>; <code>npm install pg dotenv</code>","<code>config.js</code> (<code>isProduction</code>, <code>port</code>, <code>databaseUrl</code>, <code>seedDemoData</code>), <code>db.js</code> (bez <code>withTransaction</code>), <code>seed.js</code>, <code>scripts/db-reset.js</code>"],
+   "Relacyjna baza, typy kolumn, klucz główny i obcy, <code>UNIQUE</code>, <code>CHECK</code>, <code>ON DELETE</code>, indeks częściowy, pula połączeń, zapytania z <code>$1</code> i SQL injection.",
+   "<code>\\dt</code> pokazuje 7 tabel, <code>SELECT name, is_lost FROM pets;</code> — Lunę i Mruczka; drugi start nie dubluje danych; <code>npm run db:reset</code> przywraca stan.","feat(server): schemat PostgreSQL i dane przykładowe"],
+  [41,"Prośba o link trafia do prawdziwego serwera","~2–3 h","W trybie <code>http</code> wpisuję e-mail, a link pojawia się w konsoli serwera.",
+   ["<code>errors.js</code>, <code>middleware/errorHandler.js</code>","<code>validation.js</code> — <code>EMAIL_PATTERN</code>, <code>text</code>, <code>parseEmail</code>, <code>parseOptionalName</code>","<code>services/tokens.js</code>, <code>services/mail.js</code> (tylko <code>console.log</code>)","<code>routes/auth.js</code> — <code>safeNextPath</code>, <code>POST /request-link</code>","Frontend: <code>.env.http</code>, <code>dev:http</code>, <code>api/http/request.js</code>, <code>api/http/auth.js</code> — <code>requestMagicLink</code>; fasada z wyborem per funkcja"],
+   "Middleware i kolejność, błędy w Expressie 5, walidacja na serwerze, <code>crypto.randomBytes</code>, hash SHA-256, <code>fetch</code> i <code>response.ok</code>, tryby Vite, tree shaking.",
+   "Link w konsoli serwera; w <code>login_tokens</code> <code>token_hash</code> inny niż token z linku; w <code>users</code> nowego adresu jeszcze nie ma; <code>npm run dev</code> (mock) działa jak wcześniej.","feat(auth): prośba o link logowania obsługiwana przez serwer"],
+  [42,"Logowanie przez serwer — ciasteczko sesji","~2–3 h","W trybie <code>http</code> klikam link, jestem zalogowany i zostaję zalogowany po odświeżeniu.",
+   ["<code>npm install jsonwebtoken cookie-parser</code>","<code>services/session.js</code>, <code>config.js</code> (<code>jwtSecret</code>, <code>cookieSecure</code>, demo)","<code>mappers.js</code> — <code>toUser</code>; <code>requireAuth.js</code> — <code>loadUser</code>","<code>routes/auth.js</code> — <code>/verify</code>, <code>/me</code>, <code>/logout</code>, <code>/demo</code>","<code>api/http/auth.js</code> — pozostałe funkcje; przełącz w fasadzie"],
+   "JWT, ciasteczko <code>httpOnly</code> / <code>Secure</code> / <code>SameSite</code> (D8), <code>UPDATE … RETURNING</code>, <code>INSERT … ON CONFLICT DO NOTHING</code>, <code>/auth/me</code> z <code>{ user: null }</code> zamiast 401.",
+   "Konto powstaje po kliknięciu; <code>petrace_session</code> ma <code>HttpOnly</code>; ponowny link daje błąd; odświeżenie nie wylogowuje; wylogowanie usuwa ciasteczko. Lista zwierząt pokaże „Sesja wygasła” do sesji 43.","feat(auth): sesja w ciasteczku httpOnly i logowanie przez serwer"],
+  [43,"Panel pokazuje zwierzęta z bazy","~2 h","W trybie <code>http</code> panel i profil pokazują zwierzęta z PostgreSQL, a cudze daje 404.",
+   ["<code>requireAuth.js</code> — <code>requireAuth</code>","<code>services/pets.js</code>, <code>mappers.js</code> — <code>toPet</code>","<code>routes/pets.js</code> — <code>GET /</code>, <code>GET /:id</code>","<code>api/http/pets.js</code> — <code>getPets</code>, <code>getPetById</code>"],
+   "Middleware jako strażnik (401), REST, <code>req.params</code>, <code>LEFT JOIN</code> z warunkiem w <code>ON</code>, sprawdzanie własności, <code>snake_case</code> → <code>camelCase</code>.",
+   "Zmiana imienia w <code>psql</code> widoczna po odświeżeniu; <code>curl</code> bez ciasteczka → 401; inne konto po id Luny → 404.","feat(owner): zwierzęta z bazy danych"],
+  [44,"Dodawanie, edycja i tryb zaginięcia w bazie","~2 h","W trybie <code>http</code> dodaję i edytuję zwierzę oraz włączam tryb zaginięcia.",
+   ["<code>validation.js</code> — <code>parsePet</code>, <code>parseLostMode</code>","<code>routes/pets.js</code> — <code>POST /</code>, <code>PATCH /:id</code>, <code>PATCH /:id/lost</code>","<code>api/http/pets.js</code> — <code>createPet</code>, <code>updatePet</code>, <code>setLostMode</code>"],
+   "Kod 201, <code>INSERT … RETURNING</code>, dynamiczne <code>UPDATE … SET</code> z listy dozwolonych kolumn, walidacja częściowa.",
+   "Zmiany widoczne w <code>psql</code>; pusty formularz dostaje błąd z serwera; tryb zaginięcia zmienia <code>is_lost</code>.","feat(owner): zapis zwierząt i trybu zaginięcia w bazie"],
+  [45,"Ustawienia w bazie i limit prób logowania","~1,5 h","Telefon zapisuje się w bazie, a zbyt wiele próśb o link kończy się komunikatem.",
+   ["<code>validation.js</code> — <code>parseSettings</code>; <code>routes/me.js</code>","<code>middleware/rateLimit.js</code>; <code>limitByIp</code>, <code>limitByEmail</code>","<code>config.js</code> — <code>trustProxyHops</code>; <code>app.js</code> — <code>trust proxy</code>","<code>api/http/auth.js</code> — <code>updateSettings</code>"],
+   "Rate limiting (okno czasowe, <code>Map</code>, 429, <code>Retry-After</code>), <code>X-Forwarded-For</code>, dwa limity (IP i e-mail).",
+   "Telefon w <code>psql</code>; czwarta prośba o link w 15 minut pokazuje „Wysłaliśmy już kilka linków…”.","feat(auth): ustawienia konta w bazie i limit prób logowania"],
+  [46,"Znalazca skanuje tag — wariant wybiera serwer","~2 h","Strona zawieszki dostaje wariant z serwera, a każdy skan trafia do bazy.",
+   ["<code>services/tagCodes.js</code> — <code>normalizeTagCode</code>","<code>routes/tags.js</code> — <code>GET /tags/:code</code>, <code>recordScan</code>","<code>api/http/tags.js</code> — <code>resolveTag</code>"],
+   "Routing kontekstowy na serwerze (D6), trasa publiczna z opcjonalną sesją, <code>JOIN</code> trzech tabel, <code>INSERT … SELECT … WHERE NOT EXISTS</code>.",
+   "Cztery warianty działają jak w mocku, także w incognito; odpowiedź <code>found</code> nie zawiera komunikatu ani id właściciela; każde wejście dodaje wiersz do <code>tag_scans</code>.","feat(finder): wybór wariantu zawieszki i zapis skanów na serwerze"],
+  [47,"Szybki zapis i aktywność w bazie","~1,5 h","„Karmienie” po skanie i zakładka „Aktywność” korzystają z bazy.",
+   ["<code>validation.js</code> — <code>parseActivity</code>; <code>mappers.js</code> — <code>toActivity</code>","<code>routes/activities.js</code>","<code>api/http/activities.js</code>"],
+   "<code>req.query</code>, <code>make_interval</code>, filtrowanie po dacie w SQL, granice wartości.",
+   "Karmienie po skanie jest w <code>psql</code> i w „Aktywności”; <code>?days=1</code> zwraca mniej niż <code>?days=7</code>.","feat(owner): aktywności zapisywane w bazie"],
+  [48,"Zawieszka i historia skanowań w bazie","~2 h","Tworzę zawieszkę, wymieniam kod i widzę historię — wszystko z bazy.",
+   ["<code>db.js</code> — <code>withTransaction</code>","<code>tagCodes.js</code> — <code>generateTagCode</code>; <code>mappers.js</code> — <code>toScan</code>","<code>routes/tags.js</code> — <code>POST /pets/:id/tag</code>, <code>GET /pets/:id/scans</code>, <code>GET /scans</code>","<code>client/package.json</code> — <code>\"sideEffects\": [\"**/*.css\"]</code>"],
+   "Transakcja (<code>BEGIN</code> / <code>COMMIT</code> / <code>ROLLBACK</code>), <code>crypto.randomInt</code>, kolizje przez <code>ON CONFLICT DO NOTHING</code>, <code>LIMIT</code>.",
+   "Cała aplikacja działa w <code>npm run dev:http</code> (T3–T14); w <code>tags</code> stary kod nieaktywny, nowy aktywny; w <code>dist/assets/*.js</code> nie ma <code>pettrace:db</code>.","feat(tags): zawieszki i historia skanowań w bazie"]], ms:"M5 · API gotowe · 3.01"},
+ {id:"I", name:"Pełne wdrożenie i testy", note:"Sesje 49–51 · M6 do 10.01", items:[
+  [49,"Cały system w Docker Compose","~2 h","<code>docker compose up --build</code> uruchamia bazę, API i frontend w trybie <code>http</code>.",
+   ["<code>server/Dockerfile</code>, <code>.dockerignore</code>","<code>docker-compose.yml</code> — <code>db</code>, <code>api</code>, <code>depends_on</code>","<code>Caddyfile</code> — <code>handle /api/*</code>; <code>Dockerfile</code> — <code>VITE_API_MODE=http</code>","<code>.env.example</code>"],
+   "<code>npm ci --omit=dev</code>, użytkownik bez roota, <code>healthcheck</code>, sieć między kontenerami, <code>${ZMIENNA:-domyślna}</code>.",
+   "Na <code>localhost:8080</code> działa konto demo i cała aplikacja; <code>down</code>/<code>up</code> zachowują dane; <code>down -v</code> je kasuje.","chore(deploy): cały system w Docker Compose"],
+  [50,"petracker.pl działa na mojej wersji","~2–3 h","Aplikacja z bazą działa pod <code>https://petracker.pl</code>, wysyła maile i ma kopie zapasowe.",
+   ["<code>services/mail.js</code> — cały (<code>nodemailer</code>), <code>smtp</code> w <code>config.js</code>","<code>DEPLOY.md</code> — kroki 5, 8, 9, 10, 14","nginx dla <code>petracker.pl</code> → <code>127.0.0.1:8081</code>, <code>APP_URL</code>, zatrzymanie prototypu"],
+   "SMTP, SPF i DKIM, <code>pg_dump</code> i <code>cron</code>, przywracanie kopii, aktualizacja na serwerze.",
+   "Link przychodzi mailem; kopia z dzisiejszą datą istnieje i próbne przywrócenie działa; tag NFC z <code>https://petracker.pl/t/…</code> otwiera Twoją wersję.","feat(deploy): wysyłka maili, kopie zapasowe i wdrożenie na petracker.pl"],
+  [51,"Testy na urządzeniach","~3 h","Wszystkie scenariusze z <code>plan/09-testy.md</code> są sprawdzone na Androidzie, iPhonie i komputerze.",
+   ["<code>plan/09-testy.md</code>","Lighthouse w Chrome DevTools"],
+   "Testy akceptacyjne, Lighthouse, obsługa samą klawiaturą, czytnik ekranu.",
+   "Tabela T1–T16 wypełniona; Lighthouse ≥ 90 na <code>/</code>, <code>/t/LUNA-7K2Q</code> i <code>/panel</code>; każdy błąd poprawiony osobnym commitem; zrzuty ekranu do pracy zrobione.","docs(tests): wyniki testów na urządzeniach"]], ms:"M6 · system zintegrowany · 10.01"},
+];
+const DONE_DEFAULT = n => n <= 15;
+const KEY = "petrace-plan:done";
+
+let doneMap = {};
+try { doneMap = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch { doneMap = {}; }
+const isDone = n => (n in doneMap) ? !!doneMap[n] : DONE_DEFAULT(n);
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(doneMap)); } catch {} }
+
+// --- reszta sesji
+const rest = document.getElementById("rest");
+let html = `<div class="part-head"><span class="eyebrow">Cały plan</span><h2>Wszystkie sesje</h2><p class="prose muted">Kliknij sesję, żeby zobaczyć, co przepisać z prototypu, czego się uczysz i jak sprawdzić, że działa. Sesje 16–19 rozpisane są wyżej, z kodem.</p></div>`;
+for (const part of PARTS) {
+  html += `<h3 style="margin-top:18px">Część ${part.id} · ${part.name}</h3><p class="muted" style="font-size:.88rem">${part.note}</p>`;
+  for (const it of part.items) {
+    const [n,title,time,goal,src,learn,ok,commit] = it;
+    if (DETAILED.includes(n)) {
+      html += `<details class="s" id="r${n}" data-n="${n}"><summary><span class="sn">${n}</span><span class="st"><b>${title}</b><small>pełny kod wyżej · <a href="#s${n}">przejdź do sesji ${n}</a></small></span><span class="time">${time||""}</span></summary></details>`;
+      continue;
+    }
+    const label = n <= 12 ? `Etap ${n}` : `Sesja ${n}`;
+    const body = goal ? `<div class="s-body">
+      <p><strong>Cel:</strong> ${goal}</p>
+      <div><h4>Źródło w prototypie</h4><ul>${src.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+      <div><h4>Czego się uczę</h4><p>${learn}</p></div>
+      <div><h4>Gotowe, gdy</h4><p>${ok}</p></div>
+      <div class="commit"><span>${commit}</span><button type="button" data-copy="${commit}">Kopiuj</button></div>
+      <label class="donebox"><input type="checkbox" data-done="${n}"> Zrobione</label>
+    </div>` : `<div class="s-body"><p class="muted">${n<=12?"Zrobione w części A–C. Kod jest w repozytorium.":"Zrobione. Kod jest w repozytorium."}${commit?` Commit: <code>${commit}</code>`:""}</p><label class="donebox"><input type="checkbox" data-done="${n}"> Zrobione</label></div>`;
+    html += `<details class="s" id="r${n}" data-n="${n}"><summary><span class="sn">${n<=12?"E"+n:n}</span><span class="st"><b>${title}</b><small>${label}${goal?" · "+goal.replace(/<[^>]+>/g,"").slice(0,90)+(goal.length>90?"…":""):""}</small></span><span class="time">${time||""}</span></summary>${body}</details>`;
+  }
+  if (part.ms) html += `<div class="milestone">${part.ms}</div>`;
+}
+rest.innerHTML = html;
+
+// --- spis treści
+function buildToc(el){
+  let t = `<span class="brand">PeTrace</span><div class="prog"><span class="muted" id="${el.id}-count"></span><div class="bar"><span id="${el.id}-bar"></span></div></div>`;
+  for (const part of PARTS) {
+    t += `<div class="grp"><b>${part.id} · ${part.name}</b>`;
+    const items = part.id==="A"||part.id==="B"||part.id==="C" ? [[part.items[0][0], `Etapy ${part.items[0][0]}–${part.items[part.items.length-1][0]}`, part.items.map(i=>i[0])]] : part.items.map(i=>[i[0], i[1], [i[0]]]);
+    for (const [n,title,group] of items) {
+      const target = DETAILED.includes(n) ? `s${n}` : `r${n}`;
+      t += `<a href="#${target}" data-group="${group.join(",")}"><span class="dot"></span><span>${group.length>1?title:`<strong>${n}</strong> ${title}`}</span></a>`;
+    }
+    t += `</div>`;
+  }
+  t += `<div class="grp"><a href="#pulapki"><span class="dot"></span><span>Pułapki</span></a></div>`;
+  el.innerHTML = t;
+}
+buildToc(document.getElementById("toc"));
+buildToc(document.getElementById("toc-m"));
+
+const ALL = PARTS.flatMap(p=>p.items.map(i=>i[0]));
+function refresh(){
+  document.querySelectorAll("input[data-done]").forEach(cb=>{ cb.checked = isDone(+cb.dataset.done); });
+  document.querySelectorAll("details.s").forEach(d=>d.classList.toggle("isdone", isDone(+d.dataset.n)));
+  const firstOpen = ALL.find(n=>!isDone(n));
+  document.querySelectorAll(".toc a[data-group], #toc-m a[data-group]").forEach(a=>{
+    const g = a.dataset.group.split(",").map(Number);
+    a.classList.toggle("done", g.every(isDone));
+    a.classList.toggle("now", g.includes(firstOpen));
+  });
+  const d = ALL.filter(isDone).length;
+  for (const id of ["toc","toc-m"]) {
+    const c = document.getElementById(id+"-count"); if (c) c.textContent = `${d} z ${ALL.length} zrobione`;
+    const b = document.getElementById(id+"-bar"); if (b) b.style.width = (d/ALL.length*100)+"%";
+  }
+}
+document.addEventListener("change", e=>{
+  const cb = e.target.closest("input[data-done]"); if (!cb) return;
+  doneMap[cb.dataset.done] = cb.checked; save(); refresh();
+});
+refresh();
+
+// --- kod
+function parseHl(s){ const set=new Set(); if(!s) return set; for(const part of s.split(",")){ const [a,b]=part.split("-").map(Number); for(let i=a;i<=(b||a);i++) set.add(i);} return set; }
+document.querySelectorAll(".code[data-src]").forEach(box=>{
+  const srcEl = document.getElementById(box.dataset.src);
+  const raw = srcEl ? srcEl.textContent.replace(/^\n/,"").replace(/\s+$/,"") : "// brak kodu";
+  let highlighted;
+  try { highlighted = window.hljs ? hljs.highlight(raw,{language:"javascript"}).value : null; } catch { highlighted = null; }
+  if (!highlighted) highlighted = raw.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  // dzielimy na linie, domykając otwarte spany na końcu każdej linii
+  const lines = []; let open = [];
+  for (const line of highlighted.split("\n")) {
+    let out = open.join("") + line;
+    const re = /<span[^>]*>|<\/span>/g; let m;
+    while ((m = re.exec(line))) { if (m[0].startsWith("</")) open.pop(); else open.push(m[0]); }
+    out += "</span>".repeat(open.length);
+    lines.push(out);
+  }
+  const hl = parseHl(box.dataset.hl);
+  const kind = box.dataset.kind === "new" ? `<span class="kind new">nowy plik</span>` : `<span class="kind edit">zmiana</span>`;
+  box.innerHTML = `<div class="bar"><span class="file">${kind}${box.dataset.file}</span><button type="button">Kopiuj</button></div><pre><code>${lines.map((l,i)=>`<span class="ln${hl.has(i+1)?" hl":""}">${l||" "}</span>`).join("")}</code></pre>`;
+  box.querySelector("button").addEventListener("click", ev=>copy(raw, ev.currentTarget));
+});
+function copy(text, btn){
+  const done = ()=>{ const t=btn.textContent; btn.textContent="Skopiowano"; setTimeout(()=>btn.textContent=t,1400); };
+  try { navigator.clipboard.writeText(text).then(done, ()=>{ btn.textContent="Zaznacz ręcznie"; }); } catch { btn.textContent="Zaznacz ręcznie"; }
+}
+document.addEventListener("click", e=>{
+  const b = e.target.closest("button[data-copy]"); if (b) copy(b.dataset.copy, b);
+});
+})();
+</script>
+
+
+<!--claude-mermaid-runtime-begin:3477-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script src="/_runtime/mermaid-11.16.1.min.js"></script>
+<script>(function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:pre.textContent||''};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+})();</script>
+<!--claude-mermaid-runtime-end-->
+
+</body></html>
