@@ -176,10 +176,10 @@ details.s.isdone .st b{color:var(--muted)}
     <header class="hero">
       <span class="eyebrow">Praca inżynierska · PeTrace</span>
       <h1>Plan przepisywania</h1>
-      <p class="prose muted" style="font-size:1.05rem">Przepisujesz prototyp z <code>PeTrack/petracer/</code> do nowego projektu <code>PeTracker-FinalVersion/petracer-final/</code>, jedna funkcja na sesję. Najbliższe sesje (16–19, logowanie) mają tu pełny kod dopasowany do Twojego projektu i wytłumaczony fragment po fragmencie. Reszta ma cel, źródło, test i commit.</p>
+      <p class="prose muted" style="font-size:1.05rem">Przepisujesz prototyp z <code>PeTrack/petracer/</code> do nowego projektu <code>PeTracker-FinalVersion/petracer-final/</code>, jedna funkcja na sesję. Najbliższe sesje (15a–15b: nowy układ panelu, 16–19: logowanie) mają tu pełny kod dopasowany do Twojego projektu i wytłumaczony fragment po fragmencie. Reszta ma cel, źródło, test i commit.</p>
       <div class="youarehere">
-        <b>Jesteś tutaj: sesja 16</b>
-        <span class="muted">Sesje 14 i 15 są w repo (lista i karty zwierząt). Kolejny kamień milowy: <strong>M1 — 8 listopada</strong>.</span>
+        <b>Jesteś tutaj: sesja 15a</b>
+        <span class="muted">Sesje 14 i 15 są w repo. Najpierw nowy układ panelu z wersji Alt (15a–15b, ok. 3–4 h), potem logowanie. Kolejny kamień milowy: <strong>M1 — 8 listopada</strong>.</span>
       </div>
       <div class="how">
         <div><b>1 · Przeczytaj pojęcia</b><span class="muted">Każda sesja zaczyna się od kart z nowymi pojęciami. Najpierw je zrozum, potem pisz.</span></div>
@@ -190,6 +190,195 @@ details.s.isdone .st b{color:var(--muted)}
     </header>
 
     <details class="toc-mobile"><summary>Spis sesji</summary><nav id="toc-m" aria-label="Sesje"></nav></details>
+
+    <section class="part" id="czesc-uklad">
+      <div class="part-head">
+        <span class="eyebrow">Część D · sesje 15a–15b · nowy układ panelu</span>
+        <h2>Panel pod telefon: jedno zwierzę na ekranie</h2>
+        <p class="prose muted">Zamiast sidebara, dolnego paska i siatki kart: wąska kolumna z samym logo u góry, przełącznik zwierząt, duża karta wybranego zwierzęcia i przycisk „Akcje”, który wysuwa arkusz od dołu. W arkuszu są wszystkie przejścia, także spacery, harmonogram i ustawienia. Układ pochodzi z wersji Alt, a kolory i fonty zostają Twoje. Robisz to przed logowaniem, bo sesje 16–23 dopisują już rzeczy do nowego układu.</p>
+      </div>
+      <div class="callout note"><b>Co wyrzucasz i dlaczego to nie strata</b><span>Znikają <code>Sidebar.jsx</code>, <code>BottomNav.jsx</code>, <code>ownerNav.js</code> (etapy 6–7) i <code>PetCard.jsx</code> (sesja 15). Ich kod zostaje w historii gita, a to, czego się na nich nauczyłeś (tablica obiektów jako konfiguracja, <code>.map</code> z <code>key</code>, <code>useLocation</code>, <code>fixed</code>, safe-area), używasz dalej w nowych plikach. <code>PetAvatar</code>, <code>formatAge</code> i <code>useAsync</code> zostają.</span></div>
+    </section>
+
+    <!-- ============ SESJA 15a ============ -->
+    <article class="session" id="s15a" data-session="15.1">
+      <div class="s-head">
+        <div class="s-meta"><span class="s-num">Sesja 15a</span><span>~0,5–1 h</span><span>nowy układ · krok 1 z 2</span><label class="donebox"><input type="checkbox" data-done="15.1"> Zrobione</label></div>
+        <h2>Panel w jednej kolumnie bez sidebara</h2>
+        <p class="goal">Panel nie ma już sidebara, dolnego paska ani pływającego „+”. U góry jest tylko przyklejony nagłówek z logo, a pod nim jedna wąska kolumna, taka sama na telefonie i na komputerze.</p>
+      </div>
+
+      <div class="concepts">
+        <div><b>Jedna kolumna zamiast dwóch układów</b><span>Do tej pory panel miał osobny wygląd na telefon (dolny pasek) i na komputer (sidebar). Teraz jest jeden: wąska kolumna <code>max-w-2xl</code>, wyśrodkowana przez <code>mx-auto</code>. Mniej kodu i mniej przypadków do testowania.</span></div>
+        <div><b><code>sticky</code> + <code>backdrop-blur</code></b><span>Nagłówek przykleja się do góry przy przewijaniu, a półprzezroczyste tło z rozmyciem pokazuje, że treść jedzie pod nim. <code>env(safe-area-inset-top)</code> omija „notcha”.</span></div>
+        <div><b>Własne narzędzie w Tailwind v4</b><span><code>@utility no-scrollbar { … }</code> w CSS tworzy klasę, której Tailwind nie ma. Przyda się w sesji 15b do przewijanego rzędu awatarów.</span></div>
+        <div><b>Usuwanie kodu</b><span><code>git rm</code> usuwa plik i od razu dodaje to do commita. Lint pokaże każdy import, który jeszcze wskazuje na usunięty plik.</span></div>
+      </div>
+
+      <div class="step"><span class="n">1</span><div class="body">
+        <h3>Klasa <code>no-scrollbar</code></h3>
+        <p class="what">Dopisz na końcu <code>index.css</code>, poza blokiem <code>@theme</code>.</p>
+        <div class="code" data-src="c15a-css" data-file="src/index.css" data-kind="edit"></div>
+        <div class="explain">
+          <div><span class="k">scrollbar-width: none</span><span>Firefox i nowe Chrome. Pasek znika, przewijanie zostaje.</span></div>
+          <div><span class="k">&amp;::-webkit-scrollbar</span><span>Safari i starsze Chrome. <code>&amp;</code> to „ten sam element”, jak w Sass.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">2</span><div class="body">
+        <h3>Nowy <code>OwnerLayout</code></h3>
+        <p class="what">Zamień cały plik. Bez sidebara, dolnego paska i pływającego „+”: „Rozpocznij spacer”, spacery, harmonogram i ustawienia trafią do arkusza „Akcje” w sesji 15b.</p>
+        <div class="code" data-src="c15a-layout" data-file="src/components/layout/OwnerLayout.jsx" data-kind="edit"></div>
+        <div class="explain">
+          <div><span class="k">max-w-2xl mx-auto</span><span>Jedna kolumna ~672 px, wyśrodkowana. Na telefonie zajmuje cały ekran, na komputerze wygląda jak aplikacja w oknie, a nie rozciągnięta tabela.</span></div>
+          <div><span class="k">bg-paper/85 backdrop-blur</span><span>Kolor tła strony z 85% krycia. Bez <code>/85</code> rozmycie nie miałoby czego rozmywać.</span></div>
+          <div><span class="k">h-14 justify-between</span><span>Logo po lewej, a po prawej w sesji 17 pojawi się kółko z inicjałem konta (link do ustawień).</span></div>
+          <div><span class="k">pb-32</span><span>Miejsce na dole na pływający przycisk „Akcje”, żeby nie zasłonił ostatniej karty.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">3</span><div class="body">
+        <h3>Usuń stare nawigacje</h3>
+        <p class="what">W terminalu, w <code>petracer-final/</code>:</p>
+        <div class="code" data-src="c15a-rm" data-file="terminal" data-kind="edit"></div>
+        <p class="what">Do sesji 15b na <code>/spacery</code> i <code>/harmonogram</code> wchodzisz, wpisując adres. Logo zawsze wraca do <code>/panel</code>.</p>
+      </div></div>
+
+      <div class="step"><span class="n">✓</span><div class="body">
+        <h3>Gotowe, gdy</h3>
+        <ul class="check">
+          <li>Na 375 px i przy szerokim oknie panel to ta sama wyśrodkowana kolumna, bez sidebara, dolnego paska i „+”.</li>
+          <li>Przy przewijaniu dłuższej strony (np. niskie okno przeglądarki) nagłówek z logo zostaje u góry, a kliknięcie logo wraca do <code>/panel</code>.</li>
+          <li><code>npm run lint</code> i <code>npm run build</code> przechodzą.</li>
+        </ul>
+        <div class="commit"><span>refactor(layout): panel w jednej kolumnie zamiast sidebara i dolnego menu</span><button type="button" data-copy="refactor(layout): panel w jednej kolumnie zamiast sidebara i dolnego menu">Kopiuj</button></div>
+      </div></div>
+    </article>
+
+    <!-- ============ SESJA 15b ============ -->
+    <article class="session" id="s15b" data-session="15.2">
+      <div class="s-head">
+        <div class="s-meta"><span class="s-num">Sesja 15b</span><span>~2,5–3 h</span><span>nowy układ · krok 2 z 2</span><label class="donebox"><input type="checkbox" data-done="15.2"> Zrobione</label></div>
+        <h2>Ekran jednego zwierzęcia z przełącznikiem i przyciskiem „Akcje”</h2>
+        <p class="goal"><code>/panel</code> otwiera ostatnio oglądane zwierzę. U góry są awatary do przełączania, pod nimi duża karta zwierzęcia, a na dole przycisk „Akcje”, który wysuwa arkusz z kafelkami: spacer, spacery, harmonogram, zawieszka, weterynarz, edycja, nowe zwierzę oraz konto i ustawienia.</p>
+      </div>
+
+      <div class="concepts">
+        <div><b><code>&lt;Navigate replace&gt;</code> w renderze</b><span>Strona może „odpowiedzieć” przekierowaniem: zamiast własnej treści zwraca <code>&lt;Navigate&gt;</code>. <code>replace</code> sprawia, że „Wstecz” nie wraca na <code>/panel</code>, który od razu znów by przekierował.</span></div>
+        <div><b>localStorage jako wygoda</b><span>Id ostatniego zwierzęcia to nie dane, tylko udogodnienie. Gdy zapis się nie uda (tryb prywatny), <code>/panel</code> otworzy po prostu pierwsze zwierzę. Dlatego cicho łapiemy błąd.</span></div>
+        <div><b>Ten sam komponent, inny parametr</b><span>Przejście z <code>/zwierzeta/luna</code> na <code>/zwierzeta/mruczek</code> nie odmontowuje strony, zmienia się tylko <code>id</code>. Efekty z <code>[id]</code> uruchamiają się ponownie, a te z <code>[]</code> nie. Dlatego przełącznik nie ładuje listy drugi raz.</span></div>
+        <div><b><code>useRef</code> na element</b><span><code>ref={…}</code> na <code>&lt;li&gt;</code> daje dostęp do prawdziwego elementu DOM. Odczytujesz jego <code>offsetLeft</code> i przewijasz listę tak, żeby aktywny awatar był na środku.</span></div>
+        <div><b>Scroll-snap</b><span><code>snap-x</code> na liście i <code>snap-center</code> na elementach: po puszczeniu palca lista „dociąga” najbliższy awatar do środka. Czysty CSS.</span></div>
+        <div><b><code>&lt;dialog&gt;</code> drugi raz</b><span><code>Sheet</code> to ten sam mechanizm co <code>Modal</code> z etapu 12 (<code>showModal</code>, Escape, tło), tylko inny CSS: przyklejony do dołu i wjeżdżający animacją <code>@keyframes</code>.</span></div>
+        <div><b>Animacje z <code>@theme</code></b><span><code>--animate-pop</code> i <code>--animate-rise</code> w <code>@theme</code> tworzą klasy <code>animate-pop</code> i <code>animate-rise</code>. <code>animationDelay</code> w <code>style</code> sprawia, że kafelki wjeżdżają po kolei.</span></div>
+        <div><b>Elementy warunkowe w tablicy</b><span><code>...(pet.tagCode ? [kafelek] : [])</code>: rozsypujesz tablicę z jednym albo zerem elementów. Kafelek „Oczami znalazcy” pojawia się tylko, gdy zwierzę ma zawieszkę.</span></div>
+        <div><b><code>pointer-events-none</code></b><span>Kontener przycisku „Akcje” zajmuje całą szerokość ekranu, ale nie łapie kliknięć. Kliknięcia łapie tylko sam przycisk (<code>pointer-events-auto</code>).</span></div>
+      </div>
+
+      <div class="step"><span class="n">1</span><div class="body">
+        <h3>„Serwer”: jedno zwierzę po id</h3>
+        <p class="what">Dopisz do <code>api/mock/pets.js</code>. Na razie bez sprawdzania właściciela, tak jak <code>getPets</code>. Pełną wersję z <code>findOwnPet</code> zrobisz w sesji 20.</p>
+        <div class="code" data-src="c15b-pets" data-file="src/api/mock/pets.js" data-kind="edit" data-hl="2,9-17"></div>
+        <div class="code" data-src="c15b-facade" data-file="src/api/pets.js" data-kind="edit"></div>
+        <div class="explain">
+          <div><span class="k">find(…)</span><span>Zwraca pierwszy pasujący element albo <code>undefined</code>.</span></div>
+          <div><span class="k">throw apiError(404, …)</span><span>Brak zwierzęcia to błąd „nie znaleziono”, jak zwróci Express. Strona pokaże go przez <code>ErrorState</code>.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">2</span><div class="body">
+        <h3>Zapamiętaj ostatnie zwierzę</h3>
+        <div class="code" data-src="c15b-lastpet" data-file="src/lib/lastPet.js" data-kind="new"></div>
+      </div></div>
+
+      <div class="step"><span class="n">3</span><div class="body">
+        <h3>Animacje i arkusz od dołu</h3>
+        <p class="what">Dopisz w <code>index.css</code> <strong>wewnątrz</strong> <code>@theme</code>, pod <code>--default-transition-duration</code>.</p>
+        <div class="code" data-src="c15b-css" data-file="src/index.css" data-kind="edit"></div>
+        <div class="explain">
+          <div><span class="k">sheet-up</span><span>Arkusz wjeżdża od dołu: z przesunięcia o całą swoją wysokość do zera.</span></div>
+          <div><span class="k">pop + cubic-bezier(0.3, 1.5, …)</span><span>Druga liczba większa od 1 to „przestrzelenie”: przycisk na moment robi się trochę większy niż docelowo i wraca. Efekt sprężynki bez biblioteki.</span></div>
+          <div><span class="k">rise</span><span>Kafelek wjeżdża 14 px z dołu i pojawia się z przezroczystości.</span></div>
+          <div><span class="k">both</span><span>Element trzyma stan z pierwszej klatki, zanim animacja ruszy (przy opóźnieniu), i z ostatniej, gdy się skończy.</span></div>
+        </div>
+        <div class="code" data-src="c15b-sheet" data-file="src/components/ui/Sheet.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">mx-auto mt-auto mb-0</span><span><code>&lt;dialog&gt;</code> domyślnie stoi na środku (<code>margin: auto</code>). Zostawiamy <code>auto</code> u góry i po bokach, a dół zerujemy, więc arkusz przykleja się do dolnej krawędzi.</span></div>
+          <div><span class="k">rounded-t-[2.25rem]</span><span>Duże zaokrąglenie tylko u góry, jak szuflada. Od 640 px (<code>sm:</code>) arkusz odkleja się od krawędzi i ma zaokrąglone wszystkie rogi.</span></div>
+          <div><span class="k">max-h-[85dvh]</span><span>Arkusz nigdy nie zakryje całego ekranu. Gdy kafelków będzie dużo, przewinie się w środku.</span></div>
+          <div><span class="k">env(safe-area-inset-bottom)</span><span>Na iPhonie bez przycisku dolny pasek systemu zasłoniłby ostatni rząd.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">4</span><div class="body">
+        <h3>Przełącznik zwierząt</h3>
+        <div class="code" data-src="c15b-switcher" data-file="src/components/pets/PetSwitcher.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">useAsync(getPets, [])</span><span>Lista ładuje się raz, przy pierwszym wejściu na ekran zwierzęcia. Kolejne przełączenia jej nie dotykają.</span></div>
+          <div><span class="k">current</span><span>Zwierzę wczytane przez stronę. Gdy w sesji 26 włączysz tryb zaginięcia, strona dostanie nową wersję i kropka pojawi się od razu, bez ponownego pytania API.</span></div>
+          <div><span class="k">{ ...listed, ...current }</span><span>Łączy dwa obiekty: pola z <code>current</code> nadpisują te z listy. Nie zmieniamy oryginału.</span></div>
+          <div><span class="k">ref={isActive ? activeRef : undefined}</span><span>Ref dostaje tylko aktywny element. Efekt czyta jego położenie po każdej zmianie <code>activeId</code>.</span></div>
+          <div><span class="k">list.scrollTo({ left, behavior })</span><span>Przewija tylko listę, nie całą stronę. „Lewa krawędź elementu minus pół listy plus pół elementu” daje środek.</span></div>
+          <div><span class="k">-mx-4 … px-4</span><span>Lista sięga krawędzi ekranu (przewija się od samego brzegu), a pierwszy awatar nadal stoi w linii z resztą treści.</span></div>
+          <div><span class="k">h-[92px] przy ładowaniu</span><span>Puste miejsce o wysokości przełącznika: karta pod spodem nie „skacze”, gdy awatary się pojawią.</span></div>
+          <div><span class="k">animate-ping</span><span>Gotowa animacja Tailwinda: kółko rośnie i znika. Pod nią zwykła kropka, więc zaginięcie widać nawet przy wyłączonych animacjach.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">5</span><div class="body">
+        <h3>Arkusz „Akcje” z kafelkami</h3>
+        <p class="what">Tu trafia cała nawigacja panelu. Kafelki prowadzą na razie na placeholdery z etapu 3; każda kolejna sesja „ożywi” jeden z nich.</p>
+        <div class="code" data-src="c15b-actions" data-file="src/components/pets/PetActionsSheet.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">const tiles = [ … ]</span><span>Ten sam pomysł co dawny <code>ownerNav.js</code>: wygląd w JSX, a lista rzeczy w zwykłej tablicy. Nowa akcja to jedna linijka.</span></div>
+          <div><span class="k">tone ?? petTone</span><span>Kafelek może mieć własny kolor (spacer jest pomarańczowy), a jak nie ma, dostaje kolor zwierzęcia: zielony albo czerwony przy zaginięciu.</span></div>
+          <div><span class="k">animationDelay: i * 35 ms</span><span>Każdy kolejny kafelek startuje 35 ms później, więc wjeżdżają „falą”.</span></div>
+          <div><span class="k">go(to): onClose(); navigate(to)</span><span>Najpierw zamykamy arkusz, potem zmieniamy stronę. Inaczej otwarty <code>&lt;dialog&gt;</code> zostałby nad nową stroną.</span></div>
+          <div><span class="k">&lt;button&gt; zamiast &lt;Link&gt;</span><span>Kliknięcie ma zrobić dwie rzeczy (zamknąć i przejść), a nie tylko przejść.</span></div>
+          <div><span class="k">„Konto i ustawienia”</span><span>Osobny wiersz pod kafelkami: dotyczy Ciebie, a nie zwierzęcia, więc wygląda inaczej.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">6</span><div class="body">
+        <h3>Ekran zwierzęcia</h3>
+        <p class="what">Nowy plik. Profil z zakładkami dopiszesz do niego w sesji 20, a tryb zaginięcia w sesji 26.</p>
+        <div class="code" data-src="c15b-profile" data-file="src/pages/owner/PetProfilePage.jsx" data-kind="new"></div>
+        <div class="explain">
+          <div><span class="k">useAsync(() =&gt; getPetById(id), [id])</span><span>Zależność <code>[id]</code>: przy przełączeniu na Mruczka hook pyta API jeszcze raz.</span></div>
+          <div><span class="k">useEffect(() =&gt; setLastPetId(id), [id])</span><span>Zapis do localStorage to „efekt uboczny”, więc nie robimy go w samym renderze.</span></div>
+          <div><span class="k">isLoading ? … : error ? … : …</span><span>Te same cztery stany co zawsze, tylko przełącznik stoi nad nimi i jest widoczny cały czas.</span></div>
+          <div><span class="k">bg-alert / bg-pine</span><span>Stan zwierzęcia widać po kolorze karty, zanim cokolwiek przeczytasz. Ten sam kolor ma kółko w przycisku „Akcje”.</span></div>
+          <div><span class="k">absolute -top-16 -right-12</span><span>Półprzezroczyste koła wychodzą poza kartę, a <code>overflow-hidden</code> je przycina. Dekoracja bez obrazków.</span></div>
+          <div><span class="k">„Więcej akcji…”</span><span>Zwykły link pod treścią otwiera ten sam arkusz. Pomaga komuś, kto nie zauważy pływającego przycisku.</span></div>
+          <div><span class="k">min-h-15 animate-pop</span><span>Przycisk ma 60 px wysokości (łatwo trafić kciukiem) i przy wejściu na ekran lekko „wyskakuje”.</span></div>
+          <div><span class="k">rotate-45 przy otwartym</span><span>Plus obrócony o 45° wygląda jak krzyżyk: ten sam przycisk mówi „zamknij”.</span></div>
+        </div>
+      </div></div>
+
+      <div class="step"><span class="n">7</span><div class="body">
+        <h3><code>/panel</code> przekierowuje do zwierzęcia</h3>
+        <p class="what">Zamień cały plik. Siatka kart znika, a z sesji 14 zostają stany ładowania, błędu i pustej listy.</p>
+        <div class="code" data-src="c15b-dash" data-file="src/pages/owner/DashboardPage.jsx" data-kind="edit"></div>
+        <div class="code" data-src="c15b-router" data-file="src/router.jsx" data-kind="edit" data-hl="1,4"></div>
+        <div class="code" data-src="c15b-rm" data-file="terminal" data-kind="edit"></div>
+        <p class="what">Jeśli Twój <code>PetAvatar</code> nie przyjmuje <code>className</code>, dopisz go tak jak w prototypie: <code>cn(…, className)</code> na końcu listy klas.</p>
+      </div></div>
+
+      <div class="step"><span class="n">✓</span><div class="body">
+        <h3>Gotowe, gdy</h3>
+        <ul class="check">
+          <li><code>/panel</code> przenosi na <code>/zwierzeta/luna</code>. Po przełączeniu na Mruczka i odświeżeniu <code>/panel</code> otwiera Mruczka.</li>
+          <li>Karta Mruczka jest czerwona z „Zaginione”, jego awatar ma pulsującą kropkę, a kółko w „Akcjach” też jest czerwone.</li>
+          <li>Przy przełączaniu zwierząt awatary nie migają (lista nie ładuje się od nowa), a aktywny przewija się na środek przy wąskim oknie.</li>
+          <li>„Akcje” i link „Więcej akcji…” wysuwają arkusz od dołu; kafelki wjeżdżają po kolei. Zamykają go X, Escape i kliknięcie w tło, a fokus wraca na przycisk.</li>
+          <li>Kafelki „Spacery”, „Harmonogram” i wiersz „Konto i ustawienia” zamykają arkusz i otwierają swoje strony. „Oczami znalazcy” jest tylko przy zwierzęciu z zawieszką.</li>
+          <li>„Wstecz” z ekranu zwierzęcia nie wraca na <code>/panel</code>.</li>
+          <li><code>/zwierzeta/xyz</code> pokazuje błąd „Nie znaleziono zwierzęcia”, a przełącznik nad nim nadal działa.</li>
+          <li><code>npm run lint</code> i <code>npm run build</code> przechodzą.</li>
+        </ul>
+        <div class="commit"><span>feat(owner): ekran jednego zwierzęcia z przełącznikiem i arkuszem akcji</span><button type="button" data-copy="feat(owner): ekran jednego zwierzęcia z przełącznikiem i arkuszem akcji">Kopiuj</button></div>
+      </div></div>
+    </article>
 
     <section class="part" id="czesc-d">
       <div class="part-head">
@@ -216,7 +405,7 @@ sequenceDiagram
   A->>D: token zużyty, konto, sessions.push
   A->>D: pettrace:auth-token
   A-->>P: user
-  P-->>U: /panel, „Cześć, Maciej”
+  P-->>U: /panel → ekran Luny, kółko „M”
 </pre>
       </div>
     </section>
@@ -325,12 +514,12 @@ sequenceDiagram
       <div class="s-head">
         <div class="s-meta"><span class="s-num">Sesja 17</span><span>~2 h</span><span>logowanie · krok 2 z 4</span><label class="donebox"><input type="checkbox" data-done="17"> Zrobione</label></div>
         <h2>Klikam link i jestem zalogowany</h2>
-        <p class="goal">„Symuluj kliknięcie” loguje mnie i przenosi do panelu, a w sidebarze widzę swoje imię, także po odświeżeniu.</p>
+        <p class="goal">„Symuluj kliknięcie” loguje mnie i przenosi do panelu, a w nagłówku widzę kółko z moim inicjałem, także po odświeżeniu.</p>
       </div>
 
       <div class="concepts">
         <div><b>Context</b><span>„Kanał” przez całe drzewo komponentów. Provider u góry wkłada wartość, a dowolny komponent niżej czyta ją przez <code>useContext</code>, bez przekazywania przez props.</span></div>
-        <div><b>Prop drilling</b><span>Problem, który Context rozwiązuje: <code>user</code> musiałby iść przez Router → OwnerLayout → Sidebar tylko po to, żeby Sidebar pokazał imię.</span></div>
+        <div><b>Prop drilling</b><span>Problem, który Context rozwiązuje: <code>user</code> musiałby iść przez Router → OwnerLayout → każdą stronę tylko po to, żeby nagłówek i pusty panel pokazały imię.</span></div>
         <div><b>Własny hook</b><span>Funkcja zaczynająca się od <code>use</code>, która woła inne hooki. <code>useAuth()</code> ukrywa, skąd dane pochodzą, i daje czytelny błąd, gdy zapomnisz o providerze.</span></div>
         <div><b><code>useMemo</code></b><span>Zapamiętuje obiekt między renderami i tworzy nowy tylko po zmianie zależności. Bez tego każdy render providera przerysowałby wszystkich użytkowników <code>useAuth</code>.</span></div>
         <div><b>Stan „jeszcze nie wiadomo”</b><span>Po starcie aplikacji przez chwilę nie wiadomo, czy sesja istnieje. <code>isLoading</code> odróżnia „nie zalogowany” od „jeszcze sprawdzam”.</span></div>
@@ -378,7 +567,7 @@ sequenceDiagram
           <div><span class="k">let ignore = false</span><span>Ten sam wzór co w <code>useAsync</code>: gdy komponent zniknie przed odpowiedzią, nie ustawiamy już stanu.</span></div>
           <div><span class="k">.catch(() =&gt; {})</span><span>Gdy „serwer” nie odpowie, traktujemy to jak brak sesji. Strona główna i zawieszka mają działać nawet wtedy.</span></div>
           <div><span class="k">.finally(…)</span><span>Wykonuje się po sukcesie i po błędzie, więc <code>isLoading</code> zawsze w końcu spadnie na <code>false</code>.</span></div>
-          <div><span class="k">async login(token)</span><span>Strony nie wołają <code>verifyToken</code> same. Wołają <code>login</code> z kontekstu, który przy okazji ustawia <code>user</code>, więc sidebar od razu wie, kto się zalogował.</span></div>
+          <div><span class="k">async login(token)</span><span>Strony nie wołają <code>verifyToken</code> same. Wołają <code>login</code> z kontekstu, który przy okazji ustawia <code>user</code>, więc nagłówek od razu wie, kto się zalogował.</span></div>
           <div><span class="k">&lt;AuthContext value={value}&gt;</span><span>Zapis z React 19. W starszych tutorialach zobaczysz <code>&lt;AuthContext.Provider value={…}&gt;</code>; robi to samo.</span></div>
         </div>
         <div class="code" data-src="c17-useauth" data-file="src/hooks/useAuth.js" data-kind="new"></div>
@@ -406,18 +595,22 @@ sequenceDiagram
 
       <div class="step"><span class="n">6</span><div class="body">
         <h3>Pokaż, kto jest zalogowany</h3>
-        <p class="what">W sidebarze i nagłówku panelu. Pisz na razie <code>user?.name</code> ze znakiem zapytania: do sesji 18 da się wejść na <code>/panel</code> bez logowania, a wtedy <code>user</code> to <code>null</code> i zwykłe <code>user.name</code> wywali stronę.</p>
-        <div class="code" data-src="c17-sidebar" data-file="src/components/layout/Sidebar.jsx" data-kind="edit" data-hl="1,5,10-12"></div>
+        <p class="what">W nagłówku panelu (kółko z inicjałem, link do ustawień) i w powitaniu pustego panelu. Pisz na razie <code>user?.name</code> ze znakiem zapytania: do sesji 18 da się wejść na <code>/panel</code> bez logowania, a wtedy <code>user</code> to <code>null</code> i zwykłe <code>user.name</code> wywali stronę.</p>
+        <div class="code" data-src="c17-sidebar" data-file="src/components/layout/OwnerLayout.jsx" data-kind="edit" data-hl="1-2,6,14-22"></div>
+        <div class="explain">
+          <div><span class="k">{user &amp;&amp; (…)}</span><span>Przed sesją 18 panel działa też bez logowania. Bez użytkownika kółka po prostu nie ma.</span></div>
+          <div><span class="k">charAt(0).toUpperCase()</span><span>Pierwsza litera imienia jako „awatar” konta. Pełne imię jest w <code>aria-label</code> i <code>title</code> (dymek po najechaniu).</span></div>
+        </div>
         <div class="code" data-src="c17-dash" data-file="src/pages/owner/DashboardPage.jsx" data-kind="edit" data-hl="1,4,9"></div>
       </div></div>
 
       <div class="step"><span class="n">✓</span><div class="body">
         <h3>Gotowe, gdy</h3>
         <ul class="check">
-          <li>Po kliknięciu linku jesteś na <code>/panel</code> z „Cześć, Maciej”, a w sidebarze „Zalogowano jako Maciej”.</li>
+          <li>Po kliknięciu linku jesteś w panelu (ekran Luny), a w nagłówku jest kółko „M” z dymkiem „Maciej”.</li>
           <li>Po odświeżeniu nadal jesteś zalogowany.</li>
           <li>Ponowne otwarcie tego samego linku pokazuje „Nie udało się zalogować”.</li>
-          <li>Link dla nowego adresu z imieniem „Ola” zakłada konto (widać je w <code>users</code>) i wita „Cześć, Ola”. Panel Oli pokazuje na razie Lunę i Mruczka; filtr po właścicielu dojdzie w sesji 18.</li>
+          <li>Link dla nowego adresu z imieniem „Ola” zakłada konto (widać je w <code>users</code>) i ma w nagłówku kółko „O”. Panel Oli pokazuje na razie Lunę i Mruczka; filtr po właścicielu dojdzie w sesji 18, a wtedy zobaczysz „Cześć, Ola”.</li>
           <li>W konsoli brak błędów mimo <code>StrictMode</code>.</li>
         </ul>
         <div class="commit"><span>feat(auth): weryfikacja linku i kontekst zalogowanego użytkownika</span><button type="button" data-copy="feat(auth): weryfikacja linku i kontekst zalogowanego użytkownika">Kopiuj</button></div>
@@ -463,6 +656,7 @@ sequenceDiagram
           <div><span class="k">.filter(… ownerId === user.id)</span><span>Odpowiednik <code>WHERE owner_id = $1</code>. Filtrujemy na „serwerze”, a nie na stronie: przeglądarka nigdy nie dostaje cudzych danych.</span></div>
           <div><span class="k">.map(toPet)</span><span>Usuwa <code>ownerId</code> i dokleja kod zawieszki. Strona dostaje dokładnie kształt z dokumentacji API.</span></div>
         </div>
+        <p class="what"><code>getPetById</code> z sesji 15b zostaw na razie bez zmian. Sprawdzanie właściciela (<code>findOwnPet</code>) dostanie w sesji 20.</p>
       </div></div>
 
       <div class="step"><span class="n">3</span><div class="body">
@@ -482,7 +676,7 @@ sequenceDiagram
         <p class="what">Na razie tylko wylogowanie. Formularz z imieniem i telefonem dopiszesz w sesji 23.</p>
         <div class="code" data-src="c18-settings" data-file="src/pages/owner/SettingsPage.jsx" data-kind="new"></div>
         <div class="code" data-src="c18-router2" data-file="src/router.jsx" data-kind="edit" data-hl="1,3"></div>
-        <p class="what">Teraz <code>user</code> w panelu zawsze istnieje, więc w <code>Sidebar</code> i <code>DashboardPage</code> możesz wrócić z <code>user?.name</code> do <code>user.name</code>.</p>
+        <p class="what">Teraz <code>user</code> w panelu zawsze istnieje, więc w <code>OwnerLayout</code> możesz usunąć warunek <code>{user &amp;&amp; …}</code>, a w <code>DashboardPage</code> wrócić z <code>user?.name</code> do <code>user.name</code>.</p>
       </div></div>
 
       <div class="step"><span class="n">✓</span><div class="body">
@@ -491,7 +685,7 @@ sequenceDiagram
           <li>Wylogowany wchodzi na <code>/ustawienia</code> → ląduje na <code>/login</code> → „Symuluj kliknięcie” → wraca na <strong><code>/ustawienia</code></strong>.</li>
           <li>Odświeżenie zalogowanej strony nie wyrzuca na <code>/login</code>.</li>
           <li>Wylogowanie przenosi na <code>/</code>, a „wstecz” nie wpuszcza z powrotem do panelu.</li>
-          <li>Nowe konto (inny e-mail) widzi pusty panel z <code>EmptyState</code>.</li>
+          <li>Nowe konto (inny e-mail) widzi pusty panel z „Cześć, Ola” i <code>EmptyState</code>, a nie przekierowanie do Luny.</li>
         </ul>
         <div class="commit"><span>feat(auth): ochrona panelu, powrót po zalogowaniu i wylogowanie</span><button type="button" data-copy="feat(auth): ochrona panelu, powrót po zalogowaniu i wylogowanie">Kopiuj</button></div>
       </div></div>
@@ -540,7 +734,7 @@ sequenceDiagram
       <div class="step"><span class="n">✓</span><div class="body">
         <h3>Gotowe, gdy</h3>
         <ul class="check">
-          <li>Jedno kliknięcie na <code>/login</code> przenosi do panelu z Luną i Mruczkiem.</li>
+          <li>Jedno kliknięcie na <code>/login</code> przenosi na ekran Luny, a w przełączniku jest też Mruczek.</li>
           <li>Wejście na <code>/ustawienia</code> bez sesji → „Wejdź na konto demo” → wraca na <code>/ustawienia</code>.</li>
           <li><code>npm run lint</code> i <code>npm run build</code> przechodzą.</li>
         </ul>
@@ -572,6 +766,519 @@ sequenceDiagram
     </section>
   </main>
 </div>
+
+<script type="text/plain" id="c15a-css">
+/* Poziomy rząd awatarów (przełącznik zwierząt) przewijamy palcem, bez widocznego paska. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+</script>
+<script type="text/plain" id="c15a-layout">
+import { Outlet } from 'react-router'
+import Logo from './Logo.jsx'
+
+/*
+  Układ panelu właściciela pod telefon: bez sidebara, dolnego paska i menu.
+  U góry przyklejony nagłówek (logo, a od sesji 17 także kółko konta), pod nim jedna wąska
+  kolumna — na komputerze ta sama, tylko wyśrodkowana. Cała nawigacja jest na ekranie
+  zwierzęcia: przełącznik awatarów u góry i arkusz „Akcje” na dole (sesja 15b).
+*/
+export default function OwnerLayout() {
+  return (
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-20 bg-paper/85 pt-[env(safe-area-inset-top)] backdrop-blur">
+        <div className="mx-auto max-w-2xl px-4">
+          <div className="flex h-14 items-center justify-between">
+            <Logo to="/panel" />
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-2xl px-4 pt-2 pb-32">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+</script>
+<script type="text/plain" id="c15a-rm">
+git rm src/components/layout/Sidebar.jsx src/components/layout/BottomNav.jsx src/components/layout/ownerNav.js
+npm run lint
+</script>
+
+<script type="text/plain" id="c15b-pets">
+import { getDb } from '../../mocks/db'
+import { apiError } from '../errors'
+import { delay, toPet } from './client'
+
+export async function getPets() {
+  // … bez zmian …
+}
+
+// Jedno zwierzę po id — na razie bez sprawdzania właściciela (pełna wersja w sesji 20).
+// GET /api/pets/:id
+export async function getPetById(id) {
+  await delay()
+  const db = getDb()
+  const pet = db.pets.find((item) => item.id === id)
+  if (!pet) throw apiError(404, 'Nie znaleziono zwierzęcia.')
+  return toPet(db, pet)
+}
+</script>
+<script type="text/plain" id="c15b-facade">
+// … komentarz bez zmian, dopisz w nim: getPetById(id) → pet   GET /api/pets/:id
+export { getPets, getPetById } from './mock/pets.js'
+</script>
+<script type="text/plain" id="c15b-lastpet">
+/*
+  Zapamiętuje, które zwierzę właściciel oglądał ostatnio, żeby /panel otworzył właśnie je.
+  To tylko wygoda, więc błędy localStorage (tryb prywatny, zablokowane dane) po cichu ignorujemy.
+*/
+const KEY = 'pettrace:lastPet'
+
+export function getLastPetId() {
+  try {
+    return localStorage.getItem(KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setLastPetId(petId) {
+  try {
+    localStorage.setItem(KEY, petId)
+  } catch {
+    // Bez zapamiętania /panel otworzy po prostu pierwsze zwierzę.
+  }
+}
+</script>
+<script type="text/plain" id="c15b-css">
+  /* Arkusz „Akcje” wjeżdża od dołu, przycisk „wyskakuje”, kafelki wjeżdżają po kolei. */
+  --animate-sheet: sheet-up 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  --animate-pop: pop 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+</script>
+<script type="text/plain" id="c15b-sheet">
+import { useEffect, useId, useRef } from 'react'
+import { X } from 'lucide-react'
+
+/*
+  Arkusz wysuwany od dołu (bottom sheet). Działa jak Modal — ten sam natywny <dialog>
+  z showModal(), więc tło, blokada strony i fokus są za darmo — różni się tylko wyglądem:
+  przyklejony do dolnej krawędzi, w zasięgu kciuka. Na komputerze to wyśrodkowana karta nad dołem ekranu.
+  Zamykanie: przycisk X, Escape albo kliknięcie w przyciemnione tło.
+*/
+export default function Sheet({ open, onClose, title, children }) {
+  const dialogRef = useRef(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    if (!open) return
+    const dialog = dialogRef.current
+    dialog.showModal()
+    return () => dialog.close()
+  }, [open])
+
+  function handleCancel(event) {
+    event.preventDefault()
+    onClose()
+  }
+
+  function handleClick(event) {
+    if (event.target === dialogRef.current) onClose()
+  }
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={titleId}
+      onCancel={handleCancel}
+      onClick={handleClick}
+      className="mx-auto mt-auto mb-0 max-h-[85dvh] w-full max-w-xl animate-sheet rounded-t-[2.25rem] bg-surface p-0 text-ink shadow-raised backdrop:bg-ink/40 sm:mb-4 sm:rounded-[2.25rem]"
+    >
+      <div className="px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:px-5">
+        {/* Uchwyt — sygnał „to jest arkusz”, znany z aplikacji mobilnych. */}
+        <span aria-hidden="true" className="mx-auto mb-3 block h-1.5 w-12 rounded-full bg-line" />
+        <div className="mb-4 flex items-center justify-between gap-4 px-1">
+          <h2 id={titleId} className="text-xl font-bold tracking-tight">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Zamknij"
+            className="grid size-9 shrink-0 place-items-center rounded-full text-ink-muted transition-colors hover:bg-paper hover:text-ink"
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </dialog>
+  )
+}
+</script>
+<script type="text/plain" id="c15b-switcher">
+import { useEffect, useRef } from 'react'
+import { Link } from 'react-router'
+import { Plus } from 'lucide-react'
+import { getPets } from '../../api/pets.js'
+import { useAsync } from '../../hooks/useAsync.js'
+import { cn } from '../../lib/cn.js'
+import PetAvatar from './PetAvatar.jsx'
+
+/*
+  Przełącznik zwierząt u góry ekranu: poziomo przewijany rząd awatarów (scroll-snap).
+  Aktywne zwierzę ma obwódkę, zaginione — pulsującą czerwoną kropkę. Ostatni kafelek „+” dodaje zwierzę.
+
+  Lista ładuje się raz: przy przejściu z Luny na Mruczka React zostawia ten komponent na miejscu
+  (zmienia się tylko parametr :id), więc useAsync z pustą tablicą zależności nie pyta API ponownie.
+  `current` to zwierzę z ekranu — po włączeniu trybu zaginięcia kropka pojawia się od razu.
+*/
+export default function PetSwitcher({ activeId, current }) {
+  const { data: pets } = useAsync(getPets, [])
+  const listRef = useRef(null)
+  const activeRef = useRef(null)
+
+  // Aktywny awatar na środek — przewijamy tylko listę, nie całą stronę.
+  useEffect(() => {
+    const list = listRef.current
+    const item = activeRef.current
+    if (!list || !item) return
+    list.scrollTo({ left: item.offsetLeft - list.clientWidth / 2 + item.clientWidth / 2, behavior: 'smooth' })
+  }, [activeId, pets])
+
+  if (!pets) return <div className="h-[92px]" aria-hidden="true" />
+
+  return (
+    <nav aria-label="Twoje zwierzęta" className="-mx-4 sm:mx-0">
+      <ul ref={listRef} className="no-scrollbar flex snap-x gap-2 overflow-x-auto px-4 py-1 sm:px-0">
+        {pets.map((listed) => {
+          const pet = current?.id === listed.id ? { ...listed, ...current } : listed
+          const isActive = pet.id === activeId
+          return (
+            <li key={pet.id} ref={isActive ? activeRef : undefined} className="snap-center">
+              <Link
+                to={`/zwierzeta/${pet.id}`}
+                aria-current={isActive ? 'page' : undefined}
+                className="group flex w-[72px] flex-col items-center gap-1 transition-transform active:scale-95"
+              >
+                <span className="relative">
+                  <span
+                    className={cn(
+                      'block rounded-[1.15rem] p-[3px] transition-colors',
+                      isActive ? 'bg-pine' : 'bg-transparent group-hover:bg-line',
+                    )}
+                  >
+                    <PetAvatar name={pet.name} species={pet.species} className="ring-2 ring-paper" />
+                  </span>
+                  {pet.isLost && (
+                    <span className="absolute -top-0.5 -right-0.5 grid size-4 place-items-center" title="Zaginione">
+                      <span className="absolute inset-0 animate-ping rounded-full bg-alert opacity-60" />
+                      <span className="relative size-3 rounded-full bg-alert ring-2 ring-paper" />
+                    </span>
+                  )}
+                </span>
+                <span className={cn('max-w-full truncate text-sm', isActive ? 'font-bold text-ink' : 'text-ink-muted')}>
+                  {pet.name}
+                </span>
+              </Link>
+            </li>
+          )
+        })}
+        <li className="snap-center">
+          <Link to="/zwierzeta/nowe" className="group flex w-[72px] flex-col items-center gap-1 active:scale-95">
+            <span className="grid size-[62px] place-items-center rounded-[1.15rem] border-2 border-dashed border-line text-ink-muted transition-colors group-hover:border-pine group-hover:text-pine">
+              <Plus size={24} aria-hidden="true" />
+            </span>
+            <span className="text-sm text-ink-muted">Dodaj</span>
+          </Link>
+        </li>
+      </ul>
+    </nav>
+  )
+}
+</script>
+<script type="text/plain" id="c15b-actions">
+import { useNavigate } from 'react-router'
+import { CalendarCheck, ChevronRight, Eye, Footprints, Pencil, Plus, QrCode, Settings, Stethoscope } from 'lucide-react'
+import Sheet from '../ui/Sheet.jsx'
+
+/*
+  Arkusz „Akcje” dla jednego zwierzęcia — cała nawigacja panelu w jednym miejscu: kafelki 2×N
+  i osobny wiersz „Konto i ustawienia”. Lista kafelków to zwykła tablica obiektów, a niektóre
+  pojawiają się warunkowo — np. „Oczami znalazcy” tylko wtedy, gdy zwierzę ma zawieszkę.
+*/
+export default function PetActionsSheet({ open, onClose, pet }) {
+  const navigate = useNavigate()
+  // Kolor zwierzęcia: zielony, a przy zaginięciu czerwony — jak karta na ekranie.
+  const petTone = pet.isLost ? 'bg-alert text-paper' : 'bg-pine text-paper'
+
+  const tiles = [
+    { icon: Footprints, label: 'Rozpocznij spacer', hint: 'Zapis trasy z GPS', to: '/spacery/nowy', tone: 'bg-ember text-ink' },
+    { icon: Footprints, label: 'Spacery', hint: 'Historia i statystyki', to: '/spacery' },
+    { icon: CalendarCheck, label: 'Harmonogram', hint: 'Karmienie, leki, wizyty', to: '/harmonogram' },
+    {
+      icon: QrCode,
+      label: 'Zawieszka',
+      hint: pet.tagCode ? `Kod ${pet.tagCode}` : 'Utwórz kod QR',
+      to: `/zwierzeta/${pet.id}/tag`,
+    },
+    { icon: Stethoscope, label: 'Dla weterynarza', hint: 'Paszport na czas wizyty', to: `/zwierzeta/${pet.id}/vet-share` },
+    { icon: Pencil, label: 'Edytuj profil', hint: 'Dane i zdrowie', to: `/zwierzeta/${pet.id}/edytuj` },
+    ...(pet.tagCode
+      ? [{ icon: Eye, label: 'Oczami znalazcy', hint: 'Strona zawieszki', to: `/t/${pet.tagCode}` }]
+      : []),
+    { icon: Plus, label: 'Nowe zwierzę', hint: 'Dodaj kolejne', to: '/zwierzeta/nowe' },
+  ]
+
+  // Najpierw zamykamy arkusz, potem przechodzimy — inaczej <dialog> zostałby otwarty na nowej stronie.
+  function go(to) {
+    onClose()
+    navigate(to)
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title={`Akcje: ${pet.name}`}>
+      <ul className="grid grid-cols-2 gap-3">
+        {tiles.map(({ icon: Icon, label, hint, to, tone }, index) => (
+          <li key={label}>
+            <button
+              type="button"
+              onClick={() => go(to)}
+              style={{ animationDelay: `${index * 35}ms` }}
+              className="flex h-full w-full animate-rise flex-col items-start gap-3 rounded-3xl bg-paper p-4 text-left transition-transform active:scale-[0.97]"
+            >
+              <span className={`grid size-11 place-items-center rounded-2xl ${tone ?? petTone}`}>
+                <Icon size={20} aria-hidden="true" />
+              </span>
+              <span>
+                <span className="block leading-tight font-bold">{label}</span>
+                <span className="mt-0.5 block text-xs text-ink-muted">{hint}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() => go('/ustawienia')}
+        className="mt-3 flex w-full items-center gap-3 rounded-3xl p-4 text-left font-semibold transition-colors hover:bg-paper"
+      >
+        <Settings size={22} aria-hidden="true" />
+        Konto i ustawienia
+        <ChevronRight size={18} aria-hidden="true" className="ml-auto text-ink-muted" />
+      </button>
+    </Sheet>
+  )
+}
+</script>
+<script type="text/plain" id="c15b-profile">
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router'
+import { Pencil, Plus, QrCode, Siren } from 'lucide-react'
+import { getPetById } from '../../api/pets.js'
+import PetActionsSheet from '../../components/pets/PetActionsSheet.jsx'
+import PetAvatar from '../../components/pets/PetAvatar.jsx'
+import PetSwitcher from '../../components/pets/PetSwitcher.jsx'
+import ErrorState from '../../components/ui/ErrorState.jsx'
+import Spinner from '../../components/ui/Spinner.jsx'
+import { useAsync } from '../../hooks/useAsync.js'
+import { cn } from '../../lib/cn.js'
+import { formatAge, speciesLabel } from '../../lib/format.js'
+import { setLastPetId } from '../../lib/lastPet.js'
+
+/*
+  Ekran skupiony na JEDNYM zwierzęciu — główny ekran panelu.
+  Od góry: przełącznik zwierząt i duża karta zwierzęcia (później dojdą tryb zaginięcia, zakładki
+  i skanowania). Cała nawigacja jest w arkuszu pod pływającym przyciskiem „Akcje”.
+*/
+export default function PetProfilePage() {
+  const { id } = useParams()
+  const { data: pet, error, isLoading, reload } = useAsync(() => getPetById(id), [id])
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+
+  // Zapamiętujemy oglądane zwierzę — następne wejście na /panel otworzy właśnie je.
+  useEffect(() => {
+    setLastPetId(id)
+  }, [id])
+
+  return (
+    <div className="space-y-4">
+      <PetSwitcher activeId={id} current={pet} />
+
+      {isLoading ? (
+        <Spinner showLabel label="Wczytuję profil…" />
+      ) : error ? (
+        <ErrorState title="Nie udało się wczytać profilu" error={error} onRetry={reload} />
+      ) : (
+        <>
+          <PetHero pet={pet} />
+
+          <button
+            type="button"
+            onClick={() => setIsSheetOpen(true)}
+            className="mx-auto block text-sm font-semibold text-ink-muted underline-offset-4 hover:underline"
+          >
+            Więcej akcji: spacer, harmonogram, weterynarz, zawieszka…
+          </button>
+
+          <ActionsButton pet={pet} isOpen={isSheetOpen} onClick={() => setIsSheetOpen(true)} />
+          <PetActionsSheet open={isSheetOpen} onClose={() => setIsSheetOpen(false)} pet={pet} />
+        </>
+      )}
+    </div>
+  )
+}
+
+// Duża karta u góry: zielona, a przy zaginięciu czerwona — stan widać zanim cokolwiek przeczytasz.
+function PetHero({ pet }) {
+  const details = [speciesLabel(pet.species), pet.breed, formatAge(pet.birthDate)].filter(Boolean).join(' · ')
+  const chip = 'inline-flex items-center gap-1.5 rounded-full bg-paper/20 px-3 py-1.5 transition-colors hover:bg-paper/30'
+
+  return (
+    <section
+      aria-label={`Karta: ${pet.name}`}
+      className={cn(
+        'relative overflow-hidden rounded-3xl p-5 text-paper shadow-raised',
+        pet.isLost ? 'bg-alert' : 'bg-pine',
+      )}
+    >
+      {/* Dekoracyjne koła w tle — czysty CSS, bez grafik. */}
+      <span aria-hidden="true" className="absolute -top-16 -right-12 size-48 rounded-full bg-paper/10" />
+      <span aria-hidden="true" className="absolute -bottom-20 left-20 size-40 rounded-full bg-paper/10" />
+
+      <div className="relative flex items-center gap-4">
+        <PetAvatar name={pet.name} species={pet.species} size="lg" className="ring-4 ring-paper/40" />
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-paper/20 px-2.5 py-0.5 text-xs font-bold">
+            {pet.isLost ? <Siren size={14} aria-hidden="true" /> : null}
+            {pet.isLost ? 'Zaginione' : 'Bezpieczne w domu'}
+          </p>
+          <h1 className="mt-1.5 truncate text-3xl font-extrabold tracking-tight sm:text-4xl">{pet.name}</h1>
+          <p className="truncate text-sm opacity-85">{details}</p>
+        </div>
+      </div>
+
+      <div className="relative mt-4 flex flex-wrap gap-2 text-sm font-semibold">
+        <Link to={`/zwierzeta/${pet.id}/tag`} className={chip}>
+          <QrCode size={16} aria-hidden="true" />
+          {pet.tagCode ? <span className="font-mono">{pet.tagCode}</span> : 'Bez zawieszki'}
+        </Link>
+        <Link to={`/zwierzeta/${pet.id}/edytuj`} className={chip}>
+          <Pencil size={16} aria-hidden="true" />
+          Edytuj
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+// Pływający przycisk na dole, na środku — w zasięgu kciuka. Kółko ma kolor zwierzęcia,
+// a „+” obraca się w „×”, gdy arkusz jest otwarty.
+function ActionsButton({ pet, isOpen, onClick }) {
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30 flex justify-center px-4">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        className="pointer-events-auto inline-flex min-h-15 animate-pop items-center gap-3 rounded-full bg-ink py-2 pr-7 pl-2 font-display text-lg font-bold text-paper shadow-raised transition-transform active:scale-95"
+      >
+        <span
+          className={cn(
+            'grid size-11 place-items-center rounded-full text-paper transition-transform duration-300',
+            pet.isLost ? 'bg-alert' : 'bg-pine',
+            isOpen && 'rotate-45',
+          )}
+        >
+          <Plus size={24} strokeWidth={2.5} aria-hidden="true" />
+        </span>
+        Akcje
+      </button>
+    </div>
+  )
+}
+</script>
+<script type="text/plain" id="c15b-dash">
+import { Navigate } from 'react-router'
+import { PawPrint, Plus } from 'lucide-react'
+import { getPets } from '../../api/pets.js'
+import Button from '../../components/ui/Button.jsx'
+import EmptyState from '../../components/ui/EmptyState.jsx'
+import ErrorState from '../../components/ui/ErrorState.jsx'
+import Spinner from '../../components/ui/Spinner.jsx'
+import { useAsync } from '../../hooks/useAsync.js'
+import { getLastPetId } from '../../lib/lastPet.js'
+
+/*
+  /panel nie ma już własnej listy kart. Jeśli są zwierzęta, od razu otwieramy ekran
+  ostatnio oglądanego (albo pierwszego) — tam jest przełącznik u góry i arkusz „Akcje”.
+  Własny widok /panel zostaje tylko dla konta bez zwierząt: powitanie i przycisk „Dodaj”.
+*/
+export default function DashboardPage() {
+  const { data: pets, error, isLoading, reload } = useAsync(getPets, [])
+
+  if (isLoading) return <Spinner showLabel label="Wczytuję zwierzęta…" />
+  if (error) return <ErrorState title="Nie udało się wczytać zwierząt" error={error} onRetry={reload} />
+
+  if (pets.length > 0) {
+    const lastId = getLastPetId()
+    const target = pets.find((pet) => pet.id === lastId) ?? pets[0]
+    // `replace`: „Wstecz” z ekranu zwierzęcia nie wraca na /panel, który od razu by przekierował.
+    return <Navigate to={`/zwierzeta/${target.id}`} replace />
+  }
+
+  return (
+    <div className="space-y-6 pt-4">
+      <h1 className="text-2xl font-bold tracking-tight">Twoje zwierzęta</h1>
+      <EmptyState
+        icon={PawPrint}
+        title="Nie masz jeszcze zwierząt"
+        description="Dodaj pierwsze zwierzę i utwórz mu zawieszkę — znalazca zobaczy, jak się z Tobą skontaktować."
+        action={
+          <Button to="/zwierzeta/nowe" icon={Plus} size="sm">
+            Dodaj zwierzę
+          </Button>
+        }
+      />
+    </div>
+  )
+}
+</script>
+<script type="text/plain" id="c15b-router">
+import PetProfilePage from './pages/owner/PetProfilePage'
+
+// … w grupie OwnerLayout:
+              { path: 'zwierzeta/:id', element: <PetProfilePage /> },
+</script>
+<script type="text/plain" id="c15b-rm">
+git rm src/components/pets/PetCard.jsx
+npm run lint
+</script>
 
 <script type="text/plain" id="c16-seed">
     // Tabele „techniczne” logowania — puste na starcie, wypełniają je funkcje z `api/auth.js`.
@@ -939,7 +1646,7 @@ export default function AuthProvider({ children }) {
         await apiLogout()
         setUser(null)
       },
-      // Po zapisaniu ustawień (sesja 23) — żeby sidebar od razu pokazał nowe dane.
+      // Po zapisaniu ustawień (sesja 23) — żeby nagłówek od razu pokazał nowe dane.
       updateUser: setUser,
     }),
     [user, isLoading],
@@ -1043,33 +1750,43 @@ import AuthVerifyPage from './pages/public/AuthVerifyPage'
           { path: 'auth/verify', element: <AuthVerifyPage /> },
 </script>
 <script type="text/plain" id="c17-sidebar">
+import { Link, Outlet } from 'react-router'
 import { useAuth } from '../../hooks/useAuth.js'
-// … pozostałe importy bez zmian …
+// … Logo bez zmian …
 
-export default function Sidebar() {
+export default function OwnerLayout() {
   const { user } = useAuth()
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-line bg-surface p-6 lg:flex">
-      <Logo to="/panel" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Zalogowano jako <span className="font-semibold text-ink">{user?.name}</span>
-      </p>
-
-      <nav aria-label="Nawigacja główna">
-      {/* … reszta bez zmian … */}
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-20 bg-paper/85 pt-[env(safe-area-inset-top)] backdrop-blur">
+        <div className="mx-auto max-w-2xl px-4">
+          <div className="flex h-14 items-center justify-between">
+            <Logo to="/panel" />
+            {user && (
+              <Link
+                to="/ustawienia"
+                aria-label={`Konto: ${user.name}`}
+                title={user.name}
+                className="grid size-10 place-items-center rounded-full bg-ink font-display font-bold text-paper transition-transform active:scale-95"
+              >
+                {user.name.trim().charAt(0).toUpperCase()}
+              </Link>
+            )}
+          </div>
+          {/* … main bez zmian … */}
 </script>
 <script type="text/plain" id="c17-dash">
 import { useAuth } from '../../hooks/useAuth.js'
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  // … useAsync, spinner, błąd i przekierowanie bez zmian …
 
   return (
-    <>
-      <PageHeader
-        title={`Cześć, ${user?.name ?? ''}`}
-        description="Twoje zwierzęta i ostatnie skanowania zawieszek."
+    <div className="space-y-6 pt-4">
+      <h1 className="text-2xl font-bold tracking-tight">Cześć, {user?.name}</h1>
+      {/* … EmptyState bez zmian … */}
 </script>
 
 <script type="text/plain" id="c18-require">
@@ -1296,8 +2013,10 @@ function DemoLogin() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
 (function(){
-const DETAILED = [16,17,18,19];
-const CURRENT = 16;
+const DETAILED = [15.1,15.2,16,17,18,19];
+const CURRENT = 15.1;
+// 15.1 i 15.2 to sesje 15a i 15b (dopisane później, numeracja reszty bez zmian).
+const lab = n => n === 15.1 ? "15a" : n === 15.2 ? "15b" : String(n);
 
 // Sesje skrócone: [nr, tytuł, czas, cel, źródło[], pojęcia, gotowe gdy, commit]
 const PARTS = [
@@ -1306,30 +2025,31 @@ const PARTS = [
   [1,"Tailwind, kolory i fonty","","","","","","feat: Tailwind z tokenami kolorów i fontami"],
   [2,"Router i pierwsze strony","","","","","","feat: routing ze stroną główną i 404"],
   [3,"Pełna mapa tras","","","","","","feat: pełna mapa tras z placeholderami"]]},
- {id:"B", name:"Layout", note:"Etapy 4–7 · zrobione", items:[
+ {id:"B", name:"Layout", note:"Etapy 4–7 · zrobione · sidebar i dolne menu z etapów 6–7 zastępuje sesja 15a", items:[
   [4,"RootLayout, PublicLayout, Logo"],[5,"FinderLayout, VetLayout, PageHeader"],[6,"Nawigacja boczna (desktop)"],[7,"Nawigacja mobilna i przycisk szybkiej akcji"]]},
  {id:"C", name:"Komponenty UI", note:"Etapy 8–12 · zrobione", items:[
   [8,"Card, Badge, Spinner + galeria /dev/ui"],[9,"Button"],[10,"Input, Textarea, Select"],[11,"Toggle, Tabs"],[12,"Modal, EmptyState, StatTile"]]},
- {id:"D", name:"Dane i logowanie", note:"Sesje 13–19 · M1 do 8.11", items:[
+ {id:"D", name:"Dane, nowy układ i logowanie", note:"Sesje 13–19 · nowy układ 15a–15b · M1 do 8.11", items:[
   [13,"Dane przykładowe","~1 h"],[14,"Panel pokazuje moje zwierzęta","~2 h"],[15,"Karty zwierząt z wiekiem, zaginięciem i zawieszką","~1,5 h"],
+  [15.1,"Panel w jednej kolumnie bez sidebara","~0,5–1 h"],[15.2,"Ekran jednego zwierzęcia z przełącznikiem i „Akcje”","~2,5–3 h"],
   [16,"Proszę o link do logowania","~1,5 h"],[17,"Klikam link i jestem zalogowany","~2 h"],[18,"Panel tylko dla zalogowanych, powrót i wylogowanie","~1,5 h"],[19,"Konto demo jednym przyciskiem","~0,5 h"]], ms:"M1 · logowanie i dane działają · 8.11"},
  {id:"E", name:"Panel właściciela", note:"Sesje 20–23 · M2 do 22.11", items:[
-  [20,"Profil zwierzęcia — dane i zdrowie","~1,5 h","Klikam kartę Luny i widzę profil z zakładkami „Dane” i „Zdrowie”, a zakładka zostaje po odświeżeniu.",
-   ["<code>api/mock/client.js</code> — <code>findOwnPet</code>","<code>api/mock/pets.js</code> — <code>getPetById</code>; dopisz do fasady","<code>lib/format.js</code> — <code>formatDate</code>, <code>formatWeight</code>","<code>pages/owner/PetProfilePage.jsx</code> — <code>TABS</code> (bez <code>activity</code>), <code>PetProfilePage</code> bez <code>updatedPet</code> i <code>LostModeSwitch</code>, <code>ProfileHeader</code>, <code>ProfileTabs</code>, <code>InfoTab</code>, <code>HealthTab</code>","<code>router.jsx</code> — trasa <code>zwierzeta/:id</code>"],
+  [20,"Profil zwierzęcia — dane i zdrowie","~1,5 h","Na ekranie Luny pod kartą są zakładki „Dane” i „Zdrowie”, a zakładka zostaje po odświeżeniu. Cudze zwierzę daje 404.",
+   ["<code>api/mock/client.js</code> — <code>findOwnPet</code>","<code>api/mock/pets.js</code> — <code>getPetById</code> w pełnej wersji (<code>requireUser</code> + <code>findOwnPet</code> zamiast <code>find</code> z sesji 15b)","<code>lib/format.js</code> — <code>formatDate</code>, <code>formatWeight</code>","<code>pages/owner/PetProfilePage.jsx</code> — <code>TABS</code> (bez <code>activity</code>), <code>ProfileTabs</code>, <code>InfoTab</code>, <code>HealthTab</code>; <code>&lt;ProfileTabs&gt;</code> wstaw pod <code>&lt;PetHero&gt;</code> (<code>ProfileHeader</code> z prototypu już nie istnieje — zastąpiła go karta)"],
    "Pobieranie zależne od parametru URL (<code>useParams</code> + <code>useAsync</code>), stan w adresie (<code>?tab=health</code>) zamiast w <code>useState</code>, <code>replace</code> przy zmianie zakładki, <code>&lt;dl&gt;</code>, <code>whitespace-pre-line</code>, „cudze = 404”.",
-   "<code>/zwierzeta/luna?tab=health</code> pokazuje uwagi medyczne; przełączanie zakładek zmienia adres, a odświeżenie zostawia tę samą; <code>/zwierzeta/xyz</code> pokazuje „Nie znaleziono zwierzęcia”.","feat(owner): profil zwierzęcia z zakładkami w adresie"],
-  [21,"Dodaję nowe zwierzę","~2–3 h","Przycisk „Dodaj zwierzę” otwiera formularz, a po zapisie widzę profil nowego zwierzęcia.",
-   ["<code>api/mock/pets.js</code> — <code>EDITABLE_FIELDS</code>, <code>pickEditable</code>, <code>validate</code>, <code>createPet</code>; dopisz do fasady","<code>components/ui/Notice.jsx</code> — cały plik","<code>components/pets/PetForm.jsx</code> — cały plik","<code>pages/owner/PetNewPage.jsx</code> — cały plik; trasa <code>zwierzeta/nowe</code>","<code>DashboardPage.jsx</code> — przycisk w <code>EmptyState</code> (w nagłówku już masz)"],
+   "<code>/zwierzeta/luna?tab=health</code> pokazuje uwagi medyczne; przełączanie zakładek zmienia adres, a odświeżenie zostawia tę samą; Ola po wpisaniu <code>/zwierzeta/luna</code> widzi „Nie znaleziono zwierzęcia”.","feat(owner): profil zwierzęcia z zakładkami w adresie"],
+  [21,"Dodaję nowe zwierzę","~2–3 h","Kafelek „+ Dodaj” w przełączniku (albo przycisk w pustym panelu) otwiera formularz, a po zapisie widzę ekran nowego zwierzęcia.",
+   ["<code>api/mock/pets.js</code> — <code>EDITABLE_FIELDS</code>, <code>pickEditable</code>, <code>validate</code>, <code>createPet</code>; dopisz do fasady","<code>components/ui/Notice.jsx</code> — cały plik","<code>components/pets/PetForm.jsx</code> — cały plik","<code>pages/owner/PetNewPage.jsx</code> — cały plik; trasa <code>zwierzeta/nowe</code>"],
    "Stan formularza jako obiekt, jeden <code>handleChange</code> po atrybucie <code>name</code>, walidacja w przeglądarce i „na serwerze”, <code>null</code> → <code>''</code> w polach, błąd z API w formularzu, lista dozwolonych pól.",
-   "Pusty formularz pokazuje błąd przy imieniu; waga „12,5” się zapisuje; data z przyszłości daje błąd; po zapisie jesteś na profilu, a w panelu jest karta (także po odświeżeniu).","feat(owner): dodawanie zwierzęcia"],
-  [22,"Edytuję zwierzę","~1 h","Przycisk „Edytuj” w profilu otwiera ten sam formularz z danymi i zapisuje zmiany.",
+   "Pusty formularz pokazuje błąd przy imieniu; waga „12,5” się zapisuje; data z przyszłości daje błąd; po zapisie jesteś na ekranie nowego zwierzęcia, a jego awatar jest w przełączniku (także po odświeżeniu).","feat(owner): dodawanie zwierzęcia"],
+  [22,"Edytuję zwierzę","~1 h","„Edytuj” na karcie zwierzęcia albo kafelek w „Akcjach” otwiera ten sam formularz z danymi i zapisuje zmiany.",
    ["<code>api/mock/pets.js</code> — <code>updatePet</code>; dopisz do fasady","<code>pages/owner/PetEditPage.jsx</code> — cały plik; trasa <code>zwierzeta/:id/edytuj</code>"],
    "Jeden komponent w dwóch trybach, <code>key</code> do zresetowania stanu formularza, aktualizacja bez mutacji (<code>{ ...pet, ...zmiany }</code>).",
-   "Zmiana rasy Luny jest widoczna w profilu i po odświeżeniu; „Anuluj” wraca bez zmian.","feat(owner): edycja profilu zwierzęcia"],
-  [23,"Ustawiam numer telefonu dla znalazcy","~1 h","W ustawieniach zmieniam imię i telefon, a panel ostrzega, gdy telefonu brak.",
-   ["<code>api/mock/auth.js</code> — <code>PHONE_PATTERN</code>, <code>updateSettings</code>; dopisz do fasady","<code>context/AuthProvider.jsx</code> — <code>updateUser</code> (już masz z sesji 17)","<code>pages/owner/SettingsPage.jsx</code> — cały plik (formularz + wylogowanie)","<code>DashboardPage.jsx</code> — <code>Notice</code> „Dodaj numer telefonu”"],
+   "Zmiana rasy Luny jest widoczna na karcie i po odświeżeniu; „Anuluj” wraca bez zmian.","feat(owner): edycja profilu zwierzęcia"],
+  [23,"Ustawiam numer telefonu dla znalazcy","~1 h","W ustawieniach zmieniam imię i telefon, a ekran zwierzęcia ostrzega, gdy telefonu brak.",
+   ["<code>api/mock/auth.js</code> — <code>PHONE_PATTERN</code>, <code>updateSettings</code>; dopisz do fasady","<code>context/AuthProvider.jsx</code> — <code>updateUser</code> (już masz z sesji 17)","<code>pages/owner/SettingsPage.jsx</code> — cały plik (formularz + wylogowanie)","<code>components/owner/PhoneNotice.jsx</code> — cały plik (<code>Notice</code> „Dodaj numer telefonu”); użyj go w <code>PetProfilePage</code> pod kartą i w pustym <code>DashboardPage</code>"],
    "Aktualizacja danych w kontekście po zapisie, status formularza jako jeden napis (<code>idle</code> / <code>saving</code> / <code>saved</code> / <code>error</code>), <code>type=\"tel\"</code> i <code>autoComplete</code>.",
-   "Zmiana imienia od razu zmienia sidebar; błędny numer pokazuje błąd; konto bez telefonu widzi żółte ostrzeżenie, które znika po zapisaniu numeru.","feat(owner): ustawienia z imieniem i numerem telefonu"]], ms:"M2 · panel właściciela · 22.11"},
+   "Zmiana imienia od razu zmienia literę w kółku konta; błędny numer pokazuje błąd; konto bez telefonu widzi żółte ostrzeżenie, które znika po zapisaniu numeru.","feat(owner): ustawienia z imieniem i numerem telefonu"]], ms:"M2 · panel właściciela · 22.11"},
  {id:"F", name:"Zawieszka i znalazca", note:"Sesje 24–34 · M3 do 6.12 · serce pracy", items:[
   [24,"Znalazca skanuje tag i widzi profil zwierzaka","~2 h","Niezalogowana osoba wchodzi na <code>/t/LUNA-7K2Q</code> i widzi imię, uwagi medyczne i przycisk „Zadzwoń do opiekuna”.",
    ["<code>api/mock/tags.js</code> — <code>resolveTag</code> bez <code>recordScan</code> i bez gałęzi <code>owner</code> i <code>lost</code>; fasada <code>api/tags.js</code> z komentarzem o wariantach","<code>lib/sms.js</code> — <code>normalizePhone</code>, <code>buildTelLink</code>","<code>components/finder/</code> — <code>ActionLink</code>, <code>MedicalNotes</code>, <code>InactiveTagView</code>, <code>FoundView</code>","<code>pages/finder/TagPage.jsx</code> — <code>TagContent</code> (warianty <code>found</code>, <code>inactive</code>) i <code>Loading</code>","<code>router.jsx</code> — trasa <code>t/:tagId</code>"],
@@ -1340,9 +2060,9 @@ const PARTS = [
    "Jednoznaczny komunikat alarmowy, kiedy numer jest widoczny, a kiedy nie (D5), <code>state</code> przekazany w <code>&lt;Link&gt;</code>.",
    "Po wylogowaniu <code>/t/MRCZ-4P9D</code> pokazuje „Zaginione zwierzę”, komunikat, numer i przyciski „Wyślij SMS z lokalizacją” oraz „Zadzwoń”.","feat(finder): widok alarmowy dla zaginionego zwierzęcia"],
   [26,"Włączam tryb zaginięcia w profilu","~1,5 h","Przestawiam „Zaginione”, potwierdzam w oknie z komunikatem, a zawieszka pokazuje alarm.",
-   ["<code>api/mock/pets.js</code> — <code>setLostMode</code>; dopisz do fasady","<code>components/pets/LostModeSwitch.jsx</code> — cały plik","<code>PetProfilePage.jsx</code> — <code>updatedPet</code>, <code>&lt;LostModeSwitch&gt;</code>, odznaka w <code>ProfileHeader</code>"],
+   ["<code>api/mock/pets.js</code> — <code>setLostMode</code>; dopisz do fasady","<code>components/pets/LostModeSwitch.jsx</code> — cały plik","<code>PetProfilePage.jsx</code> — <code>updatedPet</code> i <code>&lt;LostModeSwitch&gt;</code> pod kartą; <code>current={pet}</code> w przełączniku już masz z 15b"],
    "Potwierdzenie w <code>Modal</code>, przełącznik, który nie zmienia stanu od razu, aktualizacja widoku danymi z API, <code>key</code> przy zmianie zwierzęcia.",
-   "Włączenie trybu dla Luny daje czerwone oznaczenie w profilu i na karcie, a <code>/t/LUNA-7K2Q</code> pokazuje alarm z Twoim komunikatem. Wyłączenie też wymaga potwierdzenia.","feat(owner): przełącznik trybu zaginięcia z potwierdzeniem"],
+   "Włączenie trybu dla Luny od razu zmienia jej kartę na czerwoną i dodaje kropkę w przełączniku, a <code>/t/LUNA-7K2Q</code> pokazuje alarm z Twoim komunikatem. Wyłączenie też wymaga potwierdzenia.","feat(owner): przełącznik trybu zaginięcia z potwierdzeniem"],
   [27,"Znalazca wysyła mi SMS z lokalizacją","~2–3 h","Z widoku alarmowego znalazca pobiera pozycję i otwiera gotowy SMS z linkiem do mapy.",
    ["<code>hooks/useGeolocation.js</code> — cały plik","<code>lib/sms.js</code> — <code>isIOS</code>, <code>buildSmsLink</code>, <code>mapsLink</code>, <code>buildFinderMessage</code>","<code>pages/finder/ShareLocationPage.jsx</code> — cały plik; trasa <code>t/:tagId/lokalizacja</code>"],
    "Geolocation API (zgoda, kody błędów), tylko HTTPS/localhost, <code>sms:</code> na Androidzie i iOS, <code>encodeURIComponent</code>, wyjście awaryjne bez lokalizacji, dane, które celowo nie trafiają do bazy (D4, RODO).",
@@ -1355,16 +2075,16 @@ const PARTS = [
    ["<code>api/mock/activities.js</code> — <code>getActivities</code>","<code>lib/format.js</code> — <code>formatDuration</code>, <code>formatDistance</code>","<code>components/pets/ActivityList.jsx</code> — cały plik","<code>PetProfilePage.jsx</code> — zakładka <code>activity</code> i <code>ActivityTab</code>"],
    "Filtrowanie po dacie, sortowanie napisów ISO (<code>localeCompare</code>), <code>reduce</code>, <code>StatTile</code> i <code>tabular-nums</code>.",
    "Luna ma kafelki „Spacery / Karmienia / Czas spacerów” i listę z 7 dni; karmienie z sesji 28 jest na górze z odznaką „Po skanie”; nowe zwierzę widzi stan pusty.","feat(owner): aktywność zwierzęcia z ostatnich 7 dni"],
-  [30,"Każde skanowanie zapisuje się, a ja widzę je w panelu","~1,5 h","Każde otwarcie zawieszki zapisuje skan, a panel pokazuje ostatnie skanowania z przeglądarką.",
-   ["<code>api/mock/tags.js</code> — <code>DUPLICATE_SCAN_MS</code>, <code>recordScan</code>, <code>scansOf</code>, <code>getRecentScans</code>","<code>lib/format.js</code> — <code>describeUserAgent</code>","<code>components/tags/ScanList.jsx</code> — cały plik","<code>DashboardPage.jsx</code> — <code>RecentScans</code>"],
+  [30,"Każde skanowanie zapisuje się, a ja widzę je w panelu","~1,5 h","Każde otwarcie zawieszki zapisuje skan, a ekran zwierzęcia pokazuje trzy ostatnie skanowania z przeglądarką.",
+   ["<code>api/mock/tags.js</code> — <code>DUPLICATE_SCAN_MS</code>, <code>recordScan</code>, <code>scansOf</code>, <code>getTagScans</code> (przeniesione z sesji 32)","<code>lib/format.js</code> — <code>describeUserAgent</code>","<code>components/tags/ScanList.jsx</code> — cały plik","<code>PetProfilePage.jsx</code> — <code>RecentPetScans</code> na samym dole ekranu"],
    "Audyt bezpieczeństwa (UC8), minimalizacja danych (bez IP i lokalizacji), ochrona przed podwójnym zapisem, łączenie trzech kolekcji jak <code>JOIN</code>, User-Agent.",
-   "Panel pokazuje „Safari · iOS”, „Chrome · Android”; skan po wylogowaniu jest na górze jako „Inna osoba”, własny jako „Ty”. Nie testuj w incognito.","feat(owner): zapis skanowań i ostatnie skanowania w panelu"],
+   "Ekran Luny pokazuje „Safari · iOS”, „Chrome · Android”; skan po wylogowaniu jest na górze jako „Inna osoba”, własny jako „Ty”. Nie testuj w incognito.","feat(owner): zapis skanowań i ostatnie skanowania na ekranie zwierzęcia"],
   [31,"Tworzę zawieszkę z kodem QR","~2 h","Dla nowego zwierzęcia klikam „Utwórz zawieszkę” i dostaję kod, QR, adres do NFC i plik do druku.",
    ["<code>npm install qrcode.react</code>","<code>api/mock/tags.js</code> — <code>ALPHABET</code>, <code>generateTagCode</code>, <code>createTag</code>","<code>pages/owner/PetTagPage.jsx</code> — bez <code>ScanHistory</code> i bez wymiany kodu","<code>router.jsx</code> — trasa <code>zwierzeta/:id/tag</code>"],
    "<code>crypto.getRandomValues</code>, alfabet bez mylących znaków, <code>QRCodeSVG</code>, <code>window.location.origin</code>, <code>navigator.clipboard</code>, pobieranie z <code>Blob</code>, hook z logiką akcji, warunek wstępny (bez telefonu nie ma zawieszki).",
    "Kod bez <code>0 O 1 I L</code>; „Kopiuj” kopiuje adres; „Pobierz QR (SVG)” zapisuje plik; telefon odczytuje QR z ekranu; konto bez telefonu widzi prośbę o uzupełnienie.","feat(tags): generowanie zawieszki z kodem QR"],
   [32,"Historia skanowań zawieszki i nowy kod","~1 h","Widzę wszystkie skanowania zawieszki i mogę wygenerować nowy kod, który wyłącza stary.",
-   ["<code>api/mock/tags.js</code> — <code>getTagScans</code>","<code>PetTagPage.jsx</code> — <code>ScanHistory</code> (z <code>key={pet.tagCode}</code>), „Nowy kod”, <code>Modal</code>, <code>handleRegenerate</code>"],
+   ["<code>getTagScans</code> już masz z sesji 30","<code>PetTagPage.jsx</code> — <code>ScanHistory</code> (z <code>key={pet.tagCode}</code>), „Nowy kod”, <code>Modal</code>, <code>handleRegenerate</code>"],
    "Akcja nieodwracalna w oknie potwierdzenia, <code>key</code> do przeładowania sekcji, stary kod zostaje jako nieaktywny.",
    "Historia pokazuje przeglądarkę i „Ty / Inna osoba”; po „Nowy kod” stary adres jest nieaktywny, a nowy działa.","feat(tags): historia skanowań i wymiana kodu zawieszki"],
   [33,"Panel DEV do pokazu (opcjonalnie)","~1 h","W rogu ekranu w <code>npm run dev</code> mam panel, którym pokazuję wszystkie warianty zawieszki.",
@@ -1457,13 +2177,13 @@ function save(){ try { localStorage.setItem(KEY, JSON.stringify(doneMap)); } cat
 
 // --- reszta sesji
 const rest = document.getElementById("rest");
-let html = `<div class="part-head"><span class="eyebrow">Cały plan</span><h2>Wszystkie sesje</h2><p class="prose muted">Kliknij sesję, żeby zobaczyć, co przepisać z prototypu, czego się uczysz i jak sprawdzić, że działa. Sesje 16–19 rozpisane są wyżej, z kodem.</p></div>`;
+let html = `<div class="part-head"><span class="eyebrow">Cały plan</span><h2>Wszystkie sesje</h2><p class="prose muted">Kliknij sesję, żeby zobaczyć, co przepisać z prototypu, czego się uczysz i jak sprawdzić, że działa. Sesje 15a–19 rozpisane są wyżej, z kodem.</p></div>`;
 for (const part of PARTS) {
   html += `<h3 style="margin-top:18px">Część ${part.id} · ${part.name}</h3><p class="muted" style="font-size:.88rem">${part.note}</p>`;
   for (const it of part.items) {
     const [n,title,time,goal,src,learn,ok,commit] = it;
     if (DETAILED.includes(n)) {
-      html += `<details class="s" id="r${n}" data-n="${n}"><summary><span class="sn">${n}</span><span class="st"><b>${title}</b><small>pełny kod wyżej · <a href="#s${n}">przejdź do sesji ${n}</a></small></span><span class="time">${time||""}</span></summary></details>`;
+      html += `<details class="s" id="r${lab(n)}" data-n="${n}"><summary><span class="sn">${lab(n)}</span><span class="st"><b>${title}</b><small>pełny kod wyżej · <a href="#s${lab(n)}">przejdź do sesji ${lab(n)}</a></small></span><span class="time">${time||""}</span></summary></details>`;
       continue;
     }
     const label = n <= 12 ? `Etap ${n}` : `Sesja ${n}`;
@@ -1488,8 +2208,8 @@ function buildToc(el){
     t += `<div class="grp"><b>${part.id} · ${part.name}</b>`;
     const items = part.id==="A"||part.id==="B"||part.id==="C" ? [[part.items[0][0], `Etapy ${part.items[0][0]}–${part.items[part.items.length-1][0]}`, part.items.map(i=>i[0])]] : part.items.map(i=>[i[0], i[1], [i[0]]]);
     for (const [n,title,group] of items) {
-      const target = DETAILED.includes(n) ? `s${n}` : `r${n}`;
-      t += `<a href="#${target}" data-group="${group.join(",")}"><span class="dot"></span><span>${group.length>1?title:`<strong>${n}</strong> ${title}`}</span></a>`;
+      const target = DETAILED.includes(n) ? `s${lab(n)}` : `r${n}`;
+      t += `<a href="#${target}" data-group="${group.join(",")}"><span class="dot"></span><span>${group.length>1?title:`<strong>${lab(n)}</strong> ${title}`}</span></a>`;
     }
     t += `</div>`;
   }

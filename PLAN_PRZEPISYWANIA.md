@@ -198,7 +198,7 @@ a `/vet/abc` ma nagłówek „Paszport medyczny”.
 ### Etap 6 — Nawigacja boczna (desktop) ★★★
 *Nowe pojęcia:* tablica obiektów jako konfiguracja, **`.map()` i `key`**, destrukturyzacja ze zmianą
 nazwy (`icon: Icon`), **`NavLink`** i `className` jako funkcja.
-*Wzór:* `ownerNav.js`, `Sidebar.jsx`.
+*Wzór:* `ownerNav.js`, `Sidebar.jsx` (od 31.10 nie ma ich w prototypie — zastąpiła je sesja 15a; stara wersja: `git show e627572:src/components/layout/Sidebar.jsx`).
 
 1. [ ] Utwórz `components/layout/ownerNav.js`: przepisz.
 2. [ ] Utwórz `components/layout/Sidebar.jsx`: przepisz (przycisk „Rozpocznij spacer” jako `<Link>`
@@ -437,6 +437,32 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
   obie karty mają kod zawieszki w czcionce monospace, kliknięcie prowadzi do `/zwierzeta/:id`.
 - **Commit:** `feat(owner): karty zwierząt z wiekiem, zaginięciem i kodem zawieszki`
 
+## Sesja 15a: Panel w jednej kolumnie bez sidebara · ~0,5–1 h
+> Nowy układ panelu z wersji Alt (decyzja z 31.10). Kolory i fonty zostają. Pełny kod: plan w HTML.
+- **Cel:** panel nie ma sidebara, dolnego paska ani pływającego „+”; u góry przyklejony nagłówek z logo, pod nim jedna wąska kolumna (`max-w-2xl`), taka sama na telefonie i komputerze.
+- **Źródło w prototypie:**
+  - `src/index.css` — `@utility no-scrollbar`.
+  - `src/components/layout/OwnerLayout.jsx` — cały, **bez** kółka konta (`useAuth` jeszcze nie ma, dojdzie w sesji 17).
+  - Usuń: `git rm src/components/layout/Sidebar.jsx src/components/layout/BottomNav.jsx src/components/layout/ownerNav.js`.
+- **Czego się uczę:** jedna kolumna zamiast dwóch układów, `sticky` + `backdrop-blur`, `env(safe-area-inset-top)`, `@utility` w Tailwind v4, `git rm`.
+- **Gotowe, gdy:** na 375 px i na komputerze ta sama wyśrodkowana kolumna bez sidebara i dolnego paska; nagłówek zostaje u góry przy przewijaniu; logo wraca do `/panel`.
+- **Commit:** `refactor(layout): panel w jednej kolumnie zamiast sidebara i dolnego menu`
+
+## Sesja 15b: Ekran jednego zwierzęcia z przełącznikiem i przyciskiem „Akcje” · ~2,5–3 h
+- **Cel:** `/panel` otwiera ostatnio oglądane zwierzę; u góry awatary do przełączania, pod nimi duża karta zwierzęcia, na dole przycisk „Akcje” z arkuszem od dołu (spacer, spacery, harmonogram, zawieszka, weterynarz, edycja, nowe zwierzę, konto i ustawienia).
+- **Źródło w prototypie:**
+  - `src/api/mock/pets.js` — `getPetById` **w uproszczonej wersji** (`getDb().pets.find(...)`, brak → `apiError(404, ...)`); pełna z `findOwnPet` w sesji 20. Dopisz do fasady.
+  - `src/lib/lastPet.js` — cały plik.
+  - `src/index.css` — w `@theme`: `--animate-sheet`, `--animate-pop`, `--animate-rise` i ich `@keyframes`.
+  - `src/components/ui/Sheet.jsx`, `src/components/pets/PetSwitcher.jsx`, `src/components/pets/PetActionsSheet.jsx` — całe pliki.
+  - `src/pages/owner/PetProfilePage.jsx` — tylko `PetProfilePage` (przełącznik, `PetHero`, link „Więcej akcji…”, `ActionsButton`, `PetActionsSheet`), **bez** `PhoneNotice`, `LostModeSwitch`, `ProfileTabs`, `RecentPetScans`.
+  - `src/pages/owner/DashboardPage.jsx` — przekierowanie `<Navigate replace>` + `EmptyState`, **bez** `PhoneNotice` i bez `user` (nagłówek „Twoje zwierzęta”).
+  - `src/router.jsx` — trasa `zwierzeta/:id` → `PetProfilePage`.
+  - Usuń: `git rm src/components/pets/PetCard.jsx`.
+- **Czego się uczę:** `<Navigate replace>` w renderze, localStorage jako wygoda, ten sam komponent przy zmianie parametru, `useRef` na element i `scrollTo`, scroll-snap, `<dialog>` jako bottom sheet, animacje z `@theme` i `animationDelay`, elementy warunkowe w tablicy, `pointer-events-none`.
+- **Gotowe, gdy:** `/panel` → `/zwierzeta/luna` (a po obejrzeniu Mruczka — Mruczek); karta Mruczka czerwona, kropka w przełączniku i czerwone kółko w „Akcjach”; awatary nie migają przy przełączaniu; arkusz zamykają X, Escape i tło; kafelki Spacery/Harmonogram i „Konto i ustawienia” prowadzą na swoje strony; „Wstecz” nie wraca na `/panel`; `/zwierzeta/xyz` → „Nie znaleziono zwierzęcia”.
+- **Commit:** `feat(owner): ekran jednego zwierzęcia z przełącznikiem i arkuszem akcji`
+
 ## Sesja 16: Proszę o link do logowania · ~1,5 h
 - **Cel:** wpisuję e-mail na `/login`, widzę „Sprawdź pocztę” i przycisk „[DEV] Symuluj kliknięcie w link”.
 - **Źródło w prototypie:**
@@ -456,7 +482,7 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
 - **Commit:** `feat(auth): formularz prośby o link do logowania`
 
 ## Sesja 17: Klikam link i jestem zalogowany · ~2 h
-- **Cel:** „Symuluj kliknięcie” loguje mnie i przenosi do panelu, a w sidebarze widzę swoje imię — także po odświeżeniu.
+- **Cel:** „Symuluj kliknięcie” loguje mnie i przenosi do panelu, a w nagłówku widzę kółko z moim inicjałem — także po odświeżeniu.
 - **Źródło w prototypie:**
   - `src/api/mock/client.js` — `TOKEN_KEY`, `getAuthToken`, `setAuthToken`, `clearAuthToken`,
     `findSessionUser`, `toUser`.
@@ -467,16 +493,16 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
   - `src/hooks/useAuth.js` — cały plik.
   - `src/main.jsx` — owinięcie `RouterProvider` w `AuthProvider`.
   - `src/pages/public/AuthVerifyPage.jsx` — cały plik.
-  - `src/components/layout/Sidebar.jsx` — linijka z „Zalogowano jako {user.name}”.
-  - `src/pages/owner/DashboardPage.jsx` — nagłówek „Cześć, {user.name}”.
+  - `src/components/layout/OwnerLayout.jsx` — kółko z inicjałem konta (link do `/ustawienia`), na razie tylko gdy `user` istnieje.
+  - `src/pages/owner/DashboardPage.jsx` — „Cześć, {user?.name}” w pustym panelu.
 - **Czego się uczę:** Context (`createContext`, `useContext`), prop drilling, własny hook, `useMemo`,
   stan „jeszcze nie wiadomo” (`isLoading`), `useSearchParams`, podwójny efekt w `StrictMode` i `useRef`
   jako zabezpieczenie, sesja jako token w localStorage (i dlaczego prawdziwy serwer zrobi to inaczej),
   rejestracja przy pierwszym logowaniu (konto zakłada `verifyToken`, gdy e-maila nie ma w `users`).
-- **Gotowe, gdy:** po kliknięciu linku jesteś na `/panel` z „Cześć, Maciej”; po odświeżeniu nadal jesteś
-  zalogowany; ponowne otwarcie tego samego linku pokazuje „Nie udało się zalogować”; link dla nowego adresu
-  z imieniem „Ola” zakłada konto (widać je w `users`) i wita „Cześć, Ola”; w konsoli brak błędów
-  mimo `StrictMode`.
+- **Gotowe, gdy:** po kliknięciu linku jesteś w panelu (ekran Luny) z kółkiem „M” w nagłówku; po odświeżeniu
+  nadal jesteś zalogowany; ponowne otwarcie tego samego linku pokazuje „Nie udało się zalogować”; link dla
+  nowego adresu z imieniem „Ola” zakłada konto (widać je w `users`) i pokazuje kółko „O”; w konsoli brak
+  błędów mimo `StrictMode`.
 - **Commit:** `feat(auth): weryfikacja linku i kontekst zalogowanego użytkownika`
 
 ## Sesja 18: Panel tylko dla zalogowanych, powrót po logowaniu i wylogowanie · ~1,5 h
@@ -492,7 +518,7 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
   kolejność „najpierw nawigacja, potem wylogowanie”, 401 jako „brak sesji”.
 - **Gotowe, gdy:** wylogowany wchodzi na `/ustawienia` → `/login` → „Symuluj kliknięcie” → wraca na
   **`/ustawienia`**. Odświeżenie zalogowanej strony nie wyrzuca na `/login`. Wylogowanie przenosi na `/`.
-  Nowe konto (inny e-mail) widzi pusty panel z `EmptyState`.
+  Nowe konto (inny e-mail) widzi pusty panel z „Cześć, Ola” i `EmptyState`.
 - **Commit:** `feat(auth): ochrona panelu, powrót po zalogowaniu i wylogowanie`
 
 ## Sesja 19: Wchodzę na konto demo jednym przyciskiem · ~0,5 h
@@ -503,7 +529,7 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
   - `src/pages/public/LoginPage.jsx` — komponent `DemoLogin` i jego użycie pod formularzem.
 - **Czego się uczę:** komponent, który sam decyduje, czy się pokazać (`return null`), reakcja na zmianę
   kontekstu (`<Navigate>` przenosi sam, bez `navigate()`).
-- **Gotowe, gdy:** jedno kliknięcie na `/login` przenosi do panelu z Luną i Mruczkiem.
+- **Gotowe, gdy:** jedno kliknięcie na `/login` przenosi na ekran Luny, a w przełączniku jest też Mruczek.
 - **Commit:** `feat(auth): logowanie na konto demo jednym przyciskiem`
 
 > **Kamień milowy M1:** logowanie na danych przykładowych, ochrona tras, powrót na stronę sprzed logowania.
@@ -513,14 +539,13 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
 # Część E — Panel właściciela
 
 ## Sesja 20: Profil zwierzęcia — dane i zdrowie · ~1,5 h
-- **Cel:** klikam kartę Luny i widzę jej profil z zakładkami „Dane” i „Zdrowie”, a zakładka zostaje po odświeżeniu.
+- **Cel:** na ekranie Luny pod kartą są zakładki „Dane” i „Zdrowie”, a zakładka zostaje po odświeżeniu; cudze zwierzę daje 404.
 - **Źródło w prototypie:**
   - `src/api/mock/client.js` — `findOwnPet`.
-  - `src/api/mock/pets.js` — `getPetById`; dopisz do fasady.
+  - `src/api/mock/pets.js` — `getPetById` w pełnej wersji (`requireUser` + `findOwnPet` zamiast `find` z sesji 15b).
   - `src/lib/format.js` — `formatDate`, `formatWeight`.
-  - `src/pages/owner/PetProfilePage.jsx` — `TABS` (na razie bez `activity`), `PetProfilePage` **bez**
-    `updatedPet` i `LostModeSwitch`, oraz `ProfileHeader`, `ProfileTabs`, `InfoTab`, `HealthTab`.
-  - `src/router.jsx` — trasa `zwierzeta/:id`.
+  - `src/pages/owner/PetProfilePage.jsx` — `TABS` (na razie bez `activity`), `ProfileTabs`, `InfoTab`, `HealthTab`;
+    `<ProfileTabs>` pod `<PetHero>` (karta zastąpiła dawny `ProfileHeader`).
 - **Czego się uczę:** pobieranie zależne od parametru URL (`useParams` + `useAsync`), stan w adresie
   (`?tab=health`) zamiast w `useState`, `replace` przy zmianie zakładki, `<dl>`, `whitespace-pre-line`,
   „cudze = 404”.
@@ -529,23 +554,22 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
 - **Commit:** `feat(owner): profil zwierzęcia z zakładkami w adresie`
 
 ## Sesja 21: Dodaję nowe zwierzę · ~2–3 h
-- **Cel:** przycisk „Dodaj zwierzę” otwiera formularz, a po zapisie widzę profil nowego zwierzęcia.
+- **Cel:** kafelek „+ Dodaj” w przełączniku (albo „Nowe zwierzę” w Akcjach) otwiera formularz, a po zapisie widzę ekran nowego zwierzęcia.
 - **Źródło w prototypie:**
   - `src/api/mock/pets.js` — `EDITABLE_FIELDS`, `pickEditable`, `validate`, `createPet`; dopisz do fasady.
   - `src/components/ui/Notice.jsx` — cały plik.
   - `src/components/pets/PetForm.jsx` — cały plik.
   - `src/pages/owner/PetNewPage.jsx` — cały plik; trasa `zwierzeta/nowe` w routerze.
-  - `src/pages/owner/DashboardPage.jsx` — przycisk „Dodaj zwierzę” w nagłówku i w `EmptyState`.
 - **Czego się uczę:** stan formularza jako obiekt, jeden `handleChange` po atrybucie `name`, walidacja
   w przeglądarce i „na serwerze”, zamiana danych API na wartości pól (`null` → `''`), błąd z API pokazany
   w formularzu, lista dozwolonych pól.
 - **Gotowe, gdy:** pusty formularz pokazuje błąd przy imieniu; waga „12,5” (z przecinkiem) się zapisuje;
-  data z przyszłości daje błąd; po zapisie jesteś na profilu nowego zwierzęcia, a w panelu jest jego karta
-  (także po odświeżeniu).
+  data z przyszłości daje błąd; po zapisie jesteś na ekranie nowego zwierzęcia, a jego awatar jest
+  w przełączniku (także po odświeżeniu).
 - **Commit:** `feat(owner): dodawanie zwierzęcia`
 
 ## Sesja 22: Edytuję zwierzę · ~1 h
-- **Cel:** przycisk „Edytuj” w profilu otwiera ten sam formularz z danymi zwierzęcia i zapisuje zmiany.
+- **Cel:** „Edytuj” na karcie zwierzęcia albo kafelek w Akcjach otwiera ten sam formularz z danymi zwierzęcia i zapisuje zmiany.
 - **Źródło w prototypie:**
   - `src/api/mock/pets.js` — `updatePet`; dopisz do fasady.
   - `src/pages/owner/PetEditPage.jsx` — cały plik; trasa `zwierzeta/:id/edytuj`.
@@ -555,15 +579,15 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
 - **Commit:** `feat(owner): edycja profilu zwierzęcia`
 
 ## Sesja 23: Ustawiam numer telefonu dla znalazcy · ~1 h
-- **Cel:** w ustawieniach zmieniam imię i telefon, a panel ostrzega, gdy telefonu brak.
+- **Cel:** w ustawieniach zmieniam imię i telefon, a ekran zwierzęcia ostrzega, gdy telefonu brak.
 - **Źródło w prototypie:**
   - `src/api/mock/auth.js` — `PHONE_PATTERN`, `updateSettings`; dopisz do fasady.
   - `src/context/AuthProvider.jsx` — `updateUser`.
   - `src/pages/owner/SettingsPage.jsx` — cały plik (formularz + wylogowanie z sesji 18).
-  - `src/pages/owner/DashboardPage.jsx` — `Notice` „Dodaj numer telefonu”.
+  - `src/components/owner/PhoneNotice.jsx` — cały plik; użyj w `PetProfilePage` pod kartą i w pustym `DashboardPage`.
 - **Czego się uczę:** aktualizacja danych w kontekście po zapisie, status formularza jako jeden napis
   (`idle` / `saving` / `saved` / `error`), `type="tel"` i `autoComplete`.
-- **Gotowe, gdy:** zmiana imienia od razu zmienia sidebar; błędny numer pokazuje błąd; konto bez telefonu
+- **Gotowe, gdy:** zmiana imienia od razu zmienia literę w kółku konta; błędny numer pokazuje błąd; konto bez telefonu
   widzi w panelu żółte ostrzeżenie, które znika po zapisaniu numeru.
 - **Commit:** `feat(owner): ustawienia z imieniem i numerem telefonu`
 
@@ -610,10 +634,10 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
   - `src/api/mock/pets.js` — `setLostMode`; dopisz do fasady.
   - `src/components/pets/LostModeSwitch.jsx` — cały plik.
   - `src/pages/owner/PetProfilePage.jsx` — `updatedPet` i wyliczenie `pet` w `PetProfilePage`,
-    `<LostModeSwitch>`, odznaka „Zaginione” w `ProfileHeader`.
+    `<LostModeSwitch>` pod kartą (`current={pet}` w przełączniku masz już z sesji 15b).
 - **Czego się uczę:** potwierdzenie akcji w `Modal`, przełącznik, który nie zmienia stanu od razu,
   aktualizacja widoku danymi zwróconymi przez API (bez ponownego ładowania), `key` przy zmianie zwierzęcia.
-- **Gotowe, gdy:** włączenie trybu dla Luny z komunikatem daje czerwone oznaczenie w profilu i na karcie,
+- **Gotowe, gdy:** włączenie trybu dla Luny z komunikatem od razu zmienia jej kartę na czerwoną i dodaje kropkę w przełączniku,
   a po wylogowaniu `/t/LUNA-7K2Q` pokazuje alarm z Twoim komunikatem. Wyłączenie też wymaga potwierdzenia.
 - **Commit:** `feat(owner): przełącznik trybu zaginięcia z potwierdzeniem`
 
@@ -661,20 +685,20 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
   w sesji 28 jest na górze z odznaką „Po skanie”; nowe zwierzę widzi stan pusty z podpowiedzią.
 - **Commit:** `feat(owner): aktywność zwierzęcia z ostatnich 7 dni`
 
-## Sesja 30: Każde skanowanie zapisuje się, a ja widzę je w panelu · ~1,5 h
-- **Cel:** każde otwarcie strony zawieszki zapisuje skan, a panel pokazuje ostatnie skanowania z przeglądarką.
+## Sesja 30: Każde skanowanie zapisuje się, a ja widzę je przy zwierzęciu · ~1,5 h
+- **Cel:** każde otwarcie strony zawieszki zapisuje skan, a ekran zwierzęcia pokazuje 3 ostatnie skanowania z przeglądarką.
 - **Źródło w prototypie:**
   - `src/api/mock/tags.js` — `DUPLICATE_SCAN_MS`, `recordScan` (i jego wywołanie w `resolveTag`),
-    `scansOf`, `getRecentScans`; dopisz do fasady.
+    `scansOf`, `getTagScans` (przeniesione z sesji 32); dopisz do fasady.
   - `src/lib/format.js` — `describeUserAgent`.
   - `src/components/tags/ScanList.jsx` — cały plik.
-  - `src/pages/owner/DashboardPage.jsx` — komponent `RecentScans` i jego sekcja.
+  - `src/pages/owner/PetProfilePage.jsx` — komponent `RecentPetScans` na dole ekranu.
 - **Czego się uczę:** audyt bezpieczeństwa (UC8), minimalizacja danych (bez IP i lokalizacji), ochrona
   przed podwójnym zapisem, łączenie danych z trzech kolekcji (jak `JOIN`), rozpoznawanie przeglądarki po User-Agent.
-- **Gotowe, gdy:** panel pokazuje skany z danych przykładowych („Safari · iOS”, „Chrome · Android”);
+- **Gotowe, gdy:** ekran Luny pokazuje skany z danych przykładowych („Safari · iOS”, „Chrome · Android”);
   po wylogowaniu wejdź na `/t/LUNA-7K2Q`, zaloguj się — nowy skan jest na górze jako „Inna osoba”.
   Skan własnej zawieszki jest oznaczony „Ty”. (W trybie mock nie testuj w oknie incognito — ma osobny localStorage.)
-- **Commit:** `feat(owner): zapis skanowań i ostatnie skanowania w panelu`
+- **Commit:** `feat(owner): zapis skanowań i ostatnie skanowania na ekranie zwierzęcia`
 
 ## Sesja 31: Tworzę zawieszkę z kodem QR · ~2 h
 - **Cel:** dla nowego zwierzęcia klikam „Utwórz zawieszkę” i dostaję kod `XXXX-XXXX`, kod QR, adres do NFC i plik do druku.
@@ -695,7 +719,7 @@ Czas przy nazwie sesji to szacunek dla kogoś, kto robi daną rzecz pierwszy raz
 ## Sesja 32: Historia skanowań zawieszki i nowy kod · ~1 h
 - **Cel:** na stronie zawieszki widzę wszystkie jej skanowania i mogę wygenerować nowy kod, który wyłącza stary.
 - **Źródło w prototypie:**
-  - `src/api/mock/tags.js` — `getTagScans`; dopisz do fasady.
+  - `getTagScans` masz już z sesji 30.
   - `src/pages/owner/PetTagPage.jsx` — komponent `ScanHistory` (z `key={pet.tagCode}`) oraz w `TagDetails`
     przycisk „Nowy kod”, `Modal` i `handleRegenerate`.
 - **Czego się uczę:** akcja nieodwracalna w oknie potwierdzenia, `key` do przeładowania sekcji,
