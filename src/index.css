@@ -31,6 +31,38 @@
   --shadow-raised: 0 2px 4px rgb(74 52 30 / 0.08), 0 12px 32px -8px rgb(74 52 30 / 0.2);
 
   --default-transition-duration: 200ms;
+
+  /* Arkusz „Akcje” wjeżdża od dołu, przycisk „wyskakuje”, kafelki wjeżdżają po kolei. */
+  --animate-sheet: sheet-up 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  --animate-pop: pop 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+}
+
+/* Poziomy rząd awatarów (przełącznik zwierząt) przewijamy palcem, bez widocznego paska. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {
