@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
-import { Check, Copy, Download, ExternalLink, QrCode, RefreshCw, ScanLine } from 'lucide-react'
+import { Check, Copy, Download, ExternalLink, QrCode, ScanLine } from 'lucide-react'
 import { getPetById } from '../../api/pets.js'
 import { createTag, getTagScans } from '../../api/tags.js'
 import PageHeader from '../../components/layout/PageHeader.jsx'
@@ -10,7 +10,6 @@ import Button from '../../components/ui/Button.jsx'
 import Card from '../../components/ui/Card.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
 import ErrorState from '../../components/ui/ErrorState.jsx'
-import Modal from '../../components/ui/Modal.jsx'
 import Notice from '../../components/ui/Notice.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import { useAsync } from '../../hooks/useAsync.js'
@@ -41,41 +40,30 @@ export default function PetTagPage() {
         }
       />
       {pet.tagCode ? (
-        <TagDetails pet={pet} onRegenerated={setUpdatedPet} />
+        <TagDetails pet={pet} />
       ) : (
         <CreateTag pet={pet} onCreated={setUpdatedPet} />
       )}
-      {/* `key`: po wygenerowaniu nowego kodu historia ładuje się od nowa. */}
-      <ScanHistory key={pet.tagCode} petId={pet.id} />
+      <ScanHistory petId={pet.id} />
     </div>
   )
 }
 
-// Hook z logiką „utwórz tag”: wspólny dla pierwszego tagu i wygenerowania nowego kodu.
-function useCreateTag(petId, onDone) {
+function CreateTag({ pet, onCreated }) {
+  const { user } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState(null)
 
-  async function create() {
+  async function handleCreate() {
     setIsCreating(true)
     setError(null)
     try {
-      onDone(await createTag(petId))
-      return true
+      onCreated(await createTag(pet.id))
     } catch (createError) {
       setError(createError.message)
-      return false
-    } finally {
       setIsCreating(false)
     }
   }
-
-  return { create, isCreating, error }
-}
-
-function CreateTag({ pet, onCreated }) {
-  const { user } = useAuth()
-  const { create, isCreating, error } = useCreateTag(pet.id, onCreated)
 
   // UC3, warunek początkowy: bez numeru telefonu znalazca nie miałby jak się skontaktować.
   if (!user.phone) {
@@ -106,20 +94,18 @@ function CreateTag({ pet, onCreated }) {
         </p>
       </div>
       {error && <p role="alert" className="font-medium text-alert">{error}</p>}
-      <Button size="lg" icon={QrCode} onClick={create} disabled={isCreating}>
+      <Button size="lg" icon={QrCode} onClick={handleCreate} disabled={isCreating}>
         {isCreating ? 'Tworzę…' : 'Utwórz zawieszkę'}
       </Button>
     </Card>
   )
 }
 
-function TagDetails({ pet, onRegenerated }) {
+function TagDetails({ pet }) {
   // Adres zawieszki budujemy z adresu, pod którym działa aplikacja (w produkcji: https://petracker.pl).
   const tagUrl = `${window.location.origin}/t/${pet.tagCode}`
   const qrWrapperRef = useRef(null)
   const [isCopied, setIsCopied] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const { create, isCreating, error } = useCreateTag(pet.id, onRegenerated)
 
   async function handleCopy() {
     try {
@@ -143,10 +129,6 @@ function TagDetails({ pet, onRegenerated }) {
     URL.revokeObjectURL(link.href)
   }
 
-  async function handleRegenerate() {
-    if (await create()) setIsModalOpen(false)
-  }
-
   return (
     <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
       <Card className="flex flex-col items-center gap-4">
@@ -160,62 +142,27 @@ function TagDetails({ pet, onRegenerated }) {
         </Button>
       </Card>
 
-      <div className="space-y-6">
-        <Card className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Adres zawieszki</h2>
-            <p className="text-sm text-ink-muted">Ten adres zapisz na tagu NFC — kod QR prowadzi dokładnie tutaj.</p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <code className="min-w-0 flex-1 rounded-xl bg-paper px-3 py-2.5 font-mono text-sm break-all">{tagUrl}</code>
-            <Button variant="secondary" icon={isCopied ? Check : Copy} onClick={handleCopy} className="shrink-0">
-              {isCopied ? 'Skopiowano' : 'Kopiuj'}
-            </Button>
-          </div>
-          <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-muted">
-            <li>Zainstaluj na telefonie aplikację do zapisu tagów, np. NFC Tools.</li>
-            <li>Wybierz „Zapisz” → „Dodaj rekord” → „URL / URI” i wklej adres.</li>
-            <li>Przyłóż tag do telefonu. Nie blokuj tagu — zablokowanego nie da się później zmienić.</li>
-            <li>Zeskanuj zawieszkę swoim telefonem: zobaczysz szybki zapis, czyli tag działa.</li>
-          </ol>
-          <Button to={`/t/${pet.tagCode}`} variant="ghost" icon={ExternalLink}>
-            Sprawdź, co zobaczy znalazca
+      <Card className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Adres zawieszki</h2>
+          <p className="text-sm text-ink-muted">Ten adres zapisz na tagu NFC — kod QR prowadzi dokładnie tutaj.</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <code className="min-w-0 flex-1 rounded-xl bg-paper px-3 py-2.5 font-mono text-sm break-all">{tagUrl}</code>
+          <Button variant="secondary" icon={isCopied ? Check : Copy} onClick={handleCopy} className="shrink-0">
+            {isCopied ? 'Skopiowano' : 'Kopiuj'}
           </Button>
-        </Card>
-
-        <Card padding="sm" className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink-muted">Zgubiona zawieszka? Wygeneruj nowy kod — stary przestanie działać.</p>
-          <Button variant="danger" size="sm" icon={RefreshCw} onClick={() => setIsModalOpen(true)}>
-            Nowy kod
-          </Button>
-        </Card>
-      </div>
-
-      <Modal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Wygenerować nowy kod?"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-              Anuluj
-            </Button>
-            <Button onClick={handleRegenerate} disabled={isCreating}>
-              {isCreating ? 'Generuję…' : 'Wygeneruj nowy kod'}
-            </Button>
-          </>
-        }
-      >
-        <p>
-          Zawieszka <span className="font-mono text-ink">{pet.tagCode}</span> przestanie działać — po zeskanowaniu
-          pokaże „Ten tag nie jest aktywny”. Nowy adres trzeba zapisać na tagu i wydrukować nowy kod QR.
-        </p>
-        {error && (
-          <p role="alert" className="mt-3 text-sm font-medium text-alert">
-            {error}
-          </p>
-        )}
-      </Modal>
+        </div>
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-muted">
+          <li>Zainstaluj na telefonie aplikację do zapisu tagów, np. NFC Tools.</li>
+          <li>Wybierz „Zapisz” → „Dodaj rekord” → „URL / URI” i wklej adres.</li>
+          <li>Przyłóż tag do telefonu. Nie blokuj tagu — zablokowanego nie da się później zmienić.</li>
+          <li>Zeskanuj zawieszkę swoim telefonem: zobaczysz szybki zapis, czyli tag działa.</li>
+        </ol>
+        <Button to={`/t/${pet.tagCode}`} variant="ghost" icon={ExternalLink}>
+          Sprawdź, co zobaczy znalazca
+        </Button>
+      </Card>
     </div>
   )
 }

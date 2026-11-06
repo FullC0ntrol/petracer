@@ -1,14 +1,16 @@
-import * as http from './http/activities.js'
-import * as mock from './mock/activities.js'
+import { request } from './request.js'
 
 /*
-  Aktywności zwierzęcia (karmienie, spacer):
-    logActivity(petId, { type, source, durationMin?, distanceM?, occurredAt? }) → activity   POST /api/pets/:id/activities
-    getActivities(petId, days = 7)                                              → activity[] GET  /api/pets/:id/activities?days=
+  Aktywności zwierzęcia:
+    logActivity(petId, type)         → activity     POST /api/pets/:id/activities
+    getActivities(petId, days = 7)   → activity[]   GET  /api/pets/:id/activities?days=
 
-  activity = { id, petId, type: 'feeding' | 'walk', occurredAt, durationMin, distanceM, source: 'quick_tap' | 'manual' }
+  activity = { id, petId, type: 'feeding' | 'walk', occurredAt }
 */
-const useHttp = import.meta.env.VITE_API_MODE === 'http'
+export function logActivity(petId, type) {
+  return request('POST', `/pets/${encodeURIComponent(petId)}/activities`, { type })
+}
 
-export const logActivity = useHttp ? http.logActivity : mock.logActivity
-export const getActivities = useHttp ? http.getActivities : mock.getActivities
+export function getActivities(petId, days = 7) {
+  return request('GET', `/pets/${encodeURIComponent(petId)}/activities?days=${days}`)
+}

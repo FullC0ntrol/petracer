@@ -1,0 +1,318 @@
+@@ package.json
+> Lista zależności frontendu. Nie przepisujesz jej ręcznie: `npm install` dopisuje biblioteki sam.
+@0 ^
+`sideEffects` mówi narzędziu budującemu, że tylko pliki CSS działają przez samo zaimportowanie. Resztę nieużywanego kodu może wyciąć z paczki. Skrypty to skróty do Vite i ESLinta.
+@39 "qrcode.react"
+Rysuje kod QR jako SVG.
+@0 "react": "
+Biblioteka interfejsu i jej narzędzia. `devDependencies` są potrzebne tylko przy pracy i budowaniu, do przeglądarki nie trafiają.
+@32 "vite-plugin-pwa"
+Generuje manifest i service worker.
+@0 }
+
+@@ vite.config.js
+> Konfiguracja Vite: wtyczki, PWA i przekazywanie `/api` do serwera.
+@0 ^
+Wtyczka Reacta (JSX i odświeżanie na żywo) oraz funkcja konfiguracji.
+@0 import tailwindcss
+Tailwind jako wtyczka Vite, bez osobnego pliku konfiguracyjnego.
+@32 import { VitePWA }
+Import wtyczki PWA.
+@0 // https://vite.dev/config/
+Wtyczki działają w podanej kolejności.
+@32 /*
+Komentarz streszcza PWA: manifest opisuje aplikację, a service worker przechowuje jej pliki w telefonie.
+@32 VitePWA({
+`autoUpdate` oznacza, że nowa wersja podmienia starą sama. `includeAssets` dodaje ikony do pamięci offline.
+@32 manifest: {
+Manifest to wizytówka aplikacji dla systemu telefonu.
+
+- `start_url`: co otworzyć po kliknięciu ikony.
+- `display: 'standalone'`: bez paska adresu, jak zwykła aplikacja.
+- `background_color`, `theme_color`: kolor ekranu startowego i paska systemowego.
+- `icons`: ikona 192 i 512 px. `maskable` to wersja z marginesem, którą Android może przyciąć do koła.
+@32 workbox: {
+`globPatterns` wskazuje pliki do pamięci offline. `navigateFallback` każe dla adresów takich jak `/t/K7Q2-M9XD` oddać `index.html`, bo to React wybiera ekran. `navigateFallbackDenylist` wyłącza z tego `/api/`, żeby dane zawsze pochodziły z serwera.
+@0 ],
+@18 server: {
+Proxy przekazuje każde żądanie `/api/...` do Expressa na porcie 3000. Przeglądarka widzi jeden adres, więc nie trzeba CORS, a ciasteczko działa bez konfiguracji. W produkcji tę samą rolę przejmuje Caddy.
+@0 })
+
+@@ index.html
+> Jedyna prawdziwa strona HTML. React wstawia wszystko do `<div id="root">`.
+@0 ^
+`lang="pl"` mówi czytnikom ekranu i przeglądarce, w jakim języku jest strona. `charset` to kodowanie, a `favicon` to ikona w karcie.
+@32 <link rel="apple-touch-icon"
+iPhone bierze ikonę ekranu głównego z tego znacznika, a nie z manifestu.
+@0 <meta name="viewport"
+`viewport-fit=cover` pozwala użyć całego ekranu telefonu z wycięciem. `theme-color` to kolor paska przeglądarki. `type="module"` ładuje `main.jsx` jako nowoczesny moduł.
+
+@@ eslint.config.js
+> Reguły ESLinta dla frontendu.
+@0 ^
+Importy zestawów reguł, m.in. dla hooków Reacta.
+@0 export default defineConfig
+`globalIgnores(['dist'])` pomija zbudowaną aplikację. Reguły hooków pilnują m.in. tablic zależności, a `globals.browser` mówi, że istnieją `window` i `document`.
+
+@@ .gitignore
+> Pliki, których git nie zapisuje.
+@0 ^
+Logi, `node_modules`, zbudowana aplikacja i pliki edytorów. Te dwie ostatnie linie są najważniejsze: pliki `.env` z sekretami nigdy nie trafiają do repozytorium.
+
+@@ src/main.jsx
+> Punkt wejścia: uruchamia Reacta i owija całą aplikację w potrzebne konteksty.
+@22 ^
+Importy samego Reacta, routera, czcionek i stylów. `import './index.css'` wczytuje style w całej aplikacji.
+@22 import AuthProvider
+Nowością jest provider logowania.
+@22 createRoot(document
+`createRoot` łączy Reacta z `<div id="root">`. `StrictMode` przy pracy celowo uruchamia efekty dwa razy, żeby ujawnić błędy, a w produkcji nic nie robi. `AuthProvider` jest **nad** routerem, więc każda strona ma dostęp do `useAuth`.
+
+@@ src/router.jsx
+> Mapa aplikacji: jaki adres pokazuje jaki ekran. W sesji 17 usuwasz stąd martwe trasy, a kolejne sesje dopisują po jednej.
+@0 ^
+Główny import i layouty.
+@23 import RequireAuth
+Strażnik panelu.
+@0 import RootLayout
+Galeria komponentów i korzeń układu.
+@36 import ShareLocationPage
+Strona wysyłania SMS-a.
+@33 import TagPage
+Strona zawieszki.
+@0 import DashboardPage
+Panel.
+@28 import PetEditPage
+Edycja.
+@27 import PetNewPage
+Dodawanie.
+@0 import PetProfilePage
+Profil.
+@39 import PetTagPage
+Zawieszka zwierzęcia.
+@0 import SettingsPage
+Ustawienia i strony publiczne.
+@22 import RegisterPage
+Nowa strona rejestracji.
+@0 /*
+Trasa bez `path` to layout route: niczego nie dopisuje do adresu, tylko owija dzieci wyglądem. `index: true` oznacza stronę domyślną rodzica.
+@22 { path: 'rejestracja'
+Nowa trasa w grupie publicznej.
+@0 // Galeria komponentów
+`import.meta.env.DEV` to `true` tylko przy `npm run dev`. W produkcji warunek daje pustą tablicę, a galeria nie trafia do paczki. `path: '*'` łapie każdy nieznany adres i musi być na końcu grupy.
+@33 ={
+Osobny layout znalazcy: bez nawigacji i bez logowania. `:tagId` to część adresu, którą odczyta `useParams`.
+@33 { index: true, element: <TagPage />
+Strona domyślna pod `/t/KOD`.
+@36 { path: 'lokalizacja'
+Podstrona `/t/KOD/lokalizacja`.
+@33 ],
+@23 ={
+Grupa panelu dostaje strażnika jako layout route. Każda trasa wewnątrz wymaga logowania, a na nowej stronie nie można o tym zapomnieć.
+@0 ={
+Układ panelu z nagłówkiem. `OwnerLayout` działa już po strażniku, więc `user` zawsze istnieje.
+@27 { path: 'zwierzeta/nowe'
+Ta trasa jest przed `zwierzeta/:id`. React Router i tak woli stały tekst, ale taka kolejność jest czytelniejsza.
+@0 { path: 'zwierzeta/:id',
+Ekran zwierzęcia.
+@28 { path: 'zwierzeta/:id/edytuj'
+Formularz edycji.
+@39 { path: 'zwierzeta/:id/tag'
+Strona zawieszki.
+@0 { path: 'ustawienia'
+Ustawienia i zamknięcie grupy.
+@23 2*],
+Zamknięcie grupy strażnika.
+@0 ],
+Zamknięcie korzenia i całej listy tras.
+
+@@ src/index.css
+> Tokeny kolorów i czcionek. Dzięki nim w całym kodzie jest jedna paleta.
+@0 ^
+Import Tailwinda. `@theme` definiuje tokeny, a każdy `--color-pine` staje się klasami `bg-pine`, `text-pine`. `--color-*: initial` usuwa domyślne kolory, więc przypadkowe `text-gray-500` po prostu nie zadziała.
+@0 --font-display
+Czcionka nagłówków, tekstu i kodu. Reszta listy to zapas, gdy pierwsza się nie wczyta.
+@0 /* Cienie w ciepłym
+Własne cienie zamiast domyślnych. `--default-transition-duration` ustawia czas wszystkich przejść.
+@0 /* Arkusz „Akcje”
+Tokeny `--animate-*` dają klasy `animate-sheet`, `animate-pop`, `animate-rise`. `both` zostawia końcowy stan animacji, a `from` opisuje tylko początek, bo koniec to normalny wygląd elementu.
+@0 /* Poziomy rząd
+`@utility` tworzy własną klasę `no-scrollbar`. Dwie reguły, bo Firefox i Chrome ukrywają pasek inaczej.
+@0 @layer base {
+Style domyślne. `-webkit-tap-highlight-color` usuwa niebieski błysk przy dotknięciu. `text-wrap: balance` równo łamie nagłówki. `:focus-visible` rysuje obwódkę tylko przy obsłudze klawiaturą.
+@0 @media (prefers-reduced-motion
+Osoby, które w systemie wyłączyły animacje, ich nie zobaczą. Ważne dla dostępności, np. przy chorobie lokomocyjnej.
+
+@@ src/lib/cn.js
+> Skleja klasy CSS.
+@0 ^
+`...classes` zbiera wszystkie argumenty do tablicy. `filter(Boolean)` wyrzuca `false`, `null` i pusty tekst, więc można pisać `isActive && 'bg-pine'`.
+
+@@ src/lib/lastPet.js
+> Zapamiętuje ostatnio oglądane zwierzę. To tylko wygoda.
+@0 ^
+Klucz w `localStorage`.
+@0 export function getLastPetId
+`localStorage` potrafi rzucić wyjątek, np. w trybie prywatnym, więc `try/catch` jest potrzebny. Błąd oznacza po prostu brak wartości.
+@0 export function setLastPetId
+Bez zapisu aplikacja nadal działa, więc błąd można zignorować.
+
+@@ src/lib/format.js
+> Formatowanie dat, liczb i tekstów. Funkcje czyste: dostają wartość, zwracają napis.
+@26 ^
+`Intl` to wbudowane w przeglądarkę narzędzia do polskiego formatowania. `DAY_MS` to doba w milisekundach. Tworzymy formatter raz, bo jego tworzenie jest dość kosztowne.
+@37 const dateTimeFormatter
+Data z godziną, sama godzina i „3 dni temu”, potrzebne na liście aktywności.
+@26 const weightFormatter
+Waga z najwyżej jednym miejscem po przecinku.
+@0 /*
+`plural` obsługuje polską odmianę: 1 rok, 2–4 lata, 5 lat, ale też 12–14 lat. Stąd warunek na `lastTwoDigits`, który wyklucza liczby od 12 do 14.
+@26 // "2023-05-14"
+`new Date("2023-05-14")` to północ w UTC, czyli w Polsce może wyjść inny dzień. Dlatego składamy datę z części. `month - 1`, bo miesiące w JS liczą się od zera.
+@37 export function formatDateTime
+Pełna data z godziną.
+@37 // „dziś, 14:05”
+`startOfToday` to dzisiejsza północ. `Math.ceil` liczy, ile północy dzieli nas od zdarzenia: 0 to dziś, 1 to wczoraj. `format(-3, 'day')` daje „3 dni temu”.
+@0 // Wiek z daty urodzenia
+Liczy pełne miesiące i odejmuje jeden, gdy w tym miesiącu urodziny jeszcze nie minęły. Powyżej roku podaje lata, poniżej miesiące, a na końcu tygodnie. `plural` dobiera odmianę.
+@26 export function formatWeight
+Sprawdza `null` i `undefined`, a nie `!kg`. Format dodaje polski przecinek: `17,5 kg`.
+@0 const SPECIES_LABELS
+Tłumaczy kod gatunku na nazwę, a `??` obsługuje nieznaną wartość.
+@40 /*
+Kolejność sprawdzeń jest kluczowa, bo przeglądarki udają się nawzajem. Chrome ma w nazwie „Safari”, a Edge ma „Chrome”, więc od najbardziej szczegółowego. Ostatnia linia układa wynik, np. `Chrome · Android`. `filter(Boolean)` pomija brakujący system.
+
+@@ src/lib/sms.js
+> Buduje linki `tel:` i `sms:`, które otwierają aplikację telefonu.
+@36 ^
+Kluczowa decyzja pracy: lokalizacja trafia tylko do treści SMS-a i nigdzie nie jest zapisywana. Android i iOS wymagają innej składni, stąd `isIOS`. iPad podaje się za Maca, więc dodatkowo sprawdzamy ekran dotykowy.
+@33 // "+48 600 123 456"
+`[^\d+]` to wszystko oprócz cyfr i plusa. Spacje w linku psują go na części telefonów.
+@36 export function buildSmsLink
+`encodeURIComponent` koduje treść: spacje i polskie znaki nie mogą zepsuć adresu. Separator zależy od systemu.
+@33 export function buildTelLink
+Najprostszy link: `tel:+48600123456`.
+@36 // 5 miejsc po przecinku
+`toFixed(5)` to ok. 1 m dokładności.
+@36 export function buildFinderMessage
+Dwa warianty wiadomości. Bez pozycji SMS kończy się prośbą o opis miejsca, a znalazca dopisuje go sam. Z pozycją zawiera link do mapy i dokładność.
+
+@@ src/api/request.js
+> Jedyne miejsce, które wykonuje zapytania do serwera. Pozostałe pliki w `api/` podają tylko metodę, adres i dane.
+@22 ^
+`apiError` tworzy zwykły błąd z dopisanym kodem. Status `0` oznacza umowny brak połączenia.
+@22 /*
+Trzy założenia: `/api` jest pod tą samą domeną, ciasteczko dołącza przeglądarka, a błąd z serwera staje się wyjątkiem.
+@22 export async function request
+`fetch` wysyła żądanie. Nagłówek i treść są tylko wtedy, gdy są dane. `JSON.stringify` zamienia obiekt na tekst, a `credentials: 'same-origin'` dołącza ciasteczko.
+@22 } catch {
+Uwaga: `fetch` rzuca wyjątek tylko przy braku odpowiedzi. Kod 404 lub 500 to dla niego sukces, dlatego trzeba go sprawdzić niżej.
+@22 if (response.status === 204)
+Kod 204 nie ma treści, więc `response.json()` by się nie udał.
+@22 const data
+`.catch(() => null)` chroni przed odpowiedzią, która nie jest JSON-em, np. błędem z Caddy. `response.ok` to kody 200–299. Dla błędu rzucamy wyjątek z komunikatem serwera, który interfejs pokaże użytkownikowi.
+
+@@ src/api/auth.js
+> Funkcje konta. Strony nie znają adresów serwera.
+@22 ^
+Komentarz to spis funkcji z adresami.
+@22 export function register
+Te funkcje tylko przekazują dane do `request`.
+@22 export async function getCurrentUser
+Wyciąga `user` z odpowiedzi, a przy braku sesji zwraca `null`.
+@22 export async function logout
+Wylogowanie.
+@29 export function updateSettings
+Zapis imienia i telefonu.
+@24 export function getDemoLogin
+Sprawdzenie, czy konto demo jest włączone, i samo logowanie.
+
+@@ src/api/pets.js
+> Funkcje zwierząt.
+@25 ^
+Spis funkcji i kształt obiektu `pet`.
+@25 // encodeURIComponent
+Znaki specjalne w id nie zmienią ścieżki adresu. Funkcja strzałkowa, bo używają jej cztery miejsca.
+@25 export function getPets
+Lista i pojedyncze zwierzę.
+@27 export function createPet
+Dodawanie.
+@28 export function updatePet
+Edycja.
+@35 export function setLostMode
+Tryb zaginięcia.
+
+@@ src/api/tags.js
+> Funkcje zawieszek.
+@33 ^
+Komentarz to kontrakt z serwerem: dokładny kształt każdego wariantu. Warto go przepisać razem z kodem.
+@39 export function createTag
+Tworzenie zawieszki.
+@40 export function getTagScans
+Historia skanowań.
+
+@@ src/api/activities.js
+> Aktywności.
+@37 ^
+Komentarz z funkcjami i zapis jednej aktywności.
+@38 export function getActivities
+`days = 7` to parametr domyślny, a wartość trafia do adresu.
+
+@@ src/context/AuthContext.js
+> Sam kanał, przez który idą dane o logowaniu.
+@22 ^
+`createContext(null)` tworzy kontekst, a `null` to wartość poza providerem. Osobny plik jest potrzebny, bo odświeżanie na żywo w Vite wymaga, żeby plik `.jsx` eksportował tylko komponenty.
+
+@@ src/hooks/useAuth.js
+> Wygodny dostęp do kontekstu.
+@22 ^
+`useContext` odczytuje wartość z najbliższego providera. Błąd od razu mówi, co jest nie tak, zamiast tajemniczego `cannot read property of null`.
+
+@@ src/context/AuthProvider.jsx
+> Przechowuje „kto jest zalogowany” w jednym miejscu.
+@22 ^
+Funkcje z `api/` mają przedrostek `api...`, żeby nie myliły się z metodami o tych samych nazwach poniżej.
+@24 loginAsDemo as apiLoginAsDemo
+Logowanie demo.
+@22 logout as apiLogout
+Reszta importów.
+@22 /*
+`isLoading` to najważniejszy szczegół. Po odświeżeniu strony nie wiadomo jeszcze, czy sesja istnieje. Bez tej flagi strażnik zobaczyłby `user = null` i wyrzucił zalogowaną osobę na `/login`.
+@22 export default function AuthProvider
+Dwa stany: użytkownik i czy jeszcze sprawdzamy.
+@22 useEffect(() => {
+Przy starcie aplikacji pytamy serwer o sesję. Flaga `ignore` odrzuca spóźnioną odpowiedź, gdy komponent zniknął. Pusta tablica oznacza jedno wykonanie. Błąd sieci traktujemy jak brak sesji, bo strony publiczne mają nadal działać.
+@22 // useMemo: nowy obiekt
+`useMemo` tworzy nowy obiekt tylko przy zmianie `user` albo `isLoading`. Każda funkcja wywołuje API, a potem ustawia stan, co odświeża aplikację.
+@24 async loginAsDemo
+Ta sama zasada co przy zwykłym logowaniu.
+@22 async logout
+Wylogowanie czyści użytkownika.
+@29 // Po zapisaniu ustawień
+`updateUser` to po prostu `setUser`, żeby kółko konta od razu pokazało nowe imię.
+@22 }),
+`AuthContext value={...}` przekazuje dane wszystkim komponentom poniżej. To zapis z React 19.
+
+@@ src/hooks/useAsync.js
+> Wczytywanie danych ze stanami: ładowanie, błąd, dane. Używają go prawie wszystkie ekrany.
+@0 ^
+Komentarz wyjaśnia dwa problemy: wyścig odpowiedzi i brak potrzeby osobnego `isLoading`.
+@0 export function useAsync
+`key` to tekstowa wersja zależności i licznika. `JSON.stringify`, bo porównanie tablic przez `===` zawsze dawałoby `false`.
+@0 useEffect(() => {
+`asyncFn().then(sukces, błąd)` wykonuje zapytanie. `ignore` to ochrona przed wyścigiem: przy zmianie `key` React uruchamia sprzątanie i stara odpowiedź zostaje zignorowana.
+@0 const isCurrent
+Wynik pasuje do pytania, gdy klucze są równe. Jeśli nie pasują, dane są stare, czyli trwa ładowanie. Stąd `isLoading: !isCurrent`. `reload` zwiększa licznik, co zmienia klucz i ponawia zapytanie.
+
+@@ src/hooks/useGeolocation.js
+> Jednorazowe pobranie pozycji.
+@36 ^
+Kody błędów Geolocation API: 1 to brak zgody, 2 to brak sygnału, 3 to przekroczenie czasu. Mapa zamienia je na komunikaty.
+@36 /*
+Status przechodzi przez cztery stany. Pozycję pobieramy po kliknięciu, bo pytanie o zgodę bez kontekstu użytkownik zwykle odrzuca, a Safari może je zablokować. Geolokalizacja działa tylko na HTTPS i `localhost`, dlatego wdrożenie jest przed tą sesją.
+@36 export function useGeolocation
+Jeden stan z trzema polami, bo zmieniają się razem.
+@36 function request()
+Starsze przeglądarki mogą nie mieć tej funkcji. `getCurrentPosition` przyjmuje funkcję sukcesu, funkcję błędu i opcje. `{ coords }` wyciąga współrzędne z odpowiedzi.
+@36 // Dokładny GPS
+`enableHighAccuracy` używa GPS-u, `timeout` to 15 s, a `maximumAge` pozwala użyć pozycji sprzed 30 s. `{ ...state, request }` zwraca stan razem z funkcją.

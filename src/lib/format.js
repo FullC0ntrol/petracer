@@ -3,7 +3,7 @@
   zwracają napis, niczego nie zmieniają — łatwo je testować i używać w każdym komponencie.
 
   Intl.* to wbudowane w przeglądarkę narzędzia do formatowania zgodnie z językiem (tu: polski),
-  np. „17 paź 2026, 14:05” albo „3,2 km”, bez dodatkowych bibliotek.
+  np. „17 paź 2026, 14:05” albo „17,5 kg”, bez dodatkowych bibliotek.
 */
 
 const LOCALE = 'pl-PL'
@@ -19,7 +19,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
 })
 const timeFormatter = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' })
 const relativeFormatter = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' })
-const kmFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 })
+const weightFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 })
 
 /*
   Polska odmiana liczebników ma trzy formy: 1 rok, 2–4 lata (ale 12–14 lat), 5+ lat.
@@ -77,22 +77,9 @@ export function formatAge(birthDate) {
   return `${weeks} ${plural(weeks, 'tydzień', 'tygodnie', 'tygodni')}`
 }
 
-export function formatDuration(minutes) {
-  if (!minutes) return null
-  const hours = Math.floor(minutes / 60)
-  const rest = minutes % 60
-  if (!hours) return `${rest} min`
-  return rest ? `${hours} h ${rest} min` : `${hours} h`
-}
-
-export function formatDistance(meters) {
-  if (meters === null || meters === undefined) return null
-  return meters < 1000 ? `${meters} m` : `${kmFormatter.format(meters / 1000)} km`
-}
-
 export function formatWeight(kg) {
   if (kg === null || kg === undefined) return '—'
-  return `${kmFormatter.format(kg)} kg`
+  return `${weightFormatter.format(kg)} kg`
 }
 
 const SPECIES_LABELS = { dog: 'Pies', cat: 'Kot', other: 'Inne zwierzę' }

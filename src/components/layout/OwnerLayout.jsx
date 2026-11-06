@@ -1,40 +1,37 @@
-import { Link, Outlet, useLocation } from 'react-router'
-import { Plus } from 'lucide-react'
-import BottomNav from './BottomNav.jsx'
+import { Link, Outlet } from 'react-router'
+import { useAuth } from '../../hooks/useAuth.js'
 import Logo from './Logo.jsx'
-import Sidebar from './Sidebar.jsx'
 
-// Mobile: górny pasek z logo + dolna nawigacja + pływający przycisk szybkiej akcji.
-// Desktop (lg): boczny sidebar, a treść w wygodnej, ograniczonej szerokością kolumnie.
+/*
+  Układ panelu właściciela pod telefon: bez sidebara, dolnego paska i menu.
+  U góry przyklejony nagłówek (logo + kółko konta), pod nim jedna wąska kolumna —
+  na komputerze ta sama, tylko wyśrodkowana. Cała nawigacja jest na ekranie zwierzęcia:
+  przełącznik awatarów u góry i arkusz „Akcje” na dole.
+*/
 export default function OwnerLayout() {
-  const { pathname } = useLocation()
-  const isTrackingWalk = pathname === '/spacery/nowy'
+  const { user } = useAuth()
 
   return (
-    <div className="min-h-dvh lg:flex">
-      <Sidebar />
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-20 bg-paper/85 pt-[env(safe-area-inset-top)] backdrop-blur">
+        <div className="mx-auto max-w-2xl px-4">
+          <div className="flex h-14 items-center justify-between">
+            <Logo to="/panel" />
+            <Link
+              to="/ustawienia"
+              aria-label={`Konto: ${user.name}`}
+              title={user.name}
+              className="grid size-10 place-items-center rounded-full bg-ink font-display font-bold text-paper transition-transform active:scale-95"
+            >
+              {user.name.trim().charAt(0).toUpperCase()}
+            </Link>
+          </div>
+        </div>
+      </header>
 
-      <div className="flex-1">
-        <header className="sticky top-0 z-20 border-b border-line bg-paper/90 px-4 py-3 backdrop-blur lg:hidden">
-          <Logo to="/panel" />
-        </header>
-
-        <main className="mx-auto w-full max-w-5xl px-4 pt-6 pb-32 sm:px-6 lg:px-10 lg:py-10">
-          <Outlet />
-        </main>
-      </div>
-
-      {!isTrackingWalk && (
-        <Link
-          to="/spacery/nowy"
-          aria-label="Rozpocznij spacer"
-          className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 grid size-14 place-items-center rounded-2xl bg-ember text-ink shadow-raised transition-transform hover:scale-105 active:scale-95 lg:hidden"
-        >
-          <Plus size={26} aria-hidden="true" />
-        </Link>
-      )}
-
-      <BottomNav />
+      <main className="mx-auto w-full max-w-2xl px-4 pt-2 pb-32">
+        <Outlet />
+      </main>
     </div>
   )
 }

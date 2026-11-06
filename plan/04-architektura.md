@@ -1,6 +1,6 @@
 # Architektura
 
-> **Status:** frontend w realizacji, backend i wdrożenie zaprojektowane.
+> **Status:** interfejs w realizacji, serwer i baza danych w realizacji, wdrożenie zaprojektowane.
 
 ## Przegląd
 
@@ -11,7 +11,6 @@ flowchart LR
   C -->|pliki statyczne| F[Zbudowany frontend]
   C -->|/api/*| A[API: Node.js + Express]
   A --> D[(PostgreSQL)]
-  A -->|SMTP| M[Serwer poczty]
 ```
 
 Wszystko działa pod jedną domeną: Caddy serwuje frontend i przekazuje adresy `/api/*` do Expressa. Dzięki temu nie ma problemów z CORS, a ciasteczko sesji działa bez dodatkowej konfiguracji.
@@ -22,8 +21,9 @@ Wszystko działa pod jedną domeną: Caddy serwuje frontend i przekazuje adresy 
 PeTracker-FinalVersion/
 ├── client/                 # aplikacja webowa Vite + React
 ├── server/                 # backend Express
-├── docs/                   # ta dokumentacja
-├── docker-compose.yml
+├── plan/                   # ta dokumentacja
+├── docker-compose.yml      # cały system
+├── docker-compose.dev.yml  # sama baza do pracy lokalnej
 └── README.md
 ```
 
@@ -32,13 +32,13 @@ PeTracker-FinalVersion/
 Warstwy, od góry:
 
 ```
-pages  →  components  →  hooks / context  →  api  →  mocks (etap budowy) | fetch /api (docelowo)
+pages  →  components  →  hooks / context  →  api  →  fetch /api
 ```
 
 - **pages**: jedna strona na trasę, składa komponenty i pobiera dane przez hooki.
-- **components**: `layout/` (ramy stron), `ui/` (wspólne klocki), komponenty domenowe (`pets/`, `finder/`).
-- **hooks / context**: `useAuth` (zalogowany użytkownik), `useAsync` (ładowanie danych).
-- **api**: jedyne miejsce, które wie, skąd przychodzą dane. Na etapie budowy interfejsu korzysta z danych przykładowych w `localStorage` (`mocks/`), docelowo z zapytań `fetch` do API. Zmiana źródła danych dotyczy tylko tego folderu.
+- **components**: `layout/` (ramy stron), `ui/` (wspólne klocki), komponenty domenowe (`pets/`, `finder/`, `tags/`).
+- **hooks / context**: `useAuth` (zalogowany użytkownik), `useAsync` (ładowanie danych), `useGeolocation`.
+- **api**: jedyne miejsce, które wie, skąd przychodzą dane. `request.js` wykonuje zapytania `fetch`, a `auth.js`, `pets.js`, `tags.js` i `activities.js` podają metodę, adres i dane.
 
 ## Backend (`server/`)
 
@@ -47,42 +47,41 @@ server/
 ├── src/
 │   ├── index.js            # start serwera
 │   ├── app.js              # konfiguracja Expressa, podpięcie tras
+│   ├── config.js           # zmienne środowiskowe
 │   ├── db.js               # połączenie z PostgreSQL (pg.Pool)
+│   ├── errors.js           # HttpError
+│   ├── mappers.js          # snake_case z bazy → camelCase w API
+│   ├── validation.js       # sprawdzanie danych wejściowych
+│   ├── seed.js             # dane przykładowe przy pustej bazie
 │   ├── routes/             # auth.js, me.js, pets.js, tags.js, activities.js
-│   ├── middleware/         # requireAuth.js, errorHandler.js
-│   └── services/           # mail.js (wysyłka linku), tokens.js (generowanie i hashowanie)
+│   ├── middleware/         # requireAuth.js, rateLimit.js, errorHandler.js
+│   └── services/           # pin.js (skrót PIN-u), session.js (JWT), pets.js, tagCodes.js
 ├── sql/
-│   └── 001_init.sql        # schemat bazy
+│   ├── 001_init.sql        # schemat bazy
+│   └── seed.sql            # dane przykładowe
+├── scripts/db-reset.js
 ├── Dockerfile
 └── package.json
 ```
 
-Biblioteki: `express`, `pg`, `nodemailer`, `jsonwebtoken`, `cookie-parser`, `dotenv`. Bez ORM-a: zapytania SQL pisane ręcznie, co jest prostsze przy kilku tabelach i dobrze się opisuje w pracy.
+Biblioteki: `express`, `pg`, `jsonwebtoken`, `cookie-parser`, `dotenv`. Skrót PIN-u liczy wbudowany moduł `node:crypto`. Bez ORM-a: zapytania SQL pisane ręcznie, co jest prostsze przy kilku tabelach i dobrze się opisuje w pracy.
 
 ## Baza danych
 
 ```mermaid
 erDiagram
   users ||--o{ pets : "posiada"
-  pets ||--o| tags : "ma"
+  pets ||--o{ tags : "ma"
   tags ||--o{ tag_scans : "rejestruje"
   pets ||--o{ activities : "ma"
-  pets ||--o{ vet_shares : "udostępnia (P2)"
 
   users {
     uuid id PK
     text email UK
     text name
     text phone
+    text pin_hash
     timestamptz created_at
-  }
-  login_tokens {
-    uuid id PK
-    text email
-    text name
-    text token_hash
-    timestamptz expires_at
-    timestamptz used_at
   }
   pets {
     uuid id PK
@@ -115,38 +114,28 @@ erDiagram
     uuid pet_id FK
     text type
     timestamptz occurred_at
-    int duration_min
-    int distance_m
-    text source
-  }
-  vet_shares {
-    uuid id PK
-    uuid pet_id FK
-    text token_hash
-    timestamptz expires_at
-    timestamptz revoked_at
   }
 ```
 
 Uwagi:
-- `activities.type`: `feeding` albo `walk`; `source`: `quick_tap` (po skanie) albo `manual` (formularz).
-- `tags.pet_id` jest unikalne: jedno zwierzę ma jeden aktywny tag.
-- Tokeny (`login_tokens`, `vet_shares`) są przechowywane jako hash SHA-256, nigdy w czystej postaci.
-- `login_tokens` nie ma klucza obcego do `users`: token zapamiętuje e-mail (i imię podane przy pierwszym
-  logowaniu), a konto powstaje dopiero po kliknięciu w link (UC1). Adres z literówką nie zostawia w bazie konta.
-- Zdjęcia zwierząt: priorytet 2 (wymaga przechowywania plików). Do tego czasu awatar z inicjałami.
+- `activities.type`: `feeding` albo `walk`.
+- Częściowy indeks unikalny na `tags (pet_id) WHERE is_active`: zwierzę ma najwyżej jeden aktywny tag. `is_active` zostawia miejsce na wymianę kodu (priorytet 2).
+- `users.pin_hash` ma postać `sól:skrót` i powstaje funkcją `scrypt`. PIN nigdy nie jest zapisywany ani zwracany przez API.
+- Zdjęcia zwierząt: priorytet 2 (wymaga przechowywania plików). Do tego czasu awatar to ikona gatunku.
 
 ## API
 
 Wszystkie adresy zaczynają się od `/api`. 🔒 = wymaga zalogowania.
 
-### Logowanie
+### Konto i logowanie
 | Metoda | Adres | Co robi | Funkcja w `client/src/api` |
 |---|---|---|---|
-| POST | `/auth/request-link` | tworzy token, wysyła e-mail | `requestMagicLink` |
-| POST | `/auth/verify` | sprawdza token, zakłada konto, jeśli go nie ma, ustawia ciasteczko sesji | `verifyToken` |
-| GET | `/auth/me` 🔒 | zwraca zalogowanego użytkownika | `getCurrentUser` |
-| POST | `/auth/logout` 🔒 | usuwa ciasteczko | `logout` |
+| POST | `/auth/register` | zakłada konto, ustawia ciasteczko sesji | `register` |
+| POST | `/auth/login` | sprawdza e-mail i PIN, ustawia ciasteczko sesji | `login` |
+| GET | `/auth/me` | zalogowany użytkownik albo `{ user: null }` | `getCurrentUser` |
+| POST | `/auth/logout` | usuwa ciasteczko | `logout` |
+| GET | `/auth/demo` | czy logowanie na konto demo jest włączone | `getDemoLogin` |
+| POST | `/auth/demo` | loguje na konto demo, gdy jest włączone | `loginAsDemo` |
 | PATCH | `/me` 🔒 | zmienia imię i telefon | `updateSettings` |
 
 ### Zwierzęta
@@ -168,19 +157,17 @@ Wszystkie adresy zaczynają się od `/api`. 🔒 = wymaga zalogowania.
 ### Aktywności
 | Metoda | Adres | Co robi | Funkcja |
 |---|---|---|---|
-| POST | `/pets/:id/activities` 🔒 | zapis aktywności (szybki albo ręczny) | `logActivity` |
+| POST | `/pets/:id/activities` 🔒 | szybki zapis aktywności | `logActivity` |
 | GET | `/pets/:id/activities?days=7` 🔒 | lista aktywności | `getActivities` |
 
-### Weterynarz (P2)
+### Pomocnicze
 | Metoda | Adres | Co robi |
 |---|---|---|
-| POST | `/pets/:id/vet-shares` 🔒 | tworzy link z czasem ważności |
-| DELETE | `/vet-shares/:id` 🔒 | unieważnia link |
-| GET | `/vet/:token` | **publiczny**: dane medyczne, jeśli link ważny |
+| GET | `/health` | sprawdzenie, czy serwer działa |
 
 ## Najważniejsze przepływy
 
-### Logowanie magic link
+### Logowanie PIN-em
 
 ```mermaid
 sequenceDiagram
@@ -188,17 +175,22 @@ sequenceDiagram
   participant F as Frontend
   participant A as API
   participant D as Baza
-  participant M as Poczta
 
-  W->>F: wpisuje e-mail
-  F->>A: POST /auth/request-link
-  A->>D: zapisuje hash tokenu, ważny 15 min
-  A->>M: e-mail z linkiem /auth/verify?token=…
-  W->>F: klika link
-  F->>A: POST /auth/verify {token}
-  A->>D: sprawdza hash, ważność, oznacza jako użyty
-  A-->>F: ciasteczko sesji (httpOnly)
-  F-->>W: przekierowanie do /panel
+  W->>F: wpisuje e-mail i PIN
+  F->>A: POST /auth/login
+  A->>A: limit prób na e-mail i IP
+  A->>D: szuka użytkownika po e-mailu
+  A->>A: scrypt(PIN, sól) i porównanie ze skrótem
+  alt dane poprawne
+    A-->>F: użytkownik + ciasteczko sesji (httpOnly)
+    F-->>W: przekierowanie tam, skąd przyszedł, albo do /panel
+  else zły e-mail albo PIN
+    A-->>F: 401, jeden komunikat dla obu przypadków
+    F-->>W: błąd pod polem
+  else przekroczony limit
+    A-->>F: 429 z nagłówkiem Retry-After
+    F-->>W: prośba o ponowienie później
+  end
 ```
 
 ### Skan tagu (routing kontekstowy)
@@ -230,26 +222,30 @@ Decyzja o wariancie zapada **na serwerze**, nie w przeglądarce. Dzięki temu da
 
 ## Bezpieczeństwo (minimum)
 
-- Tokeny losowe (`crypto.randomBytes`), w bazie tylko hash, link logowania jednorazowy i ważny 15 minut.
+- PIN: skrót `scrypt` z losową solą dla każdego użytkownika i porównanie w stałym czasie (`timingSafeEqual`).
+- Limit prób logowania: 5 na e-mail i 20 na IP w 15 minut. Limit rejestracji: 10 na IP. Komunikat błędu nie ujawnia, czy konto istnieje.
 - Sesja: podpisany JWT w ciasteczku `httpOnly`, `Secure`, `SameSite=Lax`.
-- Ograniczenie liczby żądań na `/auth/request-link` (ochrona przed zasypaniem skrzynki).
-- Każdy endpoint 🔒 sprawdza, czy zwierzę należy do zalogowanego użytkownika.
-- Kod tagu: 8 losowych znaków bez mylących (`0/O`, `1/I`), ok. 10¹² kombinacji, praktycznie nie do zgadnięcia.
+- Każdy endpoint 🔒 sprawdza, czy zwierzę należy do zalogowanego użytkownika. Cudze zwierzę daje 404.
+- Kod tagu: 8 losowych znaków bez mylących (`0/O`, `1/I/L`), praktycznie nie do zgadnięcia.
+- SQL zawsze z parametrami (`$1`), bez sklejania zapytań z danymi.
 - Tylko HTTPS (wymagane też przez geolokalizację i service worker).
+
+**Ograniczenia:** 6-cyfrowy PIN to milion kombinacji, więc po wycieku bazy skróty da się złamać. Adres e-mail nie jest potwierdzany, a PIN resetuje administrator. Szczegóły: [D21](05-decyzje.md).
 
 ## Wdrożenie
 
 ```mermaid
 flowchart TB
+  Internet --> N[nginx na VPS: HTTPS]
   subgraph VPS [VPS: docker compose]
-    C[caddy: HTTPS + frontend + proxy /api]
+    C[caddy: frontend + proxy /api]
     A[api: Node.js]
     D[(db: PostgreSQL, wolumen)]
   end
-  Internet --> C --> A --> D
+  N --> C --> A --> D
 ```
 
 - `db`: obraz `postgres`, dane na wolumenie, `sql/001_init.sql` uruchamiany przy pierwszym starcie.
 - `api`: obraz z `server/Dockerfile`, konfiguracja w zmiennych środowiskowych (`.env` poza repozytorium).
-- `caddy`: serwuje `client/dist` i automatycznie pobiera certyfikat Let’s Encrypt dla domeny.
-- Kolejność: najpierw sam frontend na danych przykładowych, następnie usługi `api` i `db`.
+- `caddy`: serwuje `client/dist` i przekazuje `/api/*`. Na serwerze bez innych usług sam obsługuje HTTPS, a na współdzielonym VPS stoi za nginx ([D25](05-decyzje.md)).
+- Kolejność: cały system wdrażany jest po logowaniu i panelu właściciela, przed widokami znalazcy ([D24](05-decyzje.md)).

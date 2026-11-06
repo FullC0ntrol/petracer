@@ -5,9 +5,8 @@ import Badge from '../ui/Badge.jsx'
 /*
   Historia skanowań zawieszki (audyt, UC8): kiedy, jaką przeglądarką i czy skanował sam właściciel.
   Celowo bez lokalizacji i adresu IP — minimalizacja danych osobowych (01-zakres.md).
-  `showPetName` — w panelu lista obejmuje wszystkie zwierzęta, więc pokazujemy też imię.
 */
-export default function ScanList({ scans, showPetName = false }) {
+export default function ScanList({ scans }) {
   return (
     <ul className="divide-y divide-line">
       {scans.map((scan) => (
@@ -19,7 +18,6 @@ export default function ScanList({ scans, showPetName = false }) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-medium">
-              {showPetName && <span>{scan.petName} · </span>}
               <time dateTime={scan.scannedAt}>{formatRelative(scan.scannedAt)}</time>
             </p>
             <p className="truncate text-sm text-ink-muted">{describeUserAgent(scan.userAgent)}</p>

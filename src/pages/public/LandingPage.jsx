@@ -19,9 +19,14 @@ export default function LandingPage() {
             Znalazca przykłada telefon do tagu i od razu widzi, jak się z Tobą skontaktować — bez instalowania
             aplikacji. Ty jednym dotknięciem zapisujesz karmienie i spacery.
           </p>
-          <Button to="/login" variant="accent" size="lg">
-            Zaloguj się
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button to="/rejestracja" variant="accent" size="lg">
+              Załóż konto
+            </Button>
+            <Button to="/login" variant="secondary" size="lg">
+              Zaloguj się
+            </Button>
+          </div>
         </div>
         <HeroIllustration />
       </section>

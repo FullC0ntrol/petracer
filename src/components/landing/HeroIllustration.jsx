@@ -1,3 +1,5 @@
+import { Dog } from 'lucide-react'
+
 /*
   Ilustracja na stronę główną: zawieszka na obroży, fale NFC i telefon z otwartą stroną zawieszki.
   Rysunek w SVG (bez plików graficznych), kolory z tokenów przez klasy `fill-*` / `stroke-*`,
@@ -46,9 +48,7 @@ export default function HeroIllustration() {
           <rect x="260" y="82" width="70" height="7" rx="3.5" className="fill-surface" />
           {/* awatar */}
           <rect x="278" y="106" width="44" height="44" rx="12" className="fill-pine-soft" />
-          <text x="300" y="137" textAnchor="middle" className="fill-pine font-display" fontSize="24" fontWeight="700">
-            L
-          </text>
+          <Dog x="284" y="112" size={32} strokeWidth={1.75} className="text-pine" />
           {/* tekst */}
           <rect x="262" y="160" width="76" height="6" rx="3" className="fill-line" />
           <rect x="270" y="172" width="60" height="6" rx="3" className="fill-line" />

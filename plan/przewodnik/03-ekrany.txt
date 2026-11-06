@@ -1,0 +1,724 @@
+@@ src/components/layout/PublicLayout.jsx
+> Wspólny wygląd stron publicznych: logo, treść i stopka.
+@22 ^
+`Outlet` to miejsce, w którym React Router wstawi stronę dziecka. `flex-1` na `main` rozciąga treść i spycha stopkę na dół, a `min-h-dvh` to pełna wysokość ekranu z uwzględnieniem paska przeglądarki w telefonie. Nagłówek ma sam logotyp, bo przyciski logowania są na stronie głównej.
+
+@@ src/components/layout/OwnerLayout.jsx
+> Układ panelu: przyklejony nagłówek i jedna wąska kolumna.
+@22 ^
+Komentarz wyjaśnia decyzję: bez sidebara, bo cała nawigacja jest na ekranie zwierzęcia.
+@22 export default function OwnerLayout
+Od sesji 23 `user` zawsze tu istnieje, bo layout działa wewnątrz `RequireAuth`.
+@22 <div className="min-h-dvh">
+`sticky top-0` przykleja nagłówek, a `backdrop-blur` rozmywa treść pod nim. `pt-[env(safe-area-inset-top)]` to odstęp od wycięcia w telefonie.
+@22 <Link
+Kółko z pierwszą literą imienia prowadzi do ustawień. `aria-label` jest konieczny, bo sama litera niewiele mówi czytnikowi ekranu. `trim().charAt(0).toUpperCase()` obsługuje spacje i małe litery.
+
+W sesji 22 strażnika jeszcze nie ma, więc owiń kółko warunkiem `{user && (...)}`. Bez niego wejście na panel bez logowania skończy się błędem. W sesji 23 warunek można usunąć.
+@22 </div>
+`pb-32` zostawia na dole miejsce na pływający przycisk „Akcje”, żeby nie zasłaniał treści.
+
+@@ src/components/layout/RequireAuth.jsx
+> Strażnik panelu: wpuszcza tylko zalogowanych.
+@23 ^
+Importy i pobranie stanu. `useLocation` mówi, na którym adresie jest użytkownik.
+@23 // Dopóki nie wiadomo
+Najpierw `isLoading`, bo odświeżenie strony zaczyna się od `user = null`. Bez tego warunku każde odświeżenie panelu kończyłoby się na `/login`.
+@23 if (!user) {
+`<Navigate>` przekierowuje. `replace` zamienia wpis w historii, więc „Wstecz” nie wraca do strażnika w pętli. `state={{ from: location }}` zapamiętuje cel, żeby wrócić tam po zalogowaniu. Gdy wszystko jest w porządku, `Outlet` pokazuje stronę.
+
+@@ src/components/layout/FinderLayout.jsx
+> Układ znalazcy.
+@0 ^
+Tylko jedna kolumna, bez nawigacji. `max-w-md` utrzymuje wąską szerokość także na komputerze.
+
+@@ src/components/layout/RootLayout.jsx
+> Korzeń wszystkich tras.
+@0 ^
+`ScrollRestoration` przewija stronę na górę po przejściu na nowy adres. Bez tego nowa strona otwierałaby się w połowie.
+
+@@ src/components/layout/Logo.jsx
+> Logo będące linkiem.
+@0 ^
+Prop `to` ma wartość domyślną `/`, a w panelu dostaje `/panel`. Ikona ma `aria-hidden`, bo obok jest tekst z nazwą.
+
+@@ src/components/layout/PageHeader.jsx
+> Nagłówek strony.
+@0 ^
+`description && ...` renderuje opis tylko wtedy, gdy istnieje. `action` to opcjonalny przycisk po prawej, a `flex-wrap` przenosi go niżej na wąskim ekranie.
+
+@@ src/pages/public/LandingPage.jsx
+> Strona główna.
+@22 ^
+Ikony i komponenty kroków. Ilustracja jest opcjonalna, a bez niej strona też działa.
+@22 export default function LandingPage
+Lewa kolumna z tekstem i prawa z ilustracją. `md:grid-cols-2` daje dwie kolumny od średniego ekranu, a na telefonie jedną. Tu są główne przyciski: rejestracja i logowanie.
+@22 <section aria-labelledby="how-it-works">
+`aria-labelledby` nadaje sekcji nazwę z nagłówka. Lista `<ol>`, bo kroki mają kolejność. Ikonę przekazujemy jako komponent, nie jako element: `icon={Smartphone}`.
+
+@@ src/components/landing/HowItWorksStep.jsx
+> Jeden krok na stronie głównej.
+@22 ^
+`icon: Icon` zmienia nazwę propa na wielką literę, bo JSX traktuje tylko takie nazwy jak komponenty. `Card as="li"` renderuje kartę jako element listy.
+
+@@ src/components/landing/HeroIllustration.jsx
+> Ilustracja w SVG. Opcjonalna, można ją pominąć bez szkody dla działania i dla oceny.
+@22 ^
+`Dog` to ikona używana w rysunku, a komentarz opisuje podejście: kolory z tokenów, bez plików graficznych.
+@22 export default function HeroIllustration
+`aspect-square` utrzymuje proporcje, `overflow-hidden` przycina wystające elementy. `viewBox="0 0 400 300"` definiuje układ współrzędnych rysunku, więc skaluje się do każdej wielkości. `role="img"` z `aria-label` opisuje całość czytnikowi ekranu.
+@22 {/* obroża */}
+`path` z `Q` rysuje krzywą. Drugi `path` w tym samym miejscu to przerywana linia „szwu”.
+@22 {/* zawieszka */}
+Linia i dwa koła, a na nich łapa z pięciu elips. `g` grupuje kształty, a `fill-paper` koloruje je wszystkie.
+@22 {/* fale NFC */}
+Trzy łuki z rosnącą przezroczystością dają wrażenie fali.
+@22 {/* telefon */}
+`transform="rotate(8 300 160)"` obraca cały telefon. Reszta to prostokąty ustawione jak mały ekran alarmu.
+
+@@ src/pages/public/LoginPage.jsx
+> Logowanie. Budujesz go w trzech krokach: formularz, powrót na właściwą stronę i konto demo.
+@22 ^
+Importy formularza. `Navigate` i `useLocation` dopiszesz w sesji 23. W sesji 22 zaimportuj za to `useNavigate`.
+@24 import { PawPrint }
+Ikona i funkcja do przycisku demo.
+@22 import PageHeader
+Komponenty interfejsu.
+@24 import { useAsync }
+Sprawdzenie, czy konto demo jest włączone.
+@22 import { useAuth }
+Dostęp do logowania.
+@22 export default function LoginPage
+Inputy kontrolowane: wartość pola żyje w stanie. Osobne stany na błąd i wysyłanie, żeby zablokować przycisk. W sesji 22 pobierz z kontekstu tylko `login`, a w 23 dopisz `user` i `useLocation`.
+@23 // RequireAuth zapisał
+`location.state?.from` to cel z `RequireAuth`, a `?.` obsługuje wejście bezpośrednie. Warunek działa też po zalogowaniu: kontekst zmienia `user`, komponent rysuje się ponownie i `Navigate` przenosi dalej.
+@22 async function handleSubmit
+`preventDefault` blokuje przeładowanie strony. `setIsSubmitting(false)` jest tylko w `catch`, bo po sukcesie strona i tak znika.
+
+W sesji 22, bez `Navigate`, napisz na górze komponentu `const navigate = useNavigate()`, a po udanym `await login(...)` wywołaj `navigate('/panel')`. W sesji 23 usuń oba wiersze.
+@22 return (
+`Card as="form"` to karta będąca formularzem. `noValidate` wyłącza dymki przeglądarki.
+@22 <Input
+Pole e-mail. `autoComplete="email"` pozwala menedżerowi haseł podpowiedzieć adres.
+@22 <Input
+Pole PIN.
+
+- `type="password"`: ukrywa cyfry.
+- `inputMode="numeric"`: klawiatura numeryczna na telefonie.
+- `autoComplete="current-password"`: menedżer haseł rozpozna to jako hasło.
+- `maxLength={6}`: pole nie przyjmie więcej cyfr.
+
+Błąd z serwera pokazujemy pod tym polem. Komunikat jest jeden dla złego e-maila i złego PIN-u, więc nie ma potrzeby ustalać, którego pola dotyczy.
+@22 <Button type="submit"
+`disabled` zapobiega podwójnemu wysłaniu. `{' '}` to spacja przed linkiem, bo JSX usuwa spacje na końcu wiersza. `state={location.state}` przenosi zapamiętany cel na stronę rejestracji. Ten atrybut dopiszesz w sesji 23, bo wcześniej nie ma `location`.
+@24 <DemoLogin />
+Przycisk demo pod formularzem.
+@22 </div>
+Koniec formularza logowania.
+@24 /*
+`useAsync(getDemoLogin, [])` pyta serwer raz. `data?.enabled` jest fałszywe także podczas ładowania, więc przycisk po prostu się nie pokazuje. O przeniesieniu po zalogowaniu znów decyduje `Navigate` z głównego komponentu.
+
+@@ src/pages/public/RegisterPage.jsx
+> Rejestracja. Ten sam pomysł co logowanie, ale wiele pól w jednym stanie.
+@22 ^
+Importy i wartości początkowe formularza. `Navigate` i `useLocation` dopiszesz w sesji 23, a na razie zaimportuj `useNavigate`.
+@22 function validate
+Walidacja poza komponentem, bo nie zależy od jego stanu. Pusty obiekt oznacza brak błędów. `else if` sprawdza zgodność tylko wtedy, gdy sam PIN jest poprawny. Serwer sprawdza to samo: tu chodzi o szybką odpowiedź, a tam o bezpieczeństwo.
+@22 // Ten sam stan
+Stan to jeden obiekt z wszystkimi polami, a osobno błędy i flaga wysyłania. Wiersze z `user` i `location` dojdą w sesji 23: w sesji 22 pobierz z kontekstu tylko `register`.
+@23 const from
+Tak samo jak w logowaniu: po założeniu konta `user` się zmienia, a `Navigate` przenosi dalej.
+@22 function handleChange
+`[event.target.name]` to obliczona nazwa klucza, więc jedna funkcja obsługuje wszystkie pola: pole wskazuje atrybut `name`. Kopiujemy stan i zmieniamy jedno pole, bo stanu w React nie modyfikuje się bezpośrednio.
+@22 async function handleSubmit
+`Object.keys(...).length > 0` to sprawdzenie, czy są błędy. Do serwera nie wysyłamy `pinRepeat`. Błąd serwera trafia pod pole e-mail, bo najczęściej dotyczy zajętego adresu.
+
+W sesji 22, bez `Navigate`, po udanym `await register(...)` wywołaj `navigate('/panel')`. W sesji 23 usuń to wywołanie.
+@22 const pinField
+Wspólne atrybuty obu pól PIN. `{...pinField}` wstawia je do `Input`, żeby nie powtarzać pięciu atrybutów. `new-password` każe menedżerowi haseł zaproponować zapisanie nowej wartości.
+@22 return (
+Formularz i link do logowania. `state={location.state}` zachowuje zapamiętany cel, ale dopiszesz go w sesji 23.
+
+@@ src/pages/public/NotFoundPage.jsx
+> Strona 404.
+@0 ^
+Prosta strona ze szlakiem powrotu. `tabular-nums` wyrównuje szerokość cyfr.
+
+@@ src/components/ui/Badge.jsx
+> Mała etykieta.
+@0 ^
+Mapa wariantów zamiast `if`. Wybór koloru to `TONES[tone]`.
+@0 export default function Badge
+`icon: Icon` zmienia nazwę propa na wielką literę, bo tak JSX rozpoznaje komponenty. `aria-hidden` ukrywa ikonę przed czytnikiem, bo znaczenie niesie tekst.
+
+@@ src/components/ui/Button.jsx
+> Główny przycisk aplikacji.
+@0 ^
+`BASE` to klasy wspólne dla wszystkich wariantów.
+@0 const VARIANTS
+Warianty i rozmiary. Rozmiar `xl` ma 56 px wysokości, żeby znalazca w stresie trafił kciukiem.
+@0 /*
+Jeden komponent, dwa znaczniki: `<Link>` do przejść i `<button>` do akcji. `...rest` przekazuje resztę propów, m.in. `onClick` i `state`. Bez tego `state` z widoku alarmu by zginął.
+@0 export default function Button
+Parametry mają wartości domyślne. `type = 'button'` jest ważne, bo `<button>` w formularzu domyślnie go wysyła.
+@0 const classes
+`fullWidth && 'w-full'` działa dzięki `cn`. Zawartość jest zapisana w zmiennej, bo obie wersje przycisku używają tej samej. `<>...</>` grupuje elementy bez dodatkowego znacznika.
+@0 if (to) {
+Ten wybór to jedyna różnica między dwiema wersjami.
+
+@@ src/components/ui/Card.jsx
+> Biały blok.
+@0 ^
+`as: Component = 'div'` pozwala wybrać znacznik, więc `Card as="form"` to prawdziwy formularz o wyglądzie karty.
+
+@@ src/components/ui/EmptyState.jsx
+> Stan pustej listy.
+@0 ^
+Domyślna ikona to `Inbox`. Komponent mówi, co się stało i co można zrobić, zamiast zostawiać puste miejsce.
+
+@@ src/components/ui/ErrorState.jsx
+> Stan błędu.
+@0 ^
+`role="alert"` każe czytnikowi ekranu od razu przeczytać komunikat. `error?.message` obsługuje brak obiektu błędu, a przycisk pojawia się tylko przy `onRetry`.
+
+@@ src/components/ui/FormField.jsx
+> Rama każdego pola: etykieta, pole, komunikat.
+@0 ^
+`useId` daje unikalne id łączące etykietę z polem. Kliknięcie etykiety ustawia kursor w polu.
+@0 export default function FormField
+`message` to błąd albo podpowiedź, przy czym błąd wygrywa. `aria-describedby` łączy komunikat z polem, a `aria-invalid` zgłasza błąd czytnikowi. `undefined` sprawia, że React w ogóle nie wstawi atrybutu.
+@0 return (
+`children(fieldProps)` to render prop: `children` jest funkcją. Rama przekazuje atrybuty, a pole samo decyduje, na czym je położyć.
+
+@@ src/components/ui/fieldClasses.js
+> Wspólny wygląd pól.
+@0 ^
+`min-h-12` to wygodna wysokość na telefonie. Kolor obramowania zależy od błędu.
+
+@@ src/components/ui/Input.jsx
+> Pole tekstowe.
+@0 ^
+`{...rest}` przekazuje wszystkie zwykłe atrybuty `input`. `{...fieldProps}` jest później, więc `id` z ramy zawsze wygrywa.
+
+@@ src/components/ui/Textarea.jsx
+> Pole wielowierszowe.
+@0 ^
+Ten sam wzór co `Input`. `resize-y` pozwala powiększać pole tylko w pionie.
+
+@@ src/components/ui/Select.jsx
+> Lista wyboru.
+@0 ^
+Natywny `<select>` za darmo działa z klawiaturą i na telefonie. `appearance-none` chowa systemową strzałkę, a `pointer-events-none` przepuszcza kliknięcia przez własną ikonę.
+
+@@ src/components/ui/Toggle.jsx
+> Przełącznik.
+@0 ^
+Komponent kontrolowany: sam nie pamięta stanu, tylko zgłasza rodzicowi nową wartość.
+@0 export default function Toggle
+Etykieta i opis są powiązane z przyciskiem przez `id`.
+@0 <button
+`role="switch"` z `aria-checked` mówi czytnikowi, że to przełącznik. `translate-x-5` przesuwa kółko, gdy jest włączony.
+
+@@ src/components/ui/Tabs.jsx
+> Zakładki według wzorca dostępności WAI-ARIA.
+@0 ^
+Aktywną zakładkę trzyma rodzic. Klawiatura: Tab wchodzi na aktywną, a strzałki przełączają.
+@0 export default function Tabs
+`useId` buduje unikalne id zakładek i panelu.
+@0 function handleKeyDown
+Obiekt jest tu mapą klawisz → numer zakładki. Na końcu `[event.key]` wybiera wartość. Inny klawisz daje `undefined`, a wtedy nic się nie dzieje. Strzałki zawijają: po ostatniej jest pierwsza.
+@0 return (
+`tabIndex={isActive ? 0 : -1}` sprawia, że Tab zatrzymuje się tylko na aktywnej zakładce. `-mb-px` nakłada podkreślenie na dolną linię paska.
+
+@@ src/components/ui/Modal.jsx
+> Okno na natywnym `<dialog>`.
+@0 ^
+Przeglądarka daje za darmo: tło, blokadę strony i uwięzienie fokusu. `showModal()` to metoda DOM, stąd `useRef`.
+@0 export default function Modal
+Efekt otwiera okno i przez funkcję sprzątającą je zamyka, gdy `open` wróci na `false`.
+@0 // Escape wywołuje
+Rodzic trzyma stan, więc musi wiedzieć o zamknięciu. Bez `preventDefault` przeglądarka zamknęłaby okno, a `open` zostałoby `true`.
+@0 // Dialog nie ma własnego
+Treść ma padding wewnętrznego `div`, więc `event.target === dialog` oznacza kliknięcie w tło.
+@0 return (
+`backdrop:bg-ink/40` koloruje przyciemnienie. `aria-labelledby` nadaje oknu nazwę z tytułu, a przycisk X ma `aria-label`.
+
+@@ src/components/ui/Sheet.jsx
+> Arkusz wysuwany od dołu. Ta sama logika co `Modal`, tylko inny wygląd.
+@0 ^
+Różni się tylko klasami. Do trzeciego takiego komponentu warto byłoby wydzielić wspólny hook, przy dwóch to jeszcze niepotrzebne.
+@0 =return (
+`mt-auto mb-0` przykleja dialog do dołu ekranu. `animate-sheet` to wjazd od dołu z `index.css`, a `max-h-[85dvh]` ogranicza wysokość. `pb-[calc(env(safe-area-inset-bottom)+1.25rem)]` omija pasek systemowy telefonu.
+
+@@ src/components/ui/Spinner.jsx
+> Wskaźnik ładowania.
+@0 ^
+Rozmiary jako mapa.
+@0 // `role="status"`
+Czytnik ekranu przeczyta etykietę. `sr-only` ukrywa ją wizualnie, ale zostawia dla czytnika. Kółko jest dekoracją, więc ma `aria-hidden`.
+
+@@ src/components/ui/Notice.jsx
+> Ramka z komunikatem w treści strony.
+@27 ^
+Każdy ton to kolor tła, ikona i kolor ikony. Rozdzielenie tych elementów zapewnia kontrast tekstu niezależnie od tonu.
+@27 export default function Notice
+Rozpakowanie z mapy i zmiana nazwy `icon: Icon`. `title`, `children` i `action` są opcjonalne, więc komponent pasuje do wielu miejsc.
+
+@@ src/components/pets/PetAvatar.jsx
+> Awatar: ikona gatunku na kolorowym tle.
+@17 ^
+Mapa gatunek → ikona i lista czterech tonów. Zdjęć nie ma, bo to priorytet 2.
+@17 const SIZES
+Rozmiary jako klasy.
+@17 export default function PetAvatar
+`?? PawPrint` obsługuje nieznany gatunek.
+
+Linia z `reduce` to prosty skrót: `[...name]` rozbija imię na litery, a `reduce` sumuje ich kody. `% TONES.length` daje numer od 0 do 3. To samo imię zawsze ma ten sam kolor, bez zapisywania czegokolwiek w bazie.
+@17 return (
+`aria-hidden` jest na całym awatarze, bo obok zawsze jest imię. `isLost && ...` dodaje czerwoną obwódkę. `size-3/5` to rozmiar ikony względem awatara, więc działa w każdym rozmiarze.
+
+@@ src/components/pets/PetActionsSheet.jsx
+> Arkusz „Akcje”, czyli cała nawigacja po panelu.
+@17 ^
+Usuwasz stąd kafelki spacerów, harmonogramu i weterynarza wraz z ich ikonami.
+@17 /*
+Lista kafelków to tablica obiektów, bo tak łatwiej ją zmieniać niż powtarzający się JSX.
+@17 export default function PetActionsSheet
+`tone` ustala kolor wszystkich ikon: zielony albo czerwony. To odpowiedź na pytanie z kroku „Bez wzoru”: pole `tone` przy pojedynczym kafelku jest niepotrzebne.
+@17 const tiles = [
+Kod zawieszki w podpowiedzi, gdy istnieje. `...(warunek ? [obiekt] : [])` dodaje kafelek warunkowo: rozwija tablicę z jednym albo zerem elementów. „Oczami znalazcy” nie ma sensu bez zawieszki.
+@17 // Najpierw zamykamy
+Kolejność jest istotna: otwarty `<dialog>` nie może zostać na nowej stronie.
+@17 return (
+`animationDelay` opóźnia każdy kafelek o 35 ms, więc wjeżdżają po kolei. `active:scale-[0.97]` to delikatna reakcja na dotknięcie. Klucz `key={label}` to etykieta, bo jest unikalna.
+
+@@ src/components/pets/PetSwitcher.jsx
+> Rząd awatarów u góry ekranu.
+@0 ^
+Importy.
+@0 /*
+Lista ładuje się raz, bo przy zmianie `:id` React zostawia komponent na miejscu. `current` pozwala od razu pokazać zmianę z ekranu.
+@0 export default function PetSwitcher
+Dwa `useRef`: lista i aktywny element.
+@0 // Aktywny awatar na środek
+Efekt przewija tylko listę, a nie stronę. Wzór liczy pozycję środka elementu względem szerokości listy. Efekt działa przy zmianie zwierzęcia i po wczytaniu listy.
+@0 if (!pets)
+Pusty blok o stałej wysokości zapobiega skakaniu strony po wczytaniu.
+@0 return (
+`-mx-4` wyciąga listę do krawędzi ekranu. `snap-x` z `snap-center` zatrzymuje przewijanie na awatarach.
+
+`{ ...listed, ...current }` łączy dane z listy ze świeższymi danymi ekranu. `aria-current="page"` mówi czytnikowi, które zwierzę jest aktywne. `animate-ping` to pulsująca kropka przy zaginięciu.
+
+@@ src/components/pets/PhoneNotice.jsx
+> Ostrzeżenie o braku numeru.
+@29 ^
+Jeden komponent użyty w dwóch miejscach. `action` to przycisk przekazany jako prop.
+
+@@ src/components/pets/PetForm.jsx
+> Jeden formularz do dodawania i edycji.
+@27 ^
+Wartości początkowe nowego zwierzęcia.
+@27 // Dane z API
+`input` nie przyjmuje `null`, więc wszystko zamieniamy na tekst. `??` zamienia pustą datę, a `replace` pokazuje wagę z polskim przecinkiem.
+@27 function validate
+Waga: `replace` pozwala wpisać `17,5`, a warunek działa tylko dla niepustej wartości.
+@27 /*
+Formularz nie wie, jak zapisać dane. Strona przekazuje `onSubmit`, więc ten sam kod obsługuje dodawanie i edycję.
+@27 export default function PetForm
+`useState(() => toFormValues(pet))` to leniwa inicjalizacja: funkcja wykona się tylko przy pierwszym renderze. Stan zawiera wartości, błędy pól, błąd serwera i flagę wysyłania.
+@27 // Jedna funkcja dla wszystkich
+`setValues((current) => ...)` używa aktualnego stanu, a `[name]` wybiera pole. Atrybut `name` musi odpowiadać kluczowi w obiekcie.
+@27 async function handleSubmit
+Po walidacji wysyłamy obiekt w formacie API: tekst bez spacji i waga jako liczba. `||` zamienia puste pola na `null`. `await onSubmit` oznacza, że błąd z API trafia do `catch`.
+@27 return (
+Pola używają `name`, `value` i `onChange` w ten sam sposób. `max=` blokuje przyszłe daty w kalendarzu. `inputMode="decimal"` pokazuje klawiaturę z przecinkiem, a `grid` układa pola w dwóch kolumnach od małego ekranu.
+@27 <Textarea
+`hint` przypomina, że te dane zobaczy obca osoba.
+@27 {submitError && (
+Błąd serwera jest nad przyciskami, a `disabled` chroni przed podwójnym zapisem.
+
+@@ src/components/pets/LostModeSwitch.jsx
+> Przełącznik z potwierdzeniem. Włączenie upublicznia numer telefonu, dlatego nie działa od razu.
+@35 ^
+Importy.
+@35 /*
+Komentarz podaje powód okna: skutek włączenia i ryzyko przypadkowego wyłączenia alarmu.
+@35 export default function LostModeSwitch
+`willEnable` to obliczona wartość, bez osobnego stanu. `openModal` odświeża komunikat z danych zwierzęcia.
+@35 async function handleConfirm
+Po sukcesie `onChange(updated)` przekazuje świeże dane rodzicowi, a okno się zamyka. `setIsSaving(false)` jest po `try/catch`, więc wykona się w obu przypadkach.
+@35 return (
+`Toggle` nie zmienia stanu, tylko otwiera okno przez `onChange={openModal}`. Stan pokazuje wartość z serwera. Przy zaginięciu karta dostaje czerwoną obwódkę.
+@35 <Modal
+Tytuł i przyciski zależą od kierunku zmiany. `undefined` przy ikonie oznacza jej brak.
+@35 {willEnable ? (
+Okno uczciwie mówi o skutkach i ostrzega przed brakiem numeru albo zawieszki. Komunikat dla znalazcy jest opcjonalny, a `maxLength` odpowiada limitowi z serwera.
+
+@@ src/components/pets/ActivityList.jsx
+> Lista aktywności.
+@38 ^
+Mapa typ → etykieta, ikona i kolory. Dodanie nowego typu to jeden wpis.
+@38 export default function ActivityList
+`icon: Icon` zmienia nazwę przy rozpakowaniu. `<time dateTime=...>` zapisuje datę czytelnie dla maszyn, a na ekranie widać „wczoraj, 8:12”. `first:pt-0` usuwa odstęp nad pierwszym wierszem.
+
+@@ src/components/tags/ScanList.jsx
+> Historia skanowań.
+@40 ^
+Importy i powód: brak lokalizacji i IP to świadoma decyzja o minimalizacji danych.
+@40 export default function ScanList
+Kolor i ikona zależą od `byOwner`. `truncate` skraca długi tekst, a `min-w-0` pozwala mu się zwęzić wewnątrz `flex`.
+
+@@ src/pages/owner/DashboardPage.jsx
+> `/panel`: przekierowanie albo powitanie dla konta bez zwierząt.
+@0 ^
+Importy wczytywania danych.
+@29 import PhoneNotice
+Ostrzeżenie o numerze.
+@0 import Button
+Komponenty interfejsu i `useAsync`.
+@22 import { useAuth }
+Dostęp do imienia.
+@0 import { getLastPetId }
+Ostatnio oglądane zwierzę.
+@0 /*
+Własny widok ma tylko konto bez zwierząt.
+@22 const { user }
+Zalogowany użytkownik.
+@0 const { data: pets
+`data: pets` zmienia nazwę przy rozpakowaniu. Najpierw obsługujemy ładowanie i błąd, więc dalej `pets` na pewno istnieje.
+
+`??` wybiera pierwsze zwierzę, gdy ostatnio oglądane zostało usunięte. `replace` jest konieczny, bo inaczej „Wstecz” wracałoby na `/panel`, a ten znów by przekierował.
+@22 <h1 className
+Powitanie. W sesji 22 napisz `user?.name`, bo strażnika jeszcze nie ma.
+@29 {!user.phone
+Ostrzeżenie pojawia się tylko przy braku numeru.
+@0 <EmptyState
+Stan pusty z przyciskiem. Akcja jest przekazana jako prop.
+
+@@ src/pages/owner/PetNewPage.jsx
+> Strona dodawania.
+@27 ^
+Strona łączy formularz z API. `handleSubmit` nie ma `try/catch`, bo błąd ma dotrzeć do `PetForm`, który go pokaże. `replace` sprawia, że „Wstecz” nie wraca do formularza.
+
+@@ src/pages/owner/PetEditPage.jsx
+> Strona edycji.
+@28 ^
+Najpierw wczytanie danych, potem ten sam formularz.
+@28 export default function PetEditPage
+`useAsync` pobiera zwierzę, a `updatePet` zapisuje zmiany. `key={pet.id}` tworzy formularz na nowo dla innego zwierzęcia, więc stan początkowy jest zawsze poprawny.
+
+@@ src/pages/owner/PetProfilePage.jsx
+> Główny ekran panelu. Budujesz go przez kilka sesji: część masz już z wcześniejszych sesji, a tu dochodzą zakładki, tryb zaginięcia i aktywność.
+@0 ^
+Podstawowe importy Reacta i routera.
+@26 import { Activity, Footprints
+Ikony. `Footprints` dojdzie z zakładką aktywności (sesja 38), a `Siren` z trybem zaginięcia.
+@38 import { getActivities }
+Dane zakładki aktywności.
+@0 import { getPetById }
+Dane zwierzęcia.
+@38 import ActivityList
+Lista aktywności.
+@35 import LostModeSwitch
+Tryb zaginięcia.
+@0 import PetActionsSheet
+Arkusz i awatar.
+@29 import PhoneNotice
+Ostrzeżenie o numerze.
+@0 import PetSwitcher
+Przełącznik i komponenty interfejsu.
+@26 import Tabs
+Zakładki.
+@0 import { useAsync }
+Wczytywanie danych.
+@29 import { useAuth }
+Sprawdzenie numeru telefonu użytkownika.
+@0 import { cn }
+Klasy i narzędzia. W sesji 26 uzupełnij `format.js` o `formatDate` i `formatWeight`.
+@26 const TABS = [
+Lista zakładek jako dane. Zakładka `activity` dochodzi w sesji 38.
+@0 /*
+Opis ekranu.
+@0 export default function PetProfilePage
+`useParams` odczytuje `:id`, a `useAsync` wczytuje dane przy każdej zmianie. Wiersz z `useAuth` dopiszesz w sesji 29, bo dopiero wtedy potrzebny jest numer telefonu.
+@35 /*
+Po włączeniu trybu zaginięcia API zwraca zaktualizowane zwierzę, a ten stan pozwala je pokazać bez ponownego ładowania.
+@0 const [isSheetOpen
+Stan arkusza.
+@35 const pet = updatedPet
+Porównanie id sprawia, że po przejściu na inne zwierzę nie pokażemy starych danych. Przed sesją 35 napisz po prostu `const pet = data`.
+@0 // Zapamiętujemy oglądane
+Zapis po każdej zmianie zwierzęcia.
+@29 {!user.phone
+Ostrzeżenie o numerze.
+@35 <LostModeSwitch
+`key={pet.id}` tworzy przełącznik na nowo dla innego zwierzęcia, a `onChange={setUpdatedPet}` odbiera świeże dane.
+@26 <ProfileTabs
+Zakładki.
+@0 <ActionsButton
+Przycisk i arkusz.
+@26 // Duża karta u góry
+Karta zwierzęcia. `details` to rasa i wiek: `filter(Boolean)` pomija brakujące elementy, a `join` wstawia kropkę. Gatunek widać na awatarze, więc opis jest krótki. Kolor tła pokazuje stan, zanim cokolwiek przeczytasz.
+@0 // Pływający przycisk
+`pointer-events-none` na kontenerze i `pointer-events-auto` na przycisku pozwalają klikać treść obok niego. `rotate-45` obraca plus w krzyżyk.
+@26 /*
+Aktywna zakładka jest w adresie, więc odświeżenie i „wstecz” ją zachowują. `TABS.some(...)` chroni przed nieznaną wartością w adresie.
+@38 {activeTab === 'activity'
+Trzecia zakładka.
+@26 </Tabs>
+Zakładka „Dane”: tablica par etykieta i wartość, zamieniona na listę `<dl>`.
+@26 function HealthTab
+Pusta wartość pokazuje stan z przyciskiem. `whitespace-pre-line` zachowuje podziały wierszy z formularza.
+@38 function ActivityTab
+Własne wczytywanie danych. Komponent zapyta serwer dopiero po otwarciu zakładki, bo wcześniej w ogóle nie istnieje. Pusty stan podpowiada, jak dodać wpis.
+
+@@ src/pages/owner/PetTagPage.jsx
+> Zawieszka: tworzenie kodu, QR do wydruku i adres dla NFC.
+@39 ^
+Importy strony, QR i ikon. `ScanLine` dojdzie z historią.
+@40 import { createTag, getTagScans }
+W sesji 39 wystarczy `createTag`, a `getTagScans` dopiszesz w 40.
+@39 import PageHeader
+Nagłówek.
+@40 import ScanList
+Lista skanów.
+@39 import Button
+Komponenty i hooki. `EmptyState` dojdzie w sesji 40.
+@39 /*
+Opis strony.
+@39 export default function PetTagPage
+Ten sam wzór `updatedPet` co w profilu.
+@40 <ScanHistory petId
+W sesji 40 dochodzi historia.
+@39 </div>
+Koniec głównego układu strony.
+@39 function CreateTag
+`onCreated(await createTag(pet.id))` przekazuje nowe dane rodzicowi. Warunek przy numerze sprawdza to samo co serwer, ale z pomocnym przyciskiem.
+@39 function TagDetails
+`window.location.origin` to adres, pod którym działa aplikacja, więc kod QR jest poprawny na każdej domenie. `useRef` daje dostęp do kontenera QR.
+@39 async function handleCopy
+Kopiowanie do schowka. Przeglądarka wymaga HTTPS, więc błąd jest obsłużony, a adres i tak jest widoczny.
+@39 // Kod QR to element
+Tworzenie pliku w przeglądarce: serializacja SVG, `Blob`, tymczasowy link i kliknięcie. `revokeObjectURL` zwalnia pamięć.
+@39 return (
+`level="M"` to poziom korekcji błędów: kod da się odczytać przy częściowym zabrudzeniu. Pod spodem jest instrukcja zapisu na NFC.
+@40 function ScanHistory
+Każdy stan to osobny warunek. `scans?.length` obsługuje czas ładowania, gdy `scans` nie istnieje.
+
+@@ src/pages/owner/SettingsPage.jsx
+> Ustawienia. W sesji 23 tylko wylogowanie, a w sesji 29 reszta.
+@29 ^
+Stan formularza.
+@23 import { useNavigate }
+Przejście po wylogowaniu i ikony. W sesji 23 wystarczy `LogOut`.
+@29 import { updateSettings }
+Zapis ustawień.
+@23 import PageHeader
+Nagłówek i przycisk.
+@29 import Card
+Formularz.
+@23 import { useAuth }
+Dostęp do `logout`.
+@29 const PHONE_PATTERN
+Ten sam wzorzec co na serwerze.
+@23 export default function SettingsPage
+W sesji 23 pobierz z kontekstu tylko `logout`.
+@29 const [name, setName]
+`useState(user.name)` wypełnia formularz bieżącymi danymi. `status` to jeden stan zamiast kilku wartości logicznych.
+@29 async function handleSubmit
+Walidacja jak w innych formularzach. `updateUser(...)` przekazuje dane do kontekstu, więc nowe imię od razu pojawia się w nagłówku.
+@23 // Najpierw wychodzimy
+Kolejność jest ważna. Po skasowaniu sesji strażnik przeniósłby na `/login` przed wykonaniem `navigate`.
+@23 return (
+Główny kontener i nagłówek.
+@29 <Card as="form"
+Formularz. Atrybuty `autoComplete` pozwalają przeglądarce podpowiedzieć dane, a podpowiedź przy numerze uczciwie mówi, kiedy jest widoczny.
+@23 <Button variant="danger"
+Wylogowanie jest poza formularzem. Wariant `danger` ostrzega bez krzyczenia.
+
+@@ src/components/finder/ActionLink.jsx
+> Duży przycisk prowadzący poza aplikację.
+@33 ^
+`Button` z `to` używa `<Link>`, który działa tylko wewnątrz aplikacji. Do `tel:` i `sms:` potrzebny jest zwykły `<a href>`.
+
+@@ src/components/finder/MedicalNotes.jsx
+> Uwagi medyczne dla znalazcy.
+@33 ^
+Przy braku uwag komponent zwraca `null`, czyli nic. `whitespace-pre-line` zachowuje wiersze.
+
+@@ src/components/finder/InactiveTagView.jsx
+> Tag nieaktywny.
+@33 ^
+Nawet tu znalazca dostaje radę, co zrobić. Komponent nie ma logiki, tylko wyświetla kod.
+
+@@ src/components/finder/FoundView.jsx
+> Widok znalazcy.
+@33 ^
+Numer jest tylko w `href`, nie w tekście. Bez numeru pojawia się inna rada, więc znalazca nigdy nie zostaje bez wskazówki.
+@33 export default function FoundView
+Główna akcja to duży przycisk `tel:`. Uwagi medyczne są poniżej.
+
+@@ src/components/finder/LostView.jsx
+> Alarm.
+@34 ^
+Komentarz mówi, co różni ten widok: czerwony nagłówek i widoczny numer.
+@34 export default function LostView
+Czerwony nagłówek. `isLost` dodaje obwódkę do awatara. Komunikat jest w `blockquote`, bo to cytat od właściciela.
+@34 {phone ? (
+`state` przekazuje numer i imię na następną stronę bez ponownego pytania serwera, więc nie powstaje drugi wpis w historii. Numer jest tu pokazany tekstem, bo właściciel świadomie włączył ten tryb.
+
+@@ src/components/finder/OwnerQuickLog.jsx
+> Szybki zapis dla właściciela.
+@37 ^
+Lista akcji jako dane: typ, etykieta, komunikat i ikona.
+@37 /*
+Jedno dotknięcie zapisuje aktywność.
+@37 export default function OwnerQuickLog
+`savingType` mówi, który przycisk jest w trakcie zapisu, a `null` oznacza brak zapisu. `saved` trzyma ostatni sukces, żeby go pokazać.
+@37 return (
+`role="status"` sprawia, że czytnik przeczyta potwierdzenie. `disabled={savingType !== null}` blokuje oba przyciski, ale tylko aktywny pokazuje „Zapisuję…”.
+
+@@ src/pages/finder/TagPage.jsx
+> Strona pod adresem z zawieszki. Pyta serwer i wyświetla to, co dostała.
+@33 ^
+Router, API i widoki.
+@34 import LostView
+Alarm.
+@37 import OwnerQuickLog
+Szybki zapis.
+@33 import Spinner
+Ładowanie i dane.
+@37 import { useAuth }
+Sprawdzenie sesji.
+@33 /*
+Komentarz opisuje zasadę z pracy: decyduje serwer, a strona tylko wyświetla.
+@33 export default function TagPage
+Pobranie kodu z adresu. W sesji 33 ten komponent może od razu zwrócić `<TagContent code={tagId} />`.
+@37 const { user, isLoading
+Trzeba poczekać na sesję, inaczej zapytanie poszłoby dwa razy i w historii powstałyby dwa skany. `key` tworzy `TagContent` na nowo po zmianie użytkownika.
+@33 }
+@33 function TagContent
+`reload` jest przekazany do przycisku przy błędzie. To jedyna strona, której znalazca nie może zastąpić, więc błąd sieci musi mieć wyjście.
+@33 switch (tag.variant)
+Sam wybór widoku.
+@37 case 'owner':
+Właściciel.
+@34 case 'lost':
+Alarm.
+@33 case 'found':
+`default` obsługuje `inactive` i każdą nową wartość.
+@33 function Loading
+Osobny komponent, bo ten sam widok ładowania jest potrzebny w dwóch miejscach.
+
+@@ src/pages/finder/ShareLocationPage.jsx
+> Wysyłanie SMS-a z lokalizacją.
+@36 ^
+Importy.
+@36 /*
+Dane przychodzą przez `state` z poprzedniej strony. Po odświeżeniu `state` znika, więc wtedy pytamy serwer.
+@36 export default function ShareLocationPage
+Wybór między danymi z `state` a zapytaniem. Dwa osobne komponenty, bo hooków nie można wywoływać warunkowo.
+@36 function ShareLocationFromServer
+Strona działa tylko dla zaginionego zwierzęcia z numerem. W każdym innym przypadku wyjaśnia sytuację i prowadzi z powrotem.
+@36 function ShareLocation
+`position && ...` buduje link tylko po pobraniu pozycji. Link bez lokalizacji jest przygotowany zawsze.
+@36 return (
+Komunikat o prywatności jest widoczny przed pytaniem o zgodę. Główna akcja zmienia się po pobraniu pozycji.
+@36 {status === 'error'
+Przy odmowie lub błędzie znalazca dostaje wyjaśnienie. Wyjście awaryjne jest dostępne także wcześniej.
+
+@@ src/pages/dev/UiGalleryPage.jsx
+> Galeria komponentów pod `/dev/ui`, tylko przy pracy lokalnej. Nie jest potrzebna do działania, a Twoja wersja może się różnić. Nie musisz jej przepisywać.
+@0 ^
+Importy komponentów.
+@0 const BUTTON_VARIANTS
+Listy wariantów pozwalają wyświetlić wszystko w pętli. Stany obsługują przykładowe zakładki, przełączniki i okno.
+@0 <GallerySection title="Button">
+Dalej każda sekcja powtarza ten sam wzór: komponent we wszystkich wariantach. Takie miejsce pozwala szybko sprawdzić wygląd bez przechodzenia przez aplikację.
+@0 function GallerySection
+Pomocniczy komponent z nagłówkiem i `useId`.
+
+@@ scripts/generate-icons.mjs
+> Generator ikon PWA. Plan mówi wprost: **nie przepisuj go**. Ikony możesz zrobić w dowolnym programie. Jest tu tylko dla kompletności.
+@99 ^
+Rysuje ikony bez bibliotek: `inEllipse` i `inRoundedSquare` sprawdzają, czy punkt należy do kształtu, a `PAW` to łapa z elips.
+@99 /*
+`colorAt` wybiera kolor punktu, a wersja `maskable` zmniejsza łapę do bezpiecznej strefy.
+@99 function render
+Każdy piksel jest próbkowany 16 razy i uśredniany, co wygładza krawędzie.
+@99 const CRC_TABLE
+Format PNG ręcznie: bloki z sumą kontrolną CRC32 i dane skompresowane przez `deflateSync`.
+@99 const ICONS
+Cztery rozmiary i zapis do `public/`.
+
+@@ .dockerignore
+> Co nie trafia do obrazu frontendu.
+@30 ^
+Mniej plików to szybsze budowanie. `.env` nie może trafić do obrazu, bo każdy, kto go dostanie, odczytałby sekrety.
+
+@@ Dockerfile
+> Budowanie frontendu w dwóch etapach.
+@30 ^
+Etap `build` ma Node, instaluje zależności i tworzy `dist`. Końcowy obraz bierze z niego tylko gotowe pliki.
+@30 # --- Etap 2
+`COPY --from=build` kopiuje wynik pierwszego etapu. W obrazie zostaje Caddy z plikami statycznymi, bez Node i `node_modules`.
+
+@@ Caddyfile
+> Serwer wejściowy: pliki aplikacji, `/api` i HTTPS.
+@30 ^
+Adres strony pochodzi ze zmiennej, więc ten sam plik działa lokalnie i na serwerze.
+@30 {
+Blok globalny. `trusted_proxies` każe wierzyć nagłówkom o adresie tylko od sieci prywatnej, inaczej każdy mógłby ominąć limit prób fałszywym adresem.
+@30 {$SITE_ADDRESS:http://localhost} {
+`{$NAZWA:domyślna}` odczytuje zmienną. `encode` kompresuje odpowiedzi.
+@30 header {
+Trzy nagłówki bezpieczeństwa. `X-Frame-Options DENY` blokuje osadzanie strony w ramce na cudzej stronie.
+@30 handle /api/* {
+Wszystko pod `/api` idzie do kontenera `api`. Nazwa usługi działa jak nazwa komputera.
+@30 handle {
+Reszta to frontend. Pliki z `/assets` mają skrót zawartości w nazwie, więc mogą zostać w pamięci na zawsze, a `index.html` zawsze jest sprawdzany.
+
+`try_files {path} /index.html` to najważniejsza linia: `/panel` nie jest plikiem, więc Caddy oddaje `index.html`, a adres obsługuje React Router.
+
+@@ docker-compose.yml
+> Cały system jednym poleceniem. **U Ciebie są dwie różnice:** `name: pettrace` oraz `build: ./client` w usłudze `caddy`, bo frontend leży w `client/`.
+@30 ^
+`${NAZWA:-domyślna}` to wartość z `.env` albo domyślna. Dzięki temu lokalnie działa bez konfiguracji.
+@30 db:
+`restart: unless-stopped` uruchamia kontener po awarii i restarcie serwera. Wolumen zachowuje dane, a `001_init.sql` wykonuje się przy pierwszym starcie. `:ro` to tylko odczyt.
+@30 healthcheck:
+`pg_isready` sprawdza, czy baza już przyjmuje połączenia. Brak sekcji `ports` oznacza, że z internetu do bazy nie da się połączyć.
+@30 api:
+`build: ./server` buduje obraz z folderu. W adresie bazy jest `db`, czyli nazwa usługi. `depends_on` z `service_healthy` czeka na gotową bazę, inaczej `SELECT 1` przy starcie by się nie udał.
+@30 caddy:
+Jedyna usługa z portami. Wolumeny `caddy-data` i `caddy-config` przechowują certyfikaty, żeby nie pobierać ich przy każdym starcie.
+@30 2*volumes:
+Deklaracja nazwanych wolumenów.
+
+@@ docker-compose.dev.yml
+> Sama baza do pracy lokalnej. Frontend i API uruchamiasz zwykłymi poleceniami.
+@19 ^
+Polecenia: start, zatrzymanie i usunięcie danych. `name` odróżnia ten projekt od pełnego systemu.
+@19 services:
+Obraz i dane logowania. Hasło `petrace` jest tu w porządku, bo baza działa tylko na Twoim komputerze.
+@19 ports:
+Port `5434:5432` oznacza: na komputerze 5434, w kontenerze 5432. Inny port niż standardowy, żeby nie kolidować z PostgreSQL zainstalowanym w systemie.
+@19 volumes:
+Wolumen zachowuje dane. Plik SQL wykonuje się **tylko przy pierwszym starcie pustej bazy**, dlatego po zmianie schematu trzeba zrobić `down -v`.
+@19 healthcheck:
+Sprawdzanie gotowości bazy.
+
+@@ .env.example
+> Wzór konfiguracji serwera produkcyjnego. Prawdziwy `.env` istnieje tylko na VPS.
+@30 ^
+Domena i adres publiczny.
+@30 # Porty Caddy
+Standardowe porty HTTP i HTTPS. Do automatycznego certyfikatu są wymagane.
+@30 # Hasło do bazy
+Sekrety generujesz poleceniem `openssl rand`. Zmiana `JWT_SECRET` wyloguje wszystkich.
+@30 # true = wczytaj
+Dane demo i konto demo. Na prawdziwym serwerze są wyłączone, ale do pokazu przy obronie możesz je włączyć.
+@30 # Ciasteczko sesji
+Na serwerze zawsze `true`.
+@30 # --- Tylko gdy
+Układ z nginx przed Caddy. Na Twoim VPS tak właśnie jest, stąd `TRUST_PROXY_HOPS=2` i sekcja 14 w `DEPLOY.md`.

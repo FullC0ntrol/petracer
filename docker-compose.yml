@@ -40,11 +40,6 @@ services:
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
       DEMO_LOGIN: ${DEMO_LOGIN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      MAIL_FROM: ${MAIL_FROM:-PetTrace <no-reply@petracker.pl>}
     depends_on:
       db:
         condition: service_healthy

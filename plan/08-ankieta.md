@@ -12,7 +12,7 @@ Członkowie lokalnych grup internetowych poświęconych zaginionym i znalezionym
 
 ## Termin
 
-Ankieta udostępniona po kamieniu M4 (aplikacja dostępna online), zbieranie odpowiedzi przez ok. 3 tygodnie.
+Ankieta udostępniona po kamieniu M3 (aplikacja dostępna online), zbieranie odpowiedzi przez ok. 3 tygodnie.
 
 ## Pytania (wersja robocza)
 

@@ -7,8 +7,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# W produkcji frontend rozmawia z prawdziwym API (patrz src/api/mode.js).
-ENV VITE_API_MODE=http
 RUN npm run build
 
 # --- Etap 2: serwer WWW ---

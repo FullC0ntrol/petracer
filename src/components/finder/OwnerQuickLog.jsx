@@ -13,7 +13,7 @@ const ACTIONS = [
 
 /*
   Wariant 2: zalogowany właściciel skanuje zawieszkę własnego zwierzęcia (UC7).
-  Jedno dotknięcie zapisuje aktywność z bieżącą godziną (source: quick_tap).
+  Jedno dotknięcie zapisuje aktywność z bieżącą godziną.
 */
 export default function OwnerQuickLog({ pet }) {
   const [saved, setSaved] = useState(null) // { label, occurredAt } ostatniego zapisu
@@ -24,7 +24,7 @@ export default function OwnerQuickLog({ pet }) {
     setSavingType(action.type)
     setError(null)
     try {
-      const activity = await logActivity(pet.id, { type: action.type, source: 'quick_tap' })
+      const activity = await logActivity(pet.id, action.type)
       setSaved({ label: action.done, occurredAt: activity.occurredAt })
     } catch (logError) {
       setError(logError.message)

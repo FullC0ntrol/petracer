@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getCurrentUser, loginAsDemo as apiLoginAsDemo, logout as apiLogout, verifyToken } from '../api/auth.js'
+import {
+  getCurrentUser,
+  login as apiLogin,
+  loginAsDemo as apiLoginAsDemo,
+  logout as apiLogout,
+  register as apiRegister,
+} from '../api/auth.js'
 import { AuthContext } from './AuthContext.js'
 
 /*
@@ -35,8 +41,12 @@ export default function AuthProvider({ children }) {
     () => ({
       user,
       isLoading,
-      async login(token) {
-        const result = await verifyToken(token)
+      async login(email, pin) {
+        const result = await apiLogin(email, pin)
+        setUser(result.user)
+      },
+      async register(account) {
+        const result = await apiRegister(account)
         setUser(result.user)
       },
       async loginAsDemo() {
@@ -47,7 +57,7 @@ export default function AuthProvider({ children }) {
         await apiLogout()
         setUser(null)
       },
-      // Po zapisaniu ustawień (imię, telefon) — żeby sidebar i inne miejsca od razu pokazały nowe dane.
+      // Po zapisaniu ustawień (imię, telefon) — żeby kółko konta i inne miejsca od razu pokazały nowe dane.
       updateUser: setUser,
     }),
     [user, isLoading],

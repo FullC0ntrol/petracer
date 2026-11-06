@@ -8,7 +8,6 @@ Strony są pogrupowane według layoutu, czyli wspólnej ramy (nagłówek, nawiga
 flowchart TB
   R[RootLayout] --> P[PublicLayout: odwiedzający]
   R --> F[FinderLayout: znalazca]
-  R --> V[VetLayout: weterynarz]
   R --> A[RequireAuth: tylko zalogowani]
   A --> O[OwnerLayout: właściciel]
 ```
@@ -17,10 +16,9 @@ flowchart TB
 
 | Adres | Strona | Priorytet |
 |---|---|---|
-| `/` | strona główna: czym jest PeTrace, jak działa w trzech krokach, logowanie | 1 |
-| `/login` | formularz adresu e-mail | 1 |
-| `/login/sprawdz-poczte` | informacja o wysłanym linku | 1 |
-| `/auth/verify` | weryfikacja tokenu z linku i zalogowanie | 1 |
+| `/` | strona główna: czym jest PeTrace, logowanie | 1 |
+| `/login` | formularz adresu e-mail i PIN-u, przycisk konta demo | 1 |
+| `/rejestracja` | formularz nowego konta: e-mail, imię, PIN | 1 |
 | `*` | strona 404 | 1 |
 
 ## Znalazca
@@ -47,28 +45,20 @@ Warunek 2 jest przed 3, aby właściciel, który odnalazł zwierzę, po zeskanow
 
 Każde wejście na stronę zawieszki jest zapisywane w historii skanowań.
 
-## Weterynarz
-
-| Adres | Strona | Priorytet |
-|---|---|---|
-| `/vet/:shareToken` | paszport medyczny tylko do odczytu, komunikat po wygaśnięciu linku | 2 |
-
 ## Właściciel
 
-Wymaga zalogowania. Na telefonie dolna nawigacja i górny pasek, na komputerze boczny panel.
+Wymaga zalogowania. Jedna wyśrodkowana kolumna na telefonie i komputerze, a nawigacja mieści się w arkuszu „Akcje” na ekranie zwierzęcia.
 
 | Adres | Strona | Priorytet |
 |---|---|---|
-| `/panel` | lista zwierząt i ostatnie skanowania | 1 |
+| `/panel` | otwiera ostatnio oglądane zwierzę albo pusty stan z zachętą do dodania pierwszego | 1 |
 | `/zwierzeta/nowe` | formularz nowego zwierzęcia | 1 |
-| `/zwierzeta/:id` | profil: dane, zdrowie, aktywność, przełącznik trybu zaginięcia | 1 |
+| `/zwierzeta/:id` | ekran zwierzęcia: dane, zdrowie, aktywność, przełącznik trybu zaginięcia, arkusz „Akcje” | 1 |
 | `/zwierzeta/:id/edytuj` | edycja profilu | 1 |
 | `/zwierzeta/:id/tag` | zawieszka: generowanie kodu, QR, adres NFC, historia skanowań | 1 |
-| `/zwierzeta/:id/vet-share` | tworzenie i unieważnianie linku dla weterynarza | 2 |
-| `/spacery` | lista spacerów i podsumowanie z 7 dni | 2 |
-| `/spacery/nowy` | ręczny wpis spaceru | 2 |
-| `/harmonogram` | lista przypomnień | 3 |
 | `/ustawienia` | imię, numer telefonu dla znalazców, wylogowanie | 1 |
+
+Arkusz „Akcje” zawiera: Zawieszka, Edytuj profil, Oczami znalazcy (gdy zwierzę ma zawieszkę), Nowe zwierzę oraz Konto i ustawienia.
 
 ## Strony pomocnicze
 

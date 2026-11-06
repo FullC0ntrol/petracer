@@ -23,13 +23,14 @@ Scenariusze akceptacyjne wykonywane na prawdziwych urządzeniach, na wersji wdro
 | T7 | jak T6, odmowa lokalizacji | SMS bez linku do mapy z prośbą o opis miejsca | ☐ | ☐ | — |
 | T8 | skan własnej zawieszki przez zalogowanego właściciela | szybki zapis, po kliknięciu potwierdzenie | ☐ | ☐ | — |
 | T9 | nieznany kod w adresie | „Ten tag nie jest aktywny” | ☐ | ☐ | ☐ |
-| T10 | logowanie: link z maila otwarty na tym samym urządzeniu | zalogowanie i przejście do panelu | ☐ | ☐ | ☐ |
-| T11 | ponowne użycie tego samego linku | komunikat o nieważnym linku | ☐ | ☐ | ☐ |
+| T10 | logowanie poprawnym e-mailem i PIN-em | zalogowanie i przejście do panelu, sesja zostaje po odświeżeniu | ☐ | ☐ | ☐ |
+| T11 | sześć prób logowania na ten sam e-mail w 15 minut | zły PIN i nieznany adres dają ten sam komunikat, szósta próba kończy się informacją o limicie | ☐ | ☐ | ☐ |
 | T12 | wejście na `/panel` bez logowania | przekierowanie do `/login`, po zalogowaniu powrót do `/panel` | ☐ | ☐ | ☐ |
 | T13 | włączenie trybu zaginięcia w profilu | po potwierdzeniu T5 daje widok alarmowy | ☐ | ☐ | ☐ |
 | T14 | historia skanowań po T3 i T5 | wpisy z datą, godziną i przeglądarką | ☐ | ☐ | ☐ |
 | T15 | instalacja aplikacji na ekranie głównym | ikona PeTrace, uruchomienie bez paska przeglądarki | ☐ | ☐ | ☐ |
-| T16 | układ na szerokości 375 px i 1440 px | brak przewijania w poziomie, nawigacja odpowiednia do szerokości | ☐ | ☐ | ☐ |
+| T16 | układ na szerokości 375 px i 1440 px | brak przewijania w poziomie, jedna wyśrodkowana kolumna panelu | ☐ | ☐ | ☐ |
+| T17 | założenie nowego konta z PIN-em | konto działa od razu, w bazie jest tylko skrót PIN-u, zajęty adres daje komunikat | ☐ | ☐ | ☐ |
 
 ## Audyt Lighthouse
 

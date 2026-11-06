@@ -7,16 +7,11 @@ import { parseActivity } from '../validation.js'
 
 export const activitiesRouter = Router()
 
-// POST /api/pets/:id/activities — szybki zapis po skanie (source: quick_tap) albo ręczny wpis (manual).
+// POST /api/pets/:id/activities  { type } — szybki zapis po skanie własnej zawieszki.
 activitiesRouter.post('/pets/:id/activities', requireAuth, async (req, res) => {
   await findOwnPet(req.params.id, req.user.id)
-  const activity = parseActivity(req.body)
-  const { rows } = await query(
-    `INSERT INTO activities (pet_id, type, occurred_at, duration_min, distance_m, source)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [req.params.id, activity.type, activity.occurredAt, activity.durationMin, activity.distanceM, activity.source],
-  )
+  const { type } = parseActivity(req.body)
+  const { rows } = await query('INSERT INTO activities (pet_id, type) VALUES ($1, $2) RETURNING *', [req.params.id, type])
   res.status(201).json(toActivity(rows[0]))
 })
 

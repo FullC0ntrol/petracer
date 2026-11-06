@@ -4,8 +4,7 @@ import { HttpError } from '../errors.js'
   Prosty ogranicznik liczby żądań („fixed window”): dla każdego klucza (np. adresu IP)
   liczymy żądania w oknie czasu. Po przekroczeniu limitu odpowiadamy 429 Too Many Requests.
 
-  Chroni /auth/request-link przed zasypaniem czyjejś skrzynki mailami i przed masowym
-  zakładaniem kont. Liczniki są w pamięci procesu — po restarcie serwera się zerują,
+  Chroni logowanie przed zgadywaniem PIN-u, a rejestrację przed masowym zakładaniem kont. Liczniki są w pamięci procesu — po restarcie serwera się zerują,
   co przy jednym serwerze w zupełności wystarcza (przy kilku trzeba by trzymać je np. w Redisie).
 */
 export function rateLimit({ windowMs, max, keyFn, message }) {
