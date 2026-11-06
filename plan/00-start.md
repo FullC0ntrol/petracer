@@ -9,7 +9,7 @@ Zagubione zwierzę najczęściej znajduje przypadkowa osoba. Zwykła adresówka 
 
 ## Rozwiązanie
 
-PeTrace to system złożony z fizycznej zawieszki i aplikacji webowej. Zawieszka zawiera tag NFC i kod QR z unikalnym adresem, np. `petrace.pl/t/K7Q2-M9XD`. Zeskanowanie jej dowolnym smartfonem otwiera stronę w przeglądarce, bez instalowania czegokolwiek.
+PeTrace to system złożony z fizycznej zawieszki i aplikacji webowej. Zawieszka zawiera tag NFC i kod QR z unikalnym adresem, np. `petracker.pl/t/K7Q2-M9XD`. Zeskanowanie jej dowolnym smartfonem otwiera stronę w przeglądarce, bez instalowania czegokolwiek.
 
 Ten sam adres prowadzi do różnych widoków zależnie od sytuacji (**routing kontekstowy**):
 
@@ -26,7 +26,7 @@ W panelu właściciel zarządza profilami zwierząt, włącza tryb zaginięcia, 
 | Bez instalacji | Znalazca korzysta z przeglądarki. Właściciel może zainstalować aplikację jako PWA, ale nie musi. |
 | Prywatność od początku | Poza trybem zaginięcia dane osobowe właściciela nie są wyświetlane. Lokalizacja znalazcy trafia bezpośrednio do SMS-a i nie jest przechowywana w systemie. |
 | Decyzje po stronie serwera | O tym, który widok zobaczy osoba skanująca, decyduje serwer. Przeglądarka dostaje tylko dane potrzebne w danym wariancie. |
-| Logowanie bez hasła | Właściciel loguje się jednorazowym linkiem wysłanym na e-mail (magic link). |
+| Proste logowanie | Właściciel zakłada konto i loguje się adresem e-mail oraz 6-cyfrowym PIN-em. W bazie zapisany jest wyłącznie skrót PIN-u. |
 | Mobile-first | Interfejs projektowany najpierw pod telefon, z dużymi przyciskami dla osoby działającej w stresie. |
 
 ## Jak to działa
@@ -38,7 +38,6 @@ flowchart LR
   C -->|pliki aplikacji| F[Frontend]
   C -->|/api/*| A[API: Node.js + Express]
   A --> D[(PostgreSQL)]
-  A -->|e-mail z linkiem| M[Serwer poczty]
 ```
 
 Szczegóły: [04-architektura.md](04-architektura.md).
@@ -63,7 +62,7 @@ Uzasadnienia wyborów: [05-decyzje.md](05-decyzje.md).
 PeTracker-FinalVersion/
 ├── client/              # aplikacja webowa (React + Vite)
 ├── server/              # API (Node.js + Express)
-├── docs/                # dokumentacja projektu
+├── plan/                # dokumentacja projektu
 ├── docker-compose.yml   # uruchomienie całego systemu
 └── README.md
 ```
@@ -86,11 +85,11 @@ PeTracker-FinalVersion/
 
 | Obszar | Stan |
 |---|---|
-| Frontend: fundamenty, layouty, komponenty UI | ukończone |
-| Frontend: warstwa danych i logowanie (mock) | w trakcie |
-| Frontend: panel właściciela, strona tagu | zaplanowane |
-| Backend i baza danych | zaplanowane |
-| Wdrożenie | zaplanowane |
+| Fundamenty, layouty, komponenty UI, układ panelu | ukończone |
+| Serwer, baza danych i logowanie PIN-em | w trakcie |
+| Panel właściciela na bazie danych | zaplanowane |
+| Wdrożenie i PWA | zaplanowane |
+| Strona zawieszki, widoki znalazcy, QR i NFC | zaplanowane |
 | Praca pisemna | zaplanowana |
 
 Aktualny postęp: [06-harmonogram.md](06-harmonogram.md).

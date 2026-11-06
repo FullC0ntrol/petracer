@@ -1,5 +1,4 @@
-import * as http from './http/pets.js'
-import * as mock from './mock/pets.js'
+import { request } from './request.js'
 
 /*
   Zwierzęta zalogowanego właściciela:
@@ -11,10 +10,26 @@ import * as mock from './mock/pets.js'
 
   pet = { id, name, species, breed, birthDate, weightKg, medicalNotes, isLost, lostMessage, tagCode, createdAt }
 */
-const useHttp = import.meta.env.VITE_API_MODE === 'http'
 
-export const getPets = useHttp ? http.getPets : mock.getPets
-export const getPetById = useHttp ? http.getPetById : mock.getPetById
-export const createPet = useHttp ? http.createPet : mock.createPet
-export const updatePet = useHttp ? http.updatePet : mock.updatePet
-export const setLostMode = useHttp ? http.setLostMode : mock.setLostMode
+// encodeURIComponent: id trafia do adresu, więc znaki specjalne nie mogą zmienić ścieżki.
+const petPath = (id) => `/pets/${encodeURIComponent(id)}`
+
+export function getPets() {
+  return request('GET', '/pets')
+}
+
+export function getPetById(id) {
+  return request('GET', petPath(id))
+}
+
+export function createPet(data) {
+  return request('POST', '/pets', data)
+}
+
+export function updatePet(id, changes) {
+  return request('PATCH', petPath(id), changes)
+}
+
+export function setLostMode(id, isLost, message = '') {
+  return request('PATCH', `${petPath(id)}/lost`, { isLost, message })
+}

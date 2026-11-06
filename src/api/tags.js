@@ -1,12 +1,10 @@
-import * as http from './http/tags.js'
-import * as mock from './mock/tags.js'
+import { request } from './request.js'
 
 /*
   Zawieszki i historia skanowań:
-    resolveTag(code)        → { variant, … }   GET  /api/tags/:code   (publiczne, zapisuje skan)
-    createTag(petId)        → pet              POST /api/pets/:id/tag
-    getTagScans(petId)      → scan[]           GET  /api/pets/:id/scans
-    getRecentScans(limit)   → scan[]           GET  /api/scans?limit=
+    resolveTag(code)     → { variant, … }   GET  /api/tags/:code   (publiczne, zapisuje skan)
+    createTag(petId)     → pet              POST /api/pets/:id/tag
+    getTagScans(petId)   → scan[]           GET  /api/pets/:id/scans
 
   Warianty resolveTag (wybiera je serwer, decyzja D6):
     { variant: 'inactive', code }
@@ -14,11 +12,16 @@ import * as mock from './mock/tags.js'
     { variant: 'lost',  code, pet: { name, species, medicalNotes }, phone, message }
     { variant: 'found', code, pet: { name, species, medicalNotes }, phone }
 
-  scan = { id, tagCode, scannedAt, userAgent, byOwner, petId, petName }
+  scan = { id, tagCode, scannedAt, userAgent, byOwner }
 */
-const useHttp = import.meta.env.VITE_API_MODE === 'http'
+export function resolveTag(code) {
+  return request('GET', `/tags/${encodeURIComponent(code)}`)
+}
 
-export const resolveTag = useHttp ? http.resolveTag : mock.resolveTag
-export const createTag = useHttp ? http.createTag : mock.createTag
-export const getTagScans = useHttp ? http.getTagScans : mock.getTagScans
-export const getRecentScans = useHttp ? http.getRecentScans : mock.getRecentScans
+export function createTag(petId) {
+  return request('POST', `/pets/${encodeURIComponent(petId)}/tag`)
+}
+
+export function getTagScans(petId) {
+  return request('GET', `/pets/${encodeURIComponent(petId)}/scans`)
+}

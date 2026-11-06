@@ -1,27 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { Activity, ChevronRight, Footprints, Pencil, Plus, QrCode, ScanLine, Siren, Timer, UtensilsCrossed } from 'lucide-react'
+import { Activity, Footprints, Pencil, Plus, QrCode, Siren } from 'lucide-react'
 import { getActivities } from '../../api/activities.js'
 import { getPetById } from '../../api/pets.js'
-import { getTagScans } from '../../api/tags.js'
-import PhoneNotice from '../../components/owner/PhoneNotice.jsx'
 import ActivityList from '../../components/pets/ActivityList.jsx'
 import LostModeSwitch from '../../components/pets/LostModeSwitch.jsx'
 import PetActionsSheet from '../../components/pets/PetActionsSheet.jsx'
 import PetAvatar from '../../components/pets/PetAvatar.jsx'
+import PhoneNotice from '../../components/pets/PhoneNotice.jsx'
 import PetSwitcher from '../../components/pets/PetSwitcher.jsx'
-import ScanList from '../../components/tags/ScanList.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Card from '../../components/ui/Card.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
 import ErrorState from '../../components/ui/ErrorState.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
-import StatTile from '../../components/ui/StatTile.jsx'
 import Tabs from '../../components/ui/Tabs.jsx'
 import { useAsync } from '../../hooks/useAsync.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { cn } from '../../lib/cn.js'
-import { formatAge, formatDate, formatDuration, formatWeight, speciesLabel } from '../../lib/format.js'
+import { formatAge, formatDate, formatWeight, speciesLabel } from '../../lib/format.js'
 import { setLastPetId } from '../../lib/lastPet.js'
 
 const TABS = [
@@ -32,8 +29,8 @@ const TABS = [
 
 /*
   Ekran skupiony na JEDNYM zwierzęciu — główny ekran panelu.
-  Od góry: przełącznik zwierząt, duża karta zwierzęcia, tryb zaginięcia, zakładki,
-  ostatnie skanowania. Cała nawigacja jest w arkuszu pod pływającym przyciskiem „Akcje”.
+  Od góry: przełącznik zwierząt, duża karta zwierzęcia, tryb zaginięcia, zakładki.
+  Cała nawigacja jest w arkuszu pod pływającym przyciskiem „Akcje”.
 */
 export default function PetProfilePage() {
   const { id } = useParams()
@@ -67,15 +64,6 @@ export default function PetProfilePage() {
           {!user.phone && <PhoneNotice />}
           <LostModeSwitch key={pet.id} pet={pet} onChange={setUpdatedPet} />
           <ProfileTabs pet={pet} />
-          <RecentPetScans pet={pet} />
-
-          <button
-            type="button"
-            onClick={() => setIsSheetOpen(true)}
-            className="mx-auto block text-sm font-semibold text-ink-muted underline-offset-4 hover:underline"
-          >
-            Więcej akcji: spacer, harmonogram, weterynarz, zawieszka…
-          </button>
 
           <ActionsButton pet={pet} isOpen={isSheetOpen} onClick={() => setIsSheetOpen(true)} />
           <PetActionsSheet open={isSheetOpen} onClose={() => setIsSheetOpen(false)} pet={pet} />
@@ -87,14 +75,14 @@ export default function PetProfilePage() {
 
 // Duża karta u góry: zielona, a przy zaginięciu czerwona — stan widać zanim cokolwiek przeczytasz.
 function PetHero({ pet }) {
-  const details = [speciesLabel(pet.species), pet.breed, formatAge(pet.birthDate)].filter(Boolean).join(' · ')
+  const details = [pet.breed || speciesLabel(pet.species), formatAge(pet.birthDate)].filter(Boolean).join(' · ')
   const chip = 'inline-flex items-center gap-1.5 rounded-full bg-paper/20 px-3 py-1.5 transition-colors hover:bg-paper/30'
 
   return (
     <section
       aria-label={`Karta: ${pet.name}`}
       className={cn(
-        'relative overflow-hidden rounded-3xl p-5 text-paper shadow-raised',
+        'relative animate-rise overflow-hidden rounded-3xl p-5 text-paper shadow-raised',
         pet.isLost ? 'bg-alert' : 'bg-pine',
       )}
     >
@@ -125,35 +113,6 @@ function PetHero({ pet }) {
         </Link>
       </div>
     </section>
-  )
-}
-
-function RecentPetScans({ pet }) {
-  const { data: scans, error, isLoading, reload } = useAsync(() => getTagScans(pet.id), [pet.id])
-
-  return (
-    <Card as="section" padding="sm" aria-labelledby="scans-heading">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 id="scans-heading" className="text-lg font-semibold">
-          Ostatnie skanowania
-        </h2>
-        <Link to={`/zwierzeta/${pet.id}/tag`} className="inline-flex items-center text-sm font-semibold text-pine">
-          Historia <ChevronRight size={16} aria-hidden="true" />
-        </Link>
-      </div>
-      {isLoading ? (
-        <Spinner showLabel label="Wczytuję skanowania…" />
-      ) : error ? (
-        <ErrorState title="Nie udało się wczytać skanowań" error={error} onRetry={reload} />
-      ) : scans.length === 0 ? (
-        <p className="flex items-center gap-2 text-sm text-ink-muted">
-          <ScanLine size={16} aria-hidden="true" />
-          Nikt jeszcze nie skanował zawieszki.
-        </p>
-      ) : (
-        <ScanList scans={scans.slice(0, 3)} />
-      )}
-    </Card>
   )
 }
 
@@ -213,7 +172,6 @@ function InfoTab({ pet }) {
     ['Rasa', pet.breed || '—'],
     ['Data urodzenia', pet.birthDate ? `${formatDate(pet.birthDate)} (${formatAge(pet.birthDate)})` : '—'],
     ['Waga', formatWeight(pet.weightKg)],
-    ['Zawieszka', pet.tagCode ? <span className="font-mono">{pet.tagCode}</span> : 'brak'],
   ]
 
   return (
@@ -270,21 +228,10 @@ function ActivityTab({ petId }) {
     )
   }
 
-  const walks = activities.filter((activity) => activity.type === 'walk')
-  const feedings = activities.length - walks.length
-  const walkMinutes = walks.reduce((sum, walk) => sum + (walk.durationMin ?? 0), 0)
-
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <StatTile label="Spacery" value={walks.length} icon={Footprints} />
-        <StatTile label="Karmienia" value={feedings} icon={UtensilsCrossed} />
-        <StatTile label="Czas spacerów" value={formatDuration(walkMinutes) ?? '0 min'} icon={Timer} />
-      </div>
-      <Card padding="sm">
-        <h2 className="mb-3 text-sm font-semibold text-ink-muted">Ostatnie 7 dni</h2>
-        <ActivityList activities={activities} />
-      </Card>
-    </div>
+    <Card padding="sm">
+      <h2 className="mb-3 text-sm font-semibold text-ink-muted">Ostatnie 7 dni</h2>
+      <ActivityList activities={activities} />
+    </Card>
   )
 }

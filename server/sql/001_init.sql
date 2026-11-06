@@ -5,26 +5,14 @@
 -- Identyfikatory to UUID z wbudowanej funkcji gen_random_uuid(): nie da się ich zgadnąć
 -- ani policzyć (w przeciwieństwie do 1, 2, 3…), więc adres /zwierzeta/<id> nic nie zdradza.
 
+-- pin_hash: `sól:skrót` z funkcji scrypt (server/src/services/pin.js). Sam PIN nigdzie nie jest zapisany.
 CREATE TABLE users (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email      text NOT NULL UNIQUE,
   name       text NOT NULL DEFAULT '',
   phone      text NOT NULL DEFAULT '',
+  pin_hash   text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
-);
-
--- Jednorazowe linki logowania. Trzymamy tylko skrót SHA-256 tokenu: ktoś, kto wykradnie
--- kopię bazy, nie zaloguje się, bo ze skrótu nie da się odtworzyć linku.
--- Token pamięta e-mail, a nie id użytkownika: konto powstaje dopiero po kliknięciu w link
--- (POST /api/auth/verify), więc adres z literówką nie zostawia w bazie pustego konta.
--- `name` to imię z formularza, użyte tylko przy zakładaniu nowego konta.
-CREATE TABLE login_tokens (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email      text NOT NULL,
-  name       text NOT NULL DEFAULT '',
-  token_hash text NOT NULL UNIQUE,
-  expires_at timestamptz NOT NULL,
-  used_at    timestamptz
 );
 
 CREATE TABLE pets (
@@ -52,9 +40,8 @@ CREATE TABLE tags (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- „Jedno zwierzę ma jeden aktywny tag”. Indeks częściowy (WHERE is_active) pilnuje tego
--- po stronie bazy, a jednocześnie pozwala zachować stare, wyłączone zawieszki razem z ich
--- historią skanowań, gdy właściciel wygeneruje nowy kod.
+-- „Jedno zwierzę ma jeden aktywny tag”. Indeks częściowy (WHERE is_active) pilnuje tego po stronie
+-- bazy, a `is_active` zostawia miejsce na wymianę kodu zawieszki (priorytet 2).
 CREATE UNIQUE INDEX tags_one_active_per_pet ON tags (pet_id) WHERE is_active;
 
 -- Audyt: każde otwarcie strony zawieszki. Bez lokalizacji i bez adresu IP (minimalizacja danych).
@@ -68,26 +55,12 @@ CREATE TABLE tag_scans (
 
 CREATE INDEX tag_scans_tag_code_scanned_at_idx ON tag_scans (tag_code, scanned_at DESC);
 
--- type: feeding (karmienie) albo walk (spacer); source: quick_tap (po skanie) albo manual (formularz).
+-- type: feeding (karmienie) albo walk (spacer) — szybki zapis po skanie własnej zawieszki.
 CREATE TABLE activities (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   pet_id       uuid NOT NULL REFERENCES pets (id) ON DELETE CASCADE,
   type         text NOT NULL CHECK (type IN ('feeding', 'walk')),
-  occurred_at  timestamptz NOT NULL DEFAULT now(),
-  duration_min integer CHECK (duration_min > 0),
-  distance_m   integer CHECK (distance_m >= 0),
-  source       text NOT NULL DEFAULT 'manual' CHECK (source IN ('quick_tap', 'manual'))
+  occurred_at  timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX activities_pet_id_occurred_at_idx ON activities (pet_id, occurred_at DESC);
-
--- Priorytet 2: tymczasowe linki dla weterynarza. Tabela jest już w schemacie, żeby
--- dodanie funkcji nie wymagało migracji.
-CREATE TABLE vet_shares (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  pet_id     uuid NOT NULL REFERENCES pets (id) ON DELETE CASCADE,
-  token_hash text NOT NULL UNIQUE,
-  expires_at timestamptz NOT NULL,
-  revoked_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);

@@ -15,7 +15,7 @@ Każde polecenie jest w osobnym bloku. Polecenia z sekcji „na serwerze” wpis
 7. [Sprawdzenie, że działa](#7-sprawdzenie-że-działa)
 8. [Kopia zapasowa bazy](#8-kopia-zapasowa-bazy)
 9. [Aktualizacja aplikacji](#9-aktualizacja-aplikacji)
-10. [Podłączenie poczty](#10-podłączenie-poczty)
+10. [Reset PIN-u](#10-reset-pin-u)
 11. [Gdy coś nie działa](#11-gdy-coś-nie-działa)
 12. [Zawieszki: tag NFC i kod QR](#12-zawieszki-tag-nfc-i-kod-qr)
 13. [Uruchomienie całości lokalnie](#13-uruchomienie-całości-lokalnie)
@@ -185,7 +185,6 @@ Najważniejsze wartości w `.env`:
 | `JWT_SECRET` | wynik `openssl rand -hex 32` |
 | `SEED_DEMO_DATA` | `false` (na pokaz możesz dać `true` — patrz niżej) |
 | `COOKIE_SECURE` | `true` |
-| `SMTP_*` | na razie puste — link logowania będzie w logach (krok 7) |
 | `DEMO_LOGIN` | `true`, jeśli chcesz przycisk „Wejdź na konto demo” (pokaz, testy; wymaga `SEED_DEMO_DATA=true`) |
 
 > **Hasło do bazy ustawiasz raz.** PostgreSQL zapisuje je przy pierwszym uruchomieniu. Późniejsza zmiana `POSTGRES_PASSWORD` w `.env` nie zmieni hasła w bazie i API przestanie się łączyć.
@@ -227,15 +226,7 @@ curl https://petracker.pl/api/health
 ### W przeglądarce
 
 1. Otwórz `https://petracker.pl` — powinna być widoczna strona główna z kłódką w pasku adresu.
-2. Kliknij **Zaloguj się**, wpisz swój e-mail i wyślij link.
-
-### Na serwerze
-
-Dopóki poczta nie jest podłączona, link logowania jest w logach API — skopiuj go i otwórz w przeglądarce.
-
-```bash
-docker compose logs api --tail 20
-```
+2. Kliknij **Załóż konto**, podaj e-mail, imię i 6-cyfrowy PIN.
 
 Po zalogowaniu uzupełnij numer telefonu w **Ustawieniach**, dodaj zwierzę i utwórz mu zawieszkę.
 
@@ -340,36 +331,28 @@ docker image prune -f
 > **Zmiany w schemacie bazy.** Plik `server/sql/001_init.sql` wykonuje się tylko przy pierwszym starcie pustej bazy. Jeśli aktualizacja dodaje tabelę lub kolumnę, zapisz zmianę jako nowy plik (np. `server/sql/002_photos.sql`), zrób kopię zapasową (krok 8) i wykonaj go ręcznie:
 
 ```bash
-docker compose exec -T db psql -U petrace petrace < server/sql/002_photos.sql
+docker compose exec -T db psql -U petrace petrace < server/sql/002_pin_login.sql
 ```
 
-## 10. Podłączenie poczty
+## 10. Reset PIN-u
 
-Do wysyłki linków logowania potrzebny jest serwer SMTP. Możliwości:
-
-- **dostawca poczty transakcyjnej** (np. Brevo, Mailgun, Amazon SES) — najlepsza dostarczalność; dostawca poprosi o dodanie rekordów DNS SPF i DKIM dla domeny, żeby maile nie trafiały do spamu,
-- **skrzynka u dostawcy domeny/hostingu** — zwykle w panelu są dane SMTP,
-- **Gmail z hasłem aplikacji** — tylko do testów (limity wysyłki, adres nadawcy z gmail.com).
+Aplikacja nie wysyła maili, więc zapomniany PIN nadaje administrator.
 
 ### Na serwerze
 
-Uzupełnij w `.env` zmienne `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` i `MAIL_FROM` danymi od dostawcy.
+Policz skrót nowego PIN-u (tu `654321`).
 
 ```bash
-nano .env
+docker compose exec -T api node --input-type=module -e "import { hashPin } from './src/services/pin.js'; console.log(await hashPin('654321'))"
 ```
 
-Uruchom ponownie API, żeby wczytało nową konfigurację.
+Wpisz wynik do bazy zamiast `SKROT`, a adres właściciela zamiast `adres@example.com`.
 
 ```bash
-docker compose up -d api
+docker compose exec db psql -U petrace petrace -c "UPDATE users SET pin_hash = 'SKROT' WHERE email = 'adres@example.com'"
 ```
 
-Wyślij sobie link logowania ze strony i sprawdź w logach, czy nie ma błędów wysyłki.
-
-```bash
-docker compose logs api --tail 30
-```
+Przekaż PIN właścicielowi i poproś, żeby używał go tylko do tego konta.
 
 ## 11. Gdy coś nie działa
 
@@ -386,7 +369,8 @@ docker compose logs --tail 100
 | Kontener `api` ciągle się restartuje | Zobacz `docker compose logs api`. Komunikat o `JWT_SECRET` → ustaw losowy sekret w `.env` (krok 5). Błąd hasła do bazy → `POSTGRES_PASSWORD` w `.env` różni się od hasła z pierwszego uruchomienia. |
 | Strona działa, ale logowanie kończy się błędem lub od razu wylogowuje | `APP_URL` w `.env` musi być dokładnie `https://petracker.pl`, a `COOKIE_SECURE=true`. Po zmianie: `docker compose up -d api`. |
 | Komunikat „Błąd 502” przy akcjach w aplikacji | API nie działa — sprawdź `docker compose ps` i logi `api`. |
-| Nie przychodzi mail z linkiem | Bez SMTP link jest tylko w logach (`docker compose logs api`). Z SMTP — sprawdź spam i logi API. |
+| „Za dużo prób logowania” | Limit: 5 prób na e-mail w 15 minut. Odczekaj albo zrestartuj API: `docker compose restart api`. |
+| Właściciel nie pamięta PIN-u | Nadaj nowy PIN (krok 10). |
 | Po aktualizacji telefon pokazuje starą wersję | Service worker podmienia wersję przy kolejnym otwarciu. Zamknij aplikację całkowicie i otwórz ponownie. |
 | Lokalizacja w SMS-ie nie działa | Geolokalizacja wymaga HTTPS. Sprawdź, czy adres zaczyna się od `https://`. |
 | Brak miejsca na dysku | `docker system df` pokazuje zajętość; `docker image prune -f` usuwa stare obrazy. |
@@ -439,11 +423,7 @@ Zbuduj i uruchom wszystkie usługi (plik `.env` nie jest potrzebny — działaj�
 docker compose up --build
 ```
 
-Otwórz w przeglądarce `http://localhost:8080` i zaloguj się kontem `maciej@pettrace.pl` przyciskiem „[DEV] Symuluj kliknięcie w link” (działa tylko na `localhost`). Ten sam link jest też w logach — bierz zawsze **ostatni**, bo każdy działa tylko raz i 15 minut:
-
-```bash
-docker compose logs api
-```
+Otwórz w przeglądarce `http://localhost:8080` i kliknij „Wejdź na konto demo” na stronie logowania. Dane: `maciej@pettrace.pl`, PIN `123456`.
 
 Zatrzymaj wszystko (dane zostają na wolumenie).
 

@@ -1,7 +1,7 @@
 /*
   Zamiana wierszy z bazy (snake_case, jak w SQL) na obiekty JSON dla frontendu (camelCase, jak w JS).
-  Jedno miejsce, w którym ustalamy, jak wygląda np. „zwierzę” w API — tryb mock we frontendzie
-  zwraca dokładnie te same pola.
+  Jedno miejsce, w którym ustalamy, jak wygląda np. „zwierzę” w API. Mapper sam wybiera pola,
+  dlatego np. `pin_hash` nigdy nie wyjdzie poza serwer.
 */
 
 export function toUser(row) {
@@ -32,19 +32,9 @@ export function toScan(row) {
     scannedAt: row.scanned_at,
     userAgent: row.user_agent,
     byOwner: row.by_owner,
-    petId: row.pet_id,
-    petName: row.pet_name,
   }
 }
 
 export function toActivity(row) {
-  return {
-    id: row.id,
-    petId: row.pet_id,
-    type: row.type,
-    occurredAt: row.occurred_at,
-    durationMin: row.duration_min,
-    distanceM: row.distance_m,
-    source: row.source,
-  }
+  return { id: row.id, petId: row.pet_id, type: row.type, occurredAt: row.occurred_at }
 }

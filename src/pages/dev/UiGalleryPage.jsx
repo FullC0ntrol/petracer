@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { Clock, Footprints, LogOut, MapPin, Plus, Route, Siren, Trash2 } from 'lucide-react'
+import { Footprints, LogOut, MapPin, Plus, Siren, Trash2 } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -9,7 +9,6 @@ import Input from '../../components/ui/Input.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Select from '../../components/ui/Select.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
-import StatTile from '../../components/ui/StatTile.jsx'
 import Tabs from '../../components/ui/Tabs.jsx'
 import Textarea from '../../components/ui/Textarea.jsx'
 import Toggle from '../../components/ui/Toggle.jsx'
@@ -110,7 +109,7 @@ export default function UiGalleryPage() {
             <Spinner size="sm" />
             <Spinner />
             <Spinner size="lg" />
-            <Spinner showLabel label="Wczytuję spacery…" />
+            <Spinner showLabel label="Wczytuję zwierzęta…" />
           </div>
         </GallerySection>
 
@@ -172,29 +171,21 @@ export default function UiGalleryPage() {
               </>
             }
           >
-            Weterynarz straci dostęp do paszportu medycznego. Tej operacji nie można cofnąć.
+            Numer telefonu stanie się widoczny dla osoby, która zeskanuje zawieszkę.
           </Modal>
         </GallerySection>
 
         <GallerySection title="EmptyState">
           <EmptyState
             icon={Footprints}
-            title="Brak spacerów"
-            description="Rozpocznij pierwszy spacer, a tu pojawi się jego trasa i statystyki."
+            title="Brak aktywności"
+            description="Zeskanuj zawieszkę swoim telefonem, żeby zapisać karmienie albo spacer."
             action={
               <Button icon={Plus} size="sm">
-                Nowy spacer
+                Dodaj wpis
               </Button>
             }
           />
-        </GallerySection>
-
-        <GallerySection title="StatTile">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <StatTile label="Dystans" value="12,4" unit="km" icon={Route} hint="w tym tygodniu" />
-            <StatTile label="Czas" value="3:25" unit="h" icon={Clock} />
-            <StatTile label="Spacery" value="9" icon={Footprints} />
-          </div>
         </GallerySection>
       </div>
     </>

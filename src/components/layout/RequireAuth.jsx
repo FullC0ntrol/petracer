@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth.js'
 import Spinner from '../ui/Spinner.jsx'
 
 // Strażnik tras właściciela. Zapamiętujemy w `state`, dokąd użytkownik chciał wejść,
-// żeby po zalogowaniu tam wrócić (LoginPage przekazuje to dalej do magic linka).
+// żeby po zalogowaniu tam wrócić (LoginPage odczytuje to z `location.state`).
 export default function RequireAuth() {
   const { user, isLoading } = useAuth()
   const location = useLocation()

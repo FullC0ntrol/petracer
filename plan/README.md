@@ -29,13 +29,13 @@ npm run lint      # analiza kodu
 ```
 ├── client/              # aplikacja webowa
 ├── server/              # API (w realizacji)
-├── docs/                # dokumentacja projektu
+├── plan/                # dokumentacja projektu
 └── docker-compose.yml   # uruchomienie całego systemu (w realizacji)
 ```
 
 ## Dokumentacja
 
-Pełna dokumentacja w folderze [`docs/`](docs/00-start.md): zakres, przypadki użycia, widoki, architektura, dziennik decyzji, harmonogram i plan testów.
+Pełna dokumentacja w folderze [`plan/`](00-start.md): zakres, przypadki użycia, widoki, architektura, dziennik decyzji, harmonogram i plan testów.
 
 ## Autor
 

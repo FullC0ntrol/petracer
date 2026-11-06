@@ -1,4 +1,4 @@
-# Sama baza danych do pracy lokalnej: frontend (`npm run dev:http`) i API (`npm run dev` w server/)
+# Sama baza danych do pracy lokalnej: frontend (`npm run dev`) i API (`npm run dev` w server/)
 # uruchamiasz zwykłymi poleceniami, a PostgreSQL działa w Dockerze.
 #
 #   docker compose -f docker-compose.dev.yml up -d     # start bazy w tle

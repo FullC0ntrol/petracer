@@ -1,7 +1,13 @@
-import { apiError } from '../errors.js'
+// Błąd z kodem jak w HTTP (400 — złe dane, 401 — niezalogowany, 404 — nie ma, 429 — za dużo prób,
+// 0 — brak połączenia). Komunikat jest po polsku, bo trafia prosto do interfejsu.
+function apiError(status, message) {
+  const error = new Error(message)
+  error.status = status
+  return error
+}
 
 /*
-  Jedno miejsce, które wykonuje zapytania do serwera. Pozostałe pliki w api/http/ podają tylko
+  Jedno miejsce, które wykonuje zapytania do serwera. Pozostałe pliki w api/ podają tylko
   metodę, adres i dane.
 
   - Adres zaczyna się od /api: frontend i API są pod tą samą domeną (w produkcji rozdziela je Caddy,

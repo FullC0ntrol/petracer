@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router'
 import { PawPrint, Plus } from 'lucide-react'
 import { getPets } from '../../api/pets.js'
-import PhoneNotice from '../../components/owner/PhoneNotice.jsx'
+import PhoneNotice from '../../components/pets/PhoneNotice.jsx'
 import Button from '../../components/ui/Button.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
 import ErrorState from '../../components/ui/ErrorState.jsx'

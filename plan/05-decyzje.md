@@ -26,6 +26,11 @@ Każdy wpis opisuje decyzję projektową, jej uzasadnienie i odrzucone alternaty
 | D18 | Monorepo `client/` i `server/` | architektura |
 | D19 | Caddy jako serwer wejściowy | wdrożenie |
 | D20 | Priorytetyzacja zakresu | zakres |
+| D21 | Logowanie e-mailem i PIN-em (zastępuje D7) | bezpieczeństwo |
+| D22 | Bez warstwy danych przykładowych (zastępuje D16) | architektura |
+| D23 | Rezygnacja ze spacerów, harmonogramu i udostępniania weterynarzowi (zastępuje D11) | zakres |
+| D24 | Jedno wdrożenie całego systemu | wdrożenie |
+| D25 | nginx przed Caddy na współdzielonym serwerze (uzupełnia D19) | wdrożenie |
 
 ---
 
@@ -61,12 +66,13 @@ Każdy wpis opisuje decyzję projektową, jej uzasadnienie i odrzucone alternaty
 **Odrzucone:** pobranie pełnego profilu i wybór widoku w aplikacji klienckiej.
 
 ### D7 · Logowanie magic link
+**Status:** zastąpiona przez D21.
 **Decyzja:** logowanie bez hasła, jednorazowym linkiem wysyłanym na e-mail. Link jest ważny 15 minut i działa raz. W bazie przechowywany jest wyłącznie skrót (hash SHA-256) tokenu.
 **Uzasadnienie:** brak haseł eliminuje problem słabych i powtarzanych haseł oraz ich wycieków. Dla właściciela, który loguje się rzadko, link w mailu jest wygodniejszy niż pamiętanie hasła.
 **Odrzucone:** login i hasło; logowanie danymi zwierzęcia (np. imię i data urodzenia), które łatwo zgadnąć.
 
 ### D8 · Sesja w ciasteczku `httpOnly`, jedna domena
-**Decyzja:** po weryfikacji linku serwer ustawia podpisany token JWT w ciasteczku `httpOnly`, `Secure`, `SameSite=Lax`. Aplikacja i API działają pod jedną domeną (`/api/*` przekazywane przez serwer wejściowy).
+**Decyzja:** po zalogowaniu serwer ustawia podpisany token JWT w ciasteczku `httpOnly`, `Secure`, `SameSite=Lax`. Aplikacja i API działają pod jedną domeną (`/api/*` przekazywane przez serwer wejściowy).
 **Uzasadnienie:** skrypty na stronie nie mają dostępu do tokenu (ochrona przed XSS). Jedna domena eliminuje konfigurację CORS.
 **Odrzucone:** przechowywanie tokenu w `localStorage`.
 
@@ -80,6 +86,7 @@ Każdy wpis opisuje decyzję projektową, jej uzasadnienie i odrzucone alternaty
 **Uzasadnienie:** jedna akcja nie wymaga osobnej podstrony. Potwierdzenie chroni przed przypadkowym upublicznieniem numeru telefonu.
 
 ### D11 · Spacery wpisywane ręcznie
+**Status:** zastąpiona przez D23.
 **Decyzja:** spacer zapisywany jest ręcznie (czas trwania, opcjonalnie dystans) albo jednym przyciskiem po zeskanowaniu zawieszki.
 **Uzasadnienie:** przeglądarki, zwłaszcza na iOS, wstrzymują geolokalizację przy wygaszonym ekranie lub w tle. Śledzenie trasy w aplikacji webowej dawałoby niekompletne dane.
 **Odrzucone:** śledzenie trasy GPS z mapą i wykresami (kierunek rozwoju).
@@ -104,6 +111,7 @@ Każdy wpis opisuje decyzję projektową, jej uzasadnienie i odrzucone alternaty
 **Odrzucone:** Prisma, Sequelize.
 
 ### D16 · Warstwa danych przykładowych przed backendem
+**Status:** zastąpiona przez D22.
 **Decyzja:** aplikacja kliencka pobiera dane wyłącznie przez moduły w `client/src/api/`. Na etapie budowy interfejsu moduły te korzystają z danych przykładowych w `localStorage` (`client/src/mocks/`). Komponenty nigdy nie importują bezpośrednio z `mocks/`.
 **Uzasadnienie:** interfejs można zbudować i przetestować niezależnie od backendu. Funkcje w `api/` stanowią specyfikację przyszłych endpointów, a przejście na prawdziwe API nie zmienia komponentów.
 
@@ -123,3 +131,29 @@ Każdy wpis opisuje decyzję projektową, jej uzasadnienie i odrzucone alternaty
 ### D20 · Priorytetyzacja zakresu
 **Decyzja:** zakres podzielony na priorytety według [01-zakres.md](01-zakres.md).
 **Uzasadnienie:** ograniczony czas realizacji. Pierwszeństwo ma rdzeń pracy (identyfikacja bez instalacji, routing kontekstowy, prywatność), który musi być kompletny i wdrożony. Funkcje dodatkowe realizowane są po jego ukończeniu.
+
+### D21 · Logowanie e-mailem i PIN-em
+**Decyzja:** właściciel zakłada konto i loguje się adresem e-mail oraz 6-cyfrowym PIN-em. W bazie zapisany jest skrót `scrypt` z losową solą. Logowanie ma limit 5 prób na adres e-mail i 20 na adres IP w ciągu 15 minut, a komunikat błędu nie ujawnia, czy konto istnieje. Sesja pozostaje bez zmian (D8).
+**Uzasadnienie:** ograniczony czas realizacji. System nie wymaga serwera poczty, konfiguracji SPF i DKIM ani obsługi jednorazowych tokenów, a logowanie nie zależy od dostarczenia wiadomości.
+**Odrzucone:** magic link (D7), 4-cyfrowy PIN (tylko 10 000 kombinacji).
+**Konsekwencje:** PIN to krótki sekret, więc po wycieku bazy skróty da się złamać mimo `scrypt`. Adres e-mail nie jest potwierdzany i nie ma samodzielnego resetu PIN-u; reset wykonuje administrator. Ograniczenia opisano w [07-praca-pisemna.md](07-praca-pisemna.md).
+
+### D22 · Bez warstwy danych przykładowych
+**Decyzja:** każda funkcja powstaje od razu z trasą API, zapytaniem SQL i ekranem. Aplikacja kliencka nadal pobiera dane wyłącznie przez moduły w `client/src/api/`, ale nie ma implementacji na `localStorage` ani wyboru trybu.
+**Uzasadnienie:** ta sama logika nie musi powstawać dwa razy. Działający wzór aplikacji pełni rolę specyfikacji, którą w D16 miały pełnić funkcje mock, a kod mock i tak nie trafiał do wersji produkcyjnej.
+**Odrzucone:** pozostawienie trybu mock obok prawdziwego API.
+**Konsekwencje:** do pracy nad interfejsem potrzebne są uruchomione API i baza.
+
+### D23 · Rezygnacja ze spacerów, harmonogramu i udostępniania weterynarzowi
+**Decyzja:** ręczny wpis i lista spacerów, harmonogram oraz link dla weterynarza przechodzą do kierunków rozwoju. Zostaje szybki zapis „Karmienie” i „Spacer” po zeskanowaniu własnej zawieszki oraz lista aktywności z 7 dni.
+**Uzasadnienie:** ograniczony czas realizacji. Funkcje nie należały do rdzenia, a ich usunięcie upraszcza nawigację, API i schemat bazy. Szybki zapis z listą nadal realizuje zarządzanie aktywnością.
+**Konsekwencje:** tabela `activities` ma tylko typ i czas zdarzenia. Tabela `vet_shares` oraz layout i trasy weterynarza nie powstają.
+
+### D24 · Jedno wdrożenie całego systemu
+**Decyzja:** system jest wdrażany od razu jako komplet usług `caddy`, `api` i `db`, po ukończeniu logowania i panelu, a przed widokami znalazcy.
+**Uzasadnienie:** bez danych przykładowych nie ma sensu osobno wdrażać samego frontendu. HTTPS jest dostępny przed pracą nad geolokalizacją, więc można ją od razu sprawdzać na telefonie.
+
+### D25 · nginx przed Caddy na współdzielonym serwerze
+**Decyzja:** na VPS, na którym nginx obsługuje już inne usługi, ruch przechodzi przez nginx z certyfikatem Let's Encrypt, a dalej do Caddy słuchającego wyłącznie na `127.0.0.1`. Caddy nadal serwuje frontend i przekazuje `/api/*` (D19).
+**Uzasadnienie:** port 443 jest zajęty przez nginx. Ten sam `docker-compose.yml` działa lokalnie i na serwerze.
+**Konsekwencje:** API stoi za dwoma pośrednikami, dlatego `TRUST_PROXY_HOPS=2`. Bez tego limit prób widziałby jeden adres IP dla wszystkich.

@@ -19,23 +19,3 @@ pg.types.setTypeParser(pg.types.builtins.NUMERIC, (value) => Number(value))
 export function query(text, params) {
   return pool.query(text, params)
 }
-
-/*
-  Transakcja: kilka zapytań, które mają się wykonać razem albo wcale.
-  Przykład: wyłączenie starej zawieszki i utworzenie nowej — gdyby drugie zapytanie się nie
-  udało, zwierzę zostałoby bez żadnego aktywnego tagu. ROLLBACK cofa wtedy także pierwsze.
-*/
-export async function withTransaction(callback) {
-  const client = await pool.connect()
-  try {
-    await client.query('BEGIN')
-    const result = await callback(client)
-    await client.query('COMMIT')
-    return result
-  } catch (error) {
-    await client.query('ROLLBACK')
-    throw error
-  } finally {
-    client.release()
-  }
-}

@@ -25,7 +25,7 @@ export default function TagPage() {
   // (raz „anonimowo”, raz po wczytaniu sesji) i zapisała w historii dwa skany.
   if (isAuthLoading) return <Loading />
 
-  // `key`: po zalogowaniu albo wylogowaniu (np. z panelu DEV) pytamy serwer od nowa,
+  // `key`: po zalogowaniu albo wylogowaniu pytamy serwer od nowa,
   // bo zmienia się odpowiedź na pytanie „czy skanuje właściciel”.
   return <TagContent key={user?.id ?? 'anonymous'} code={tagId} />
 }

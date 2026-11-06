@@ -27,9 +27,15 @@ export function parseEmail(value) {
   return email
 }
 
-// Imię podawane przy pierwszym logowaniu — opcjonalne.
-export function parseOptionalName(value) {
-  return text(value, 60, 'Imię')
+export function parseName(value) {
+  const name = text(value, 60, 'Imię')
+  if (!name) throw new HttpError(400, 'Podaj imię.')
+  return name
+}
+
+export function parsePin(value) {
+  if (typeof value !== 'string' || !/^\d{6}$/.test(value)) throw new HttpError(400, 'PIN musi mieć dokładnie 6 cyfr.')
+  return value
 }
 
 export function parseSettings(body) {
@@ -84,20 +90,5 @@ export function parseLostMode(body) {
 
 export function parseActivity(body) {
   if (!['feeding', 'walk'].includes(body.type)) throw new HttpError(400, 'Nieznany rodzaj aktywności.')
-  const source = body.source === 'quick_tap' ? 'quick_tap' : 'manual'
-
-  const durationMin = body.durationMin ? Number(body.durationMin) : null
-  if (durationMin !== null && !(Number.isInteger(durationMin) && durationMin > 0 && durationMin <= 1440)) {
-    throw new HttpError(400, 'Czas trwania musi być liczbą minut od 1 do 1440.')
-  }
-  const distanceM = body.distanceM ? Number(body.distanceM) : null
-  if (distanceM !== null && !(Number.isInteger(distanceM) && distanceM >= 0 && distanceM <= 100000)) {
-    throw new HttpError(400, 'Dystans musi być liczbą metrów od 0 do 100 000.')
-  }
-
-  const occurredAt = body.occurredAt ? new Date(body.occurredAt) : new Date()
-  if (Number.isNaN(occurredAt.getTime())) throw new HttpError(400, 'Data aktywności ma zły format.')
-  if (occurredAt > new Date(Date.now() + 60 * 1000)) throw new HttpError(400, 'Data aktywności nie może być z przyszłości.')
-
-  return { type: body.type, source, durationMin, distanceM, occurredAt }
+  return { type: body.type }
 }

@@ -16,7 +16,7 @@ function toFormValues(pet) {
     species: pet.species,
     breed: pet.breed,
     birthDate: pet.birthDate ?? '',
-    weightKg: pet.weightKg === null ? '' : String(pet.weightKg),
+    weightKg: pet.weightKg === null ? '' : String(pet.weightKg).replace('.', ','),
     medicalNotes: pet.medicalNotes,
   }
 }

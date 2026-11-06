@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { query, withTransaction } from '../db.js'
+import { query } from '../db.js'
 import { HttpError } from '../errors.js'
 import { toPet, toScan } from '../mappers.js'
 import { loadUser, requireAuth } from '../middleware/requireAuth.js'
@@ -74,56 +74,35 @@ async function recordScan(code, userAgent, byOwner) {
   )
 }
 
-/*
-  POST /api/pets/:id/tag — generuje nową zawieszkę (D9).
-  Jeśli zwierzę miało już tag, stary zostaje wyłączony (np. zgubiona zawieszka przestaje działać),
-  ale jego historia skanowań zostaje w bazie.
-*/
+// POST /api/pets/:id/tag — generuje zawieszkę zwierzęcia (D9). Wymiana kodu to priorytet 2.
 tagsRouter.post('/pets/:id/tag', requireAuth, async (req, res) => {
-  await findOwnPet(req.params.id, req.user.id)
+  const pet = await findOwnPet(req.params.id, req.user.id)
+  if (pet.tag_code) throw new HttpError(409, 'To zwierzę ma już zawieszkę.')
   if (!req.user.phone) {
     throw new HttpError(400, 'Najpierw podaj numer telefonu w ustawieniach — znalazca musi mieć jak się z Tobą skontaktować.')
   }
 
-  await withTransaction(async (client) => {
-    await client.query('UPDATE tags SET is_active = false WHERE pet_id = $1 AND is_active', [req.params.id])
-
-    // Kolizja losowego kodu jest skrajnie mało prawdopodobna, ale tania do obsłużenia:
-    // ON CONFLICT DO NOTHING nic nie wstawi, więc losujemy jeszcze raz.
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const candidate = generateTagCode()
-      const { rowCount } = await client.query(
-        'INSERT INTO tags (code, pet_id) VALUES ($1, $2) ON CONFLICT (code) DO NOTHING',
-        [candidate, req.params.id],
-      )
-      if (rowCount === 1) return
-    }
-    throw new Error('Nie udało się wygenerować unikalnego kodu zawieszki.')
-  })
-
-  res.status(201).json(toPet(await findOwnPet(req.params.id, req.user.id)))
+  // Kolizja losowego kodu jest skrajnie mało prawdopodobna, ale tania do obsłużenia:
+  // ON CONFLICT DO NOTHING nic nie wstawi, więc losujemy jeszcze raz.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { rowCount } = await query('INSERT INTO tags (code, pet_id) VALUES ($1, $2) ON CONFLICT (code) DO NOTHING', [
+      generateTagCode(),
+      req.params.id,
+    ])
+    if (rowCount === 1) return res.status(201).json(toPet(await findOwnPet(req.params.id, req.user.id)))
+  }
+  throw new Error('Nie udało się wygenerować unikalnego kodu zawieszki.')
 })
 
-const SCAN_SELECT = `
-  SELECT s.*, p.id AS pet_id, p.name AS pet_name
-  FROM tag_scans s
-  JOIN tags t ON t.code = s.tag_code
-  JOIN pets p ON p.id = t.pet_id
-`
-
-// GET /api/pets/:id/scans — historia skanowań wszystkich zawieszek zwierzęcia (audyt, UC8).
+// GET /api/pets/:id/scans — historia skanowań zawieszki zwierzęcia (audyt, UC8).
 tagsRouter.get('/pets/:id/scans', requireAuth, async (req, res) => {
   await findOwnPet(req.params.id, req.user.id)
-  const { rows } = await query(`${SCAN_SELECT} WHERE p.id = $1 ORDER BY s.scanned_at DESC LIMIT 100`, [req.params.id])
-  res.json(rows.map(toScan))
-})
-
-// GET /api/scans?limit=10 — ostatnie skanowania wszystkich zwierząt właściciela (panel).
-tagsRouter.get('/scans', requireAuth, async (req, res) => {
-  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50)
-  const { rows } = await query(`${SCAN_SELECT} WHERE p.owner_id = $1 ORDER BY s.scanned_at DESC LIMIT $2`, [
-    req.user.id,
-    limit,
-  ])
+  const { rows } = await query(
+    `SELECT s.* FROM tag_scans s
+     JOIN tags t ON t.code = s.tag_code
+     WHERE t.pet_id = $1
+     ORDER BY s.scanned_at DESC LIMIT 100`,
+    [req.params.id],
+  )
   res.json(rows.map(toScan))
 })

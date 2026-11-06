@@ -1,0 +1,532 @@
+@@ server/package.json
+> Dowód osobisty serwera: nazwa, skrypty i biblioteki. Serwer ma własny plik, bo to osobny program, a jego biblioteki nie mogą trafić do paczki w przeglądarce. Sekcję `dependencies` dopisuje `npm install`, więc nie przepisujesz jej ręcznie.
+@18 ^
+`"type": "module"` włącza składnię `import` i `export` zamiast starego `require`. Bez tej linii Node potraktuje każdy `import` jako błąd składni.
+
+Skrypty to skróty: `npm run dev` uruchamia `node --watch src/index.js`, a `--watch` restartuje serwer po każdym zapisie pliku. `start` działa bez `--watch`, bo w produkcji kod się nie zmienia.
+@19 "db:reset"
+Skrót do skryptu, który kasuje bazę i wczytuje ją od nowa. Używasz go, gdy dane testowe się pobrudzą.
+@18 },
+`engines` to informacja, że kod wymaga Node 22 lub nowszego. Sam w sobie niczego nie blokuje, ale od razu mówi, na czym projekt działa.
+@21 "cookie-parser"
+Odczytuje nagłówek `Cookie` i układa go w wygodny obiekt `req.cookies`.
+@19 "dotenv"
+Wczytuje plik `server/.env` do `process.env`, żeby konfiguracja nie była wpisana na sztywno w kodzie.
+@18 "express"
+Biblioteka, w której mówisz: dla takiej metody i takiego adresu wykonaj tę funkcję.
+@21 "jsonwebtoken"
+Tworzy i sprawdza podpisane tokeny sesji (JWT).
+@19 "pg"
+Sterownik PostgreSQL: pozwala wysyłać zapytania SQL z Node.
+@18 }
+
+@@ server/.gitignore
+> Lista tego, czego git ma nie zapisywać.
+@18 ^
+`node_modules` można odtworzyć przez `npm install`, więc nie ma sensu go przechowywać. `.env` zawiera sekrety i nigdy nie może trafić do repozytorium.
+
+@@ server/.dockerignore
+> Lista plików, których Docker nie kopiuje do obrazu.
+@30 ^
+`node_modules` w obrazie powstaje przez `npm ci`, a kopia z Windowsa mogłaby zawierać skompilowane biblioteki na zły system. `.env` zostaje poza obrazem, bo każdy, kto dostanie obraz, mógłby odczytać sekrety. Konfigurację podaje `docker-compose.yml`.
+
+@@ server/Dockerfile
+> Przepis na obraz API. Docker wykonuje go od góry do dołu, a każda linia tworzy warstwę, którą może zapamiętać.
+@30 ^
+`FROM node:22-alpine` bierze gotowy system z Node. Alpine to bardzo mała dystrybucja Linuksa, więc obraz waży mniej. `WORKDIR /app` ustawia folder, w którym wykonują się kolejne polecenia.
+@30 # Najpierw same pliki zależności
+Kolejność jest celowa. Docker zapamiętuje każdą warstwę i odbudowuje ją dopiero wtedy, gdy zmieni się to, co do niej kopiujesz. Zmiana w `src/` nie uruchomi więc ponownie instalacji paczek.
+
+`npm ci` instaluje dokładnie wersje z `package-lock.json`, a `--omit=dev` pomija narzędzia potrzebne tylko przy pracy.
+@30 COPY src ./src
+Kopiuje sam kod, schemat bazy i skrypty. Testy, notatki i dokumentacja nie są potrzebne do działania, więc zostają poza obrazem.
+@30 # Serwer nie musi działać jako root
+`USER node` to zabezpieczenie: nawet jeśli ktoś przejmie proces, nie ma uprawnień administratora kontenera. `NODE_ENV=production` włącza w `config.js` twarde sprawdzanie zmiennych. `EXPOSE 3000` to tylko informacja, że aplikacja słucha na tym porcie. `CMD` mówi, co uruchomić przy starcie kontenera.
+
+@@ server/eslint.config.js
+> Reguły ESLinta dla serwera. Osobny plik jest potrzebny, bo w Node istnieją inne zmienne globalne niż w przeglądarce.
+@18 ^
+Importy to trzy elementy: zestaw zalecanych reguł JavaScriptu, listy znanych zmiennych globalnych i funkcja do budowania konfiguracji.
+@18 // Osobna konfiguracja dla backendu
+`files` mówi, których plików dotyczą reguły. `extends` włącza zalecany zestaw, np. wykrywanie nieużywanych zmiennych. `globals.node` informuje ESLinta, że `process` i `console` istnieją, więc nie zgłosi ich jako niezdefiniowanych.
+
+@@ server/.env.example
+> Wzór pliku z konfiguracją lokalną. Do repozytorium trafia sam wzór, a jego kopia `.env` zostaje tylko u Ciebie.
+@19 ^
+Komentarz mówi, co zrobić: skopiować plik do `.env`. Bez niego serwer też wystartuje, bo `config.js` ma wartości domyślne dla pracy lokalnej.
+@19 # Tryb pracy
+`development` oznacza łagodne zachowanie i wartości domyślne. `production` oznacza, że brak zmiennej zatrzymuje serwer.
+@19 # Port, na którym
+Port 3000 musi się zgadzać z adresem w proxy Vite, inaczej `/api` nie trafi do serwera.
+@19 # Połączenie z bazą
+Adres ma postać `postgres://użytkownik:hasło@host:port/baza`. Port `5434` pochodzi z `docker-compose.dev.yml`.
+@19 # Sekret do podpisywania
+Sekret, którym serwer podpisuje tokeny sesji. Lokalnie może być prosty, ale na serwerze musi być długi i losowy, bo kto go zna, ten podrobi sesję dowolnej osoby.
+@19 # Publiczny adres
+`config.js` sprawdza po nim, czy aplikacja działa lokalnie. Od tego zależy m.in. domyślne włączenie konta demo.
+@19 # true = przy starcie
+Wczytuje Lunę i Mruczka do pustej bazy. Przydaje się przy pracy, ale na prawdziwych danych ma być wyłączone.
+@19 # Przycisk „Wejdź
+Puste oznacza decyzję automatyczną: przycisk działa tylko lokalnie.
+@19 # Ciasteczko sesji
+Puste też oznacza decyzję automatyczną: `Secure` włącza się w produkcji.
+
+@@ server/sql/001_init.sql
+> Najważniejszy dokument projektu: opisuje, co system w ogóle wie. Pięć tabel, a w nich reguły, których baza pilnuje sama, nawet gdy kod aplikacji ma błąd.
+@19 ^
+Komentarz tłumaczy dwie rzeczy. Plik wykonuje się sam przy pierwszym starcie pustej bazy w Dockerze, a identyfikatory to UUID. Numery 1, 2, 3 zdradzałyby liczbę kont i dałoby się je łatwo odgadywać.
+@19 -- pin_hash
+Tabela kont.
+
+- `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`: unikalny identyfikator, który baza losuje sama, gdy go nie podasz.
+- `email ... UNIQUE`: drugie konto na ten sam adres zostanie odrzucone przez bazę, nawet przy dwóch równoczesnych rejestracjach.
+- `NOT NULL DEFAULT ''`: tekst nigdy nie jest `NULL`, więc w kodzie nie trzeba sprawdzać dwóch rodzajów pustej wartości.
+- `pin_hash`: jest skrót, a nie sam PIN. Szczegóły w sesji 20.
+- `timestamptz`: data z godziną i strefą czasową.
+@19 CREATE TABLE pets
+Tabela zwierząt.
+
+- `REFERENCES users (id)`: klucz obcy, czyli zwierzę nie może należeć do nieistniejącego konta.
+- `ON DELETE CASCADE`: usunięcie konta usuwa też jego zwierzęta.
+- `CHECK (length(trim(name)) > 0)`: imię z samych spacji nie przejdzie.
+- `CHECK (species IN (...))`: tylko trzy dozwolone gatunki.
+- `numeric(5, 2)`: dokładna liczba, np. `17.50`. Waga nie ma błędów zaokrągleń jak zwykły float.
+- `birth_date date`: może być `NULL`, bo wiek bywa nieznany. Sama data bez godziny.
+- `is_lost` i `lost_message`: to one przełączają widok zawieszki na alarm.
+@19 CREATE INDEX pets_owner_id_idx
+Indeks to spis treści: „zwierzęta tego właściciela” baza znajdzie bez czytania całej tabeli. To zapytanie wykonuje się przy każdym wejściu do panelu, więc warto je przyspieszyć.
+@19 -- Kod zawieszki jest
+Tu kluczem głównym jest sam kod, bo to on jest zapisany na tagu i pod nim szuka serwer. `CHECK (code ~ '...')` sprawdza wyrażeniem regularnym format `XXXX-XXXX`. `ON DELETE SET NULL` zostawia zawieszkę po usunięciu zwierzęcia, ale już bez przypisania, a `pet_id = NULL` oznacza widok „tag nieaktywny”.
+@19 -- „Jedno zwierzę ma
+Indeks częściowy obowiązuje tylko dla wierszy z `is_active = true`. Zwierzę może mieć jedną aktywną zawieszkę i dowolnie wiele starych w historii. Reguły pilnuje baza, więc błąd w kodzie nie stworzy dwóch aktywnych kodów.
+@19 -- Audyt
+Historia skanowań. Świadomie nie ma tu adresu IP ani lokalizacji, bo to dane osobowe, które nie są potrzebne do działania. Tyle wystarczy, żeby odpowiedzieć właścicielowi: kiedy, jaką przeglądarką i czy to on sam.
+@19 CREATE INDEX tag_scans
+Indeks na dwóch kolumnach: najpierw kod zawieszki, potem data malejąco. Dokładnie w tej kolejności zapytanie pobiera historię, więc baza dostaje wiersze od razu posortowane.
+@19 -- type: feeding
+Szybkie zapisy po skanie. Tylko typ i czas, bo reszta funkcji spacerów została usunięta przy zmianie zakresu. `CHECK` ogranicza typ do dwóch wartości.
+@19 CREATE INDEX activities
+Ten sam pomysł co wyżej: lista aktywności jednego zwierzęcia od najnowszej.
+
+@@ server/sql/seed.sql
+> Dane przykładowe, dzięki którym po starcie aplikacja nie jest pusta i każdy scenariusz da się od razu sprawdzić.
+@19 ^
+Daty są liczone od `now()`, więc demo zawsze wygląda świeżo, nawet kilka miesięcy później. Skrót poniżej powstał z PIN-u `123456`. Ten PIN jest publiczny, bo służy tylko do pokazu.
+@19 INSERT INTO users
+Konto demo. Ma stałe `id`, żeby zwierzęta niżej mogły się do niego odwołać. `pin_hash` ma format `sól:skrót`, opisany w sesji 20.
+@19 INSERT INTO pets
+Dwa zwierzęta, bo trzeba sprawdzić oba stany: Luna jest bezpieczna, a Mruczek zaginiony. `E'...\n...'` to tekst, w którym `\n` oznacza nową linię. Stąd uwagi medyczne mają kilka wierszy.
+@19 INSERT INTO tags
+Trzy zawieszki na trzy warianty: Luna (widok znalazcy), Mruczek (alarm) i `XXXX-0000` bez zwierzęcia (tag nieaktywny). `now() - interval '400 days'` to data sprzed 400 dni.
+@19 INSERT INTO tag_scans
+Przykładowa historia skanowań z prawdziwymi napisami User-Agent. Dzięki temu w sesji 40 od razu widać, czy rozpoznawanie przeglądarki działa dla Androida i iPhone'a.
+@19 INSERT INTO activities
+Aktywność z ostatnich dni dla obu zwierząt, żeby lista z 7 dni nie była pusta.
+
+@@ server/sql/002_pin_login.sql
+> Tego pliku nie przepisujesz. Przenosi starą bazę z magic linkiem na PIN, a Twoja baza od początku powstaje z `001_init.sql`. Potrzebny tylko na serwerze, na którym działa stary prototyp.
+@99 ^
+Komentarz mówi, kiedy i jak uruchomić plik. Stare konta zostają, ale nie mają PIN-u, więc nadaje go administrator.
+@99 BEGIN;
+`BEGIN` i `COMMIT` tworzą transakcję: wykonuje się wszystko albo nic. `IF NOT EXISTS` pozwala bezpiecznie uruchomić plik drugi raz. Kolumna dostaje najpierw domyślny pusty tekst, bo w tabeli są już wiersze, a potem ta wartość domyślna jest usuwana. Pusty `pin_hash` nie przechodzi `verifyPin`, więc takie konto nie może się zalogować. Dalej usuwane są tabele i kolumny po wyciętych funkcjach.
+
+@@ server/src/app.js
+> Składa aplikację Express: kolejność linii w tym pliku to kolejność, w jakiej żądanie przechodzi przez serwer. Sama nie uruchamia nasłuchu, to robi `index.js`.
+@21 ^
+Import biblioteki do ciasteczek.
+@18 import express
+Na początku potrzebujesz tylko tego importu.
+@30 import { config }
+`config` jest tu potrzebny tylko do ustawienia `trust proxy`.
+@20 import { errorHandler
+Obsługa błędów i odpowiedzi 404.
+@37 import { activitiesRouter
+Trasy aktywności.
+@20 import { authRouter
+Trasy logowania.
+@29 import { meRouter
+Trasa ustawień konta.
+@25 import { petsRouter
+Trasy zwierząt.
+@33 import { tagsRouter
+Trasy zawieszek.
+@18 /*
+`createApp` tylko buduje aplikację i ją zwraca. Rozdzielenie budowania od nasłuchu pozwala w przyszłości uruchomić ją w testach bez zajmowania portu. Powstaje też jeden czytelny obraz serwera.
+@30 // Serwer stoi za Caddy
+Za pośrednikiem API widzi jako nadawcę Caddy, a nie użytkownika. `trust proxy` każe odczytać prawdziwy adres z nagłówka `X-Forwarded-For`. Bez tego limit prób widziałby jeden adres dla wszystkich i pierwsza osoba zablokowałaby całą resztę. Wartość to liczba zaufanych pośredników, a nie `true`, bo `true` pozwoliłoby każdemu podać fałszywy adres w nagłówku.
+
+`x-powered-by` usuwa nagłówek zdradzający, że działa tu Express. Atakującemu nie warto ułatwiać zadania.
+@20 app.use(express.json
+Middleware, który zamienia treść żądania z JSON-a na obiekt `req.body`. Bez niego `req.body` jest puste. Limit `20kb` chroni przed wysłaniem ogromnego pliku, a uwagi medyczne i tak się w nim mieszczą.
+@21 app.use(cookieParser
+Rozkłada ciasteczka do `req.cookies`. Musi być przed trasami, które ich używają.
+@18 app.get('/api/health'
+Najprostsza możliwa trasa. Odpowiada `{ ok: true }` i pozwala sprawdzić, czy serwer w ogóle działa.
+@20 app.use('/api/auth'
+`app.use(prefiks, router)` przekazuje grupę adresów do osobnego pliku. Router definiuje `/login`, a pełny adres to `/api/auth/login`.
+@29 app.use('/api/me'
+Ustawienia konta.
+@25 app.use('/api/pets'
+Zwierzęta. Wszystkie trasy w tym routerze wymagają logowania.
+@33 app.use('/api'
+Zawieszki montujemy pod samym `/api`, bo adresy w tym routerze mają różne początki: `/tags/:code` i `/pets/:id/tag`.
+@37 app.use('/api', activitiesRouter
+Tak samo aktywności: `/pets/:id/activities`.
+@20 app.use('/api', notFound
+Kolejność ma znaczenie. `notFound` wykona się tylko wtedy, gdy żadna trasa wyżej nie odpowiedziała. `errorHandler` musi być ostatni, żeby złapać błędy ze wszystkiego, co jest nad nim.
+@18 return app
+
+@@ server/src/config.js
+> Cała konfiguracja serwera w jednym miejscu. Reszta kodu pyta `config.port`, a nie `process.env.PORT`, więc nazwy i wartości domyślne ustalasz raz.
+@19 ^
+`dotenv.config` wczytuje `server/.env` do `process.env`. W Dockerze pliku nie ma, a te same zmienne podaje `docker-compose.yml`. Kod nie musi rozróżniać tych sytuacji. `quiet: true` wyłącza komunikat biblioteki przy starcie.
+@19 const isProduction
+`required` to bezpiecznik. Gdy zmienna istnieje, zwraca ją. W pracy lokalnej zwraca wartość domyślną. W produkcji brak zmiennej zatrzymuje start. Lepiej, żeby serwer nie ruszył, niż żeby podpisywał sesje sekretem znanym każdemu z repozytorium.
+
+`fallbackForDev !== undefined` odróżnia „nie podano wartości domyślnej” od pustego tekstu.
+@21 // Publiczny adres aplikacji
+`replace(/\/$/, '')` usuwa końcowy ukośnik z adresu. Wyrażenie regularne sprawdza, czy to `localhost` albo `127.0.0.1`, z dowolnym portem. `isLocalApp` odróżnia prawdziwą domenę od pracy na własnym komputerze.
+@21 /*
+Lokalny Docker ma domyślny sekret z `docker-compose.yml`. To wygodne, ale na prawdziwej domenie oznaczałoby sekret znany każdemu. Serwer nie wystartuje, gdy sekret zawiera `change-me` albo ma mniej niż 32 znaki. Taki błąd konfiguracji wychodzi od razu, a nie po włamaniu.
+@19 export const config
+`Number(process.env.PORT ?? 3000)`: zmienne środowiskowe są zawsze tekstem, a `??` podstawia wartość domyślną, gdy zmiennej nie ma.
+@21 jwtSecret: assertSafeSecret
+Sekret przechodzi przez `required`, a potem przez bezpiecznik. `cookieSecure`: gdy zmienna jest ustawiona, liczy się jej wartość, a gdy nie ma, decyduje tryb produkcyjny. Porównanie `=== 'true'` zamienia tekst na wartość logiczną.
+@19 seedDemoData
+Dane przykładowe wczytują się tylko przy jawnym `true`.
+@21 // Przycisk „Wejdź
+Ten sam schemat co `cookieSecure`, tylko domyślnie decyduje `isLocalApp`. Adres konta demo jest stały, bo to jedyne konto, na które można wejść bez PIN-u.
+@30 // Ilu pośredników
+Liczba trafia do `app.set('trust proxy', ...)`. Lokalnie i przy samym Caddy to 1, a na VPS z nginx 2.
+@19 }
+
+@@ server/src/db.js
+> Połączenie z bazą. Reszta kodu zna tylko funkcję `query`.
+@19 ^
+Komentarz streszcza dwie najważniejsze rzeczy: pulę połączeń i parametry `$1`. Otwieranie połączenia z bazą jest wolne, więc pula trzyma kilka gotowych i pożycza je kolejnym zapytaniom.
+@19 export const pool
+Sama pula. `new pg.Pool` niczego jeszcze nie łączy, połączenia powstają przy pierwszych zapytaniach.
+@19 // PostgreSQL zwraca typ `date`
+Parsery mówią, jak zamienić typ z bazy na wartość w JS.
+
+- `DATE`: domyślnie powstaje obiekt `Date` o północy lokalnego czasu, który po zmianie strefy potrafi przesunąć dzień. Zwracamy zwykły tekst `2023-05-14`.
+- `NUMERIC`: domyślnie przychodzi jako tekst, żeby nie tracić precyzji. Waga mieści się w zwykłej liczbie, więc zamieniamy ją przez `Number`.
+@19 export function query
+Cienka nakładka, żeby trasy pisały `query(sql, parametry)`. Zawsze przekazuj wartości w tablicy `params`, nigdy nie doklejaj ich do tekstu SQL.
+
+@@ server/src/errors.js
+> Własny typ błędu, który niesie kod HTTP.
+@20 ^
+`extends Error` dziedziczy zwykły błąd, a `super(message)` ustawia jego komunikat. Dopisujemy tylko `status`. Dzięki temu trasa może napisać `throw new HttpError(404, 'Nie znaleziono')` w dowolnym miejscu, nawet w funkcji pomocniczej, i nie musi znać `res`. Resztą zajmie się `errorHandler`.
+
+@@ server/src/index.js
+> Punkt startowy. To ten plik uruchamia `node src/index.js`.
+@18 ^
+W sesji 18 ten import wystarczy.
+@19 import { config }
+Konfiguracja, pula połączeń i funkcja wczytująca dane przykładowe.
+@19 // Punkt startowy
+`await` na najwyższym poziomie działa dzięki `"type": "module"`. `SELECT 1` nic nie robi poza sprawdzeniem połączenia. Gdy baza nie działa, serwer od razu kończy pracę z czytelnym błędem, a nie przyjmuje żądań, których nie obsłuży.
+@18 const server = createApp()
+`listen` zaczyna przyjmować żądania, a funkcja wykona się, gdy port jest gotowy.
+
+W sesji 18 nie ma jeszcze `config`, więc napisz `createApp().listen(3000, () => console.log('API działa na porcie 3000'))`. Tę wersję wpiszesz w sesji 19.
+@30 // `docker compose stop`
+`SIGTERM` to sygnał „zakończ pracę”. `server.close` przestaje przyjmować nowe żądania i czeka na rozpoczęte, a `pool.end` zamyka połączenia. Użytkownik w połowie zapisu nie dostaje urwanej odpowiedzi.
+
+@@ server/src/seed.js
+> Wczytuje pliki SQL. Używają go `index.js` przy starcie i `db-reset.js`.
+@19 ^
+`new URL('../sql/', import.meta.url)` buduje ścieżkę względem tego pliku, a nie folderu, z którego uruchomiono polecenie. `runSqlFile` czyta cały plik jako tekst i wysyła go do bazy.
+@19 // Dane demo wczytujemy
+Najpierw sprawdzenie, czy baza jest pusta. Bez tego każdy restart dodawałby kolejne kopie Luny albo kończył się błędem unikalności. `count(*)::int` zamienia wynik na liczbę, bo `count` przychodzi domyślnie jako tekst.
+
+@@ server/scripts/db-reset.js
+> Skrypt uruchamiany przez `npm run db:reset`. Tylko do pracy lokalnej.
+@19 ^
+`DROP SCHEMA public CASCADE` usuwa wszystkie tabele naraz, a `CREATE SCHEMA` tworzy pustą przestrzeń. Potem wczytuje się schemat i dane. `pool.end()` zamyka połączenia, bo inaczej skrypt nigdy by się nie zakończył.
+
+@@ server/src/mappers.js
+> Tłumaczy wiersze z bazy (`birth_date`) na obiekty JSON (`birthDate`). Mapper sam wybiera pola, więc `pin_hash` nie może przypadkiem wyjść poza serwer, nawet gdy zapytanie pobrało `SELECT *`.
+@20 ^
+`toUser` buduje nowy obiekt z czterech pól i pomija całą resztę. To lista dozwolonych pól, czyli najbezpieczniejsza forma: nowa kolumna w tabeli nie wycieknie sama.
+@25 // `tag_code` pochodzi
+Kształt zwierzęcia w całym API. `row.tag_code ?? null` obsługuje sytuację, w której zapytanie nie miało złączenia z tagami i pola w ogóle nie ma.
+@40 export function toScan
+Jeden wpis historii skanowań.
+@37 export function toActivity
+Jedna aktywność.
+
+@@ server/src/middleware/errorHandler.js
+> Ostatnia stacja każdego żądania, które się nie udało.
+@20 ^
+Express 5 sam przekazuje tu błędy z funkcji `async`. W Expressie 4 każda trasa potrzebowała `try/catch`.
+@20 // eslint-disable-next-line
+Express rozpoznaje obsługę błędów po **czterech** parametrach, więc `next` musi być w definicji, choć nie jest używany. Komentarz wyłącza ostrzeżenie ESLinta o tym jednym wierszu.
+@20 if (error instanceof HttpError)
+Błąd przewidziany: wysyłamy jego kod i komunikat. `return` kończy funkcję, żeby nie wysłać drugiej odpowiedzi.
+@20 // Niepoprawny JSON
+`express.json()` rzuca własny błąd, gdy treść nie jest JSON-em. To wina klienta, więc 400, a nie 500.
+@20 console.error(error)
+Wszystko inne to błąd programu albo bazy. Szczegóły idą do logów, a klient dostaje ogólny komunikat. Treść zapytania SQL w odpowiedzi zdradzałaby budowę systemu.
+@20 export function notFound
+Odpowiedź dla nieznanego adresu `/api/...`.
+
+@@ server/src/middleware/rateLimit.js
+> Ogranicznik prób. To główna ochrona PIN-u, bo 6 cyfr to tylko milion kombinacji.
+@20 ^
+„Fixed window” oznacza stałe okno czasu: pierwsze żądanie otwiera okno, a licznik zeruje się po jego końcu. Liczniki są w pamięci, więc restart je kasuje. Przy jednym serwerze to wystarcza.
+@20 export function rateLimit
+Funkcja, która **tworzy** middleware. Każde wywołanie ma własną mapę `hits`, dzięki czemu limit na e-mail i limit na IP liczą się osobno. To domknięcie: zwrócona funkcja pamięta `hits` z miejsca, w którym powstała.
+@20 // Co jakiś czas usuwamy
+Bez sprzątania mapa rosłaby przy każdym nowym adresie aż do braku pamięci. `.unref()` pozwala procesowi zakończyć się mimo działającego timera.
+@20 return function rateLimitMiddleware
+`keyFn(req)` mówi, kogo liczymy: IP albo e-mail. Limit nie musi wiedzieć, co to za klucz.
+@20 if (!entry || entry.resetAt <= now)
+Nie ma wpisu albo okno minęło: zaczynamy liczyć od 1 i przepuszczamy żądanie.
+@20 entry.count += 1
+Zwiększamy licznik. Po przekroczeniu limitu nagłówek `Retry-After` mówi, ile sekund czekać, a `throw` wysyła odpowiedź 429 przez `errorHandler`. W przeciwnym razie `next()` przekazuje żądanie dalej.
+
+@@ server/src/middleware/requireAuth.js
+> Dwa middleware: jeden sprawdza, kim jest użytkownik, drugi dodatkowo wymaga logowania.
+@21 ^
+Zapytania do bazy.
+@25 import { HttpError }
+Błąd 401 dochodzi razem z `requireAuth`.
+@21 import { readSessionUserId }
+Odczyt tokenu z ciasteczka.
+@21 /*
+Middleware to funkcja, która działa przed właściwą trasą. Może coś dopisać do `req` albo przerwać żądanie.
+@21 // Ustawia `req.user`
+Tu nikt nie jest blokowany. Strona zawieszki i `/auth/me` działają też bez logowania, ale chcą wiedzieć, czy ktoś jest zalogowany.
+
+Mimo ważnego tokenu sprawdzamy bazę, bo konto mogło zostać usunięte. W `SELECT` nie ma `pin_hash`, więc skrót nie trafia nawet do `req.user`. `next()` przekazuje żądanie dalej.
+@25 // Dla tras 🔒
+Wykorzystuje `loadUser`. Pusta funkcja `() => {}` jest podana zamiast `next`, bo `requireAuth` sam decyduje, co dalej. Bez użytkownika leci 401 i trasa w ogóle się nie wykona.
+
+@@ server/src/validation.js
+> Sprawdzanie danych od klienta. Walidacja w formularzu to wygoda, bo każdy może wysłać żądanie przez `curl`. Ostatnie słowo ma serwer.
+@20 ^
+Każda funkcja w tym pliku ma ten sam kontrakt: zwraca oczyszczone dane albo rzuca `HttpError 400`.
+@20 const EMAIL_PATTERN
+Wzorzec celowo jest prosty: coś, małpa, coś, kropka, coś. Pełna zgodność ze standardem adresów jest bardzo skomplikowana, a bez wysyłki maili i tak nie potwierdzamy adresu.
+@29 const PHONE_PATTERN
+Opcjonalny `+`, potem 9–20 znaków: cyfry, spacje, nawiasy, myślniki.
+@27 const DATE_PATTERN
+Format daty z pola `<input type="date">` i lista dozwolonych gatunków. Muszą się zgadzać z ograniczeniem `CHECK` w tabeli.
+@20 function text
+Pomocnik do pól tekstowych. Brak wartości to pusty tekst. Sprawdzenie `typeof` jest konieczne, bo JSON może przysłać liczbę albo obiekt, a na nich `.trim()` wywołałby błąd 500 zamiast czytelnego 400. Limit długości chroni bazę przed ogromnym tekstem.
+@20 export function parseEmail
+Małe litery i brak spacji, żeby `Ola@Example.com` i `ola@example.com` były jednym kontem. 254 znaki to maksymalna długość adresu e-mail.
+@20 export function parseName
+Pomocnik `text`, a potem warunek, że imię nie może być puste.
+@20 export function parsePin
+`^\d{6}$` to dokładnie 6 cyfr, od początku do końca napisu. Sprawdzenie `typeof` jest potrzebne, bo PIN musi być tekstem: liczba zgubiłaby wiodące zera i `012345` stałby się `12345`.
+@29 export function parseSettings
+Imię jest wymagane, a telefon opcjonalny. Dlatego warunek `phone &&` sprawdza format tylko wtedy, gdy numer podano.
+@27 // `partial` = edycja
+Jedna funkcja na tworzenie i edycję. Przy `partial` pole sprawdzamy tylko wtedy, gdy przyszło w żądaniu (`'name' in body`). Dzięki temu edycja samej wagi nie wymaga imienia. Do obiektu `pet` trafiają wyłącznie znane pola, więc klient nie zmieni np. `owner_id`.
+@27 if ('birthDate' in body)
+`body.birthDate || null` zamienia pusty tekst na `NULL`. Data musi mieć poprawny format, istnieć i nie być z przyszłości.
+@27 if ('weightKg' in body)
+Pusta wartość to `NULL`, a reszta zamienia się na liczbę. Warunek `!(value > 0 && value < 200)` przechwytuje też `NaN`, bo każde porównanie z `NaN` daje `false`.
+@35 export function parseLostMode
+`typeof ... !== 'boolean'` wymaga prawdziwego `true` albo `false`. Tekst `"false"` w warunku byłby prawdą, a to by włączyło alarm.
+@37 export function parseActivity
+Lista dwóch dozwolonych typów. Zwraca nowy obiekt z jednym polem, więc nic więcej z żądania nie przejdzie dalej.
+
+@@ server/src/services/pin.js
+> Serce bezpieczeństwa logowania. Dwie funkcje: `hashPin` przy rejestracji i `verifyPin` przy logowaniu.
+@20 ^
+Oba moduły są wbudowane w Node, bez instalowania. `crypto` ma funkcje kryptograficzne, a `promisify` zamienia funkcję z callbackiem na taką, którą można wywołać przez `await`.
+@20 /*
+Komentarz to gotowa odpowiedź na obronie. Cztery decyzje: skrót zamiast szyfrowania, sól, celowo wolny `scrypt` i porównanie w stałym czasie.
+@20 const scryptAsync
+`scrypt` w Node przyjmuje callback, a `promisify` robi z niego wersję z `await`. `KEY_LENGTH` to długość skrótu w bajtach.
+@20 export async function hashPin
+Krok po kroku:
+
+- `randomBytes(16)` losuje 16 bajtów soli. `toString('hex')` zapisuje je tekstem.
+- `scryptAsync(pin, salt, 64)` liczy skrót. Działa długo, więc `await` nie blokuje w tym czasie innych żądań.
+- Wynik to `sól:skrót`. Sól nie jest tajna, ale musi być zapisana, bo przy logowaniu trzeba policzyć skrót tak samo.
+@20 export async function verifyPin
+`stored.split(':')` rozdziela sól i skrót. Sprawdzenie długości obsługuje puste i uszkodzone wpisy, np. konta ze starej bazy: funkcja zwraca `false`, zamiast rzucić błąd.
+
+Potem liczymy skrót wpisanego PIN-u tą samą solą. `timingSafeEqual` porównuje wszystkie bajty, a zwykłe `===` kończyłoby na pierwszej różnicy, co zdradza coś w czasie odpowiedzi.
+
+@@ server/src/services/session.js
+> Sesja to podpisany token w ciasteczku. Serwer nie trzyma listy sesji: podpis dowodzi, że token jest prawdziwy.
+@21 ^
+Biblioteka JWT i konfiguracja z sekretem.
+@21 /*
+Trzy flagi ciasteczka to trzy osobne ochrony: `httpOnly` przed kradzieżą przez XSS, `secure` przed podsłuchem, a `sameSite` przed CSRF.
+@21 export const SESSION_COOKIE
+Nazwa ciasteczka i czas życia w jednym miejscu.
+@21 const cookieOptions
+Wspólne opcje. `path: '/'` oznacza, że przeglądarka wysyła ciasteczko do wszystkich adresów. Usunięcie musi użyć tych samych opcji, inaczej przeglądarka uzna je za inne ciasteczko i go nie skasuje.
+@21 export function setSessionCookie
+`jwt.sign` tworzy token z polem `sub` (id użytkownika) i datą ważności. `res.cookie` dopisuje nagłówek `Set-Cookie`. `maxAge` jest w milisekundach, stąd mnożenie. Bez niego ciasteczko zniknęłoby po zamknięciu przeglądarki.
+@21 export function clearSessionCookie
+Wylogowanie: serwer każe przeglądarce usunąć ciasteczko.
+@21 // Zwraca id użytkownika
+`req.cookies?.[...]`: `?.` nie wywoła błędu, gdy `req.cookies` nie istnieje. `jwt.verify` sprawdza podpis i datę ważności, a przy problemie rzuca błąd. Fałszywy albo wygasły token to zwykła sytuacja, więc `catch` zwraca `null`.
+
+@@ server/src/services/pets.js
+> Sprawdzanie właściciela. Każda trasa `/pets/:id/...` przechodzi przez tę funkcję.
+@25 ^
+Dwa importy: zapytania i błąd.
+@25 // Zwierzę razem z kodem
+Wspólny początek zapytania. `LEFT JOIN` zostawia zwierzę także bez zawieszki, a wtedy `t.code` to `NULL`. Warunek `t.is_active` musi być w `ON`. W `WHERE` wyrzuciłby zwierzęta bez aktywnego tagu.
+@25 const UUID_PATTERN
+Sprawdza format id, zanim trafi do bazy.
+@25 /*
+Komentarz opisuje zasadę, na którą będą pytać: cudze i nieistniejące zwierzę dają ten sam błąd 404. Odpowiedź 403 zdradziłaby, że takie id istnieje.
+@25 export async function findOwnPet
+Najpierw format, bo PostgreSQL odrzuciłby `abc` błędem typu, a to dałoby 500. Potem zapytanie z dwoma warunkami: to id **i** ten właściciel. Bez wiersza leci 404. Funkcja zwraca cały wiersz, żeby trasy mogły go od razu użyć.
+
+@@ server/src/services/tagCodes.js
+> Kody zawieszek: losowanie nowych i porządkowanie tych z adresu.
+@39 ^
+Moduł kryptograficzny Node. Zwykłe `Math.random` jest przewidywalne, więc nie nadaje się do kodów.
+@39 /*
+31 znaków na 8 pozycjach to ok. 850 miliardów kombinacji. Z alfabetu usunięto znaki łatwe do pomylenia: `0` i `O`, `1`, `I` i `L`.
+@39 const ALPHABET
+Pętla losuje 8 znaków, a przed piątym dopisuje myślnik. `crypto.randomInt` daje każdemu znakowi równą szansę.
+@33 // Kod z adresu
+Użytkownik może wpisać adres małymi literami. `String(value ?? '')` działa też dla braku wartości, potem usuwamy spacje i zamieniamy na wielkie litery.
+
+@@ server/src/routes/auth.js
+> Rejestracja, logowanie, sprawdzenie sesji i konto demo.
+@20 ^
+Router to mała aplikacja: grupa tras dołączana w `app.js`.
+@24 import { config }
+Konfiguracja konta demo.
+@20 import { query }
+Baza, błąd HTTP i mapper użytkownika.
+@21 import { loadUser }
+Do trasy `/me`.
+@20 import { rateLimit }
+Limit prób i funkcje PIN-u.
+@21 import { clearSessionCookie
+Ciasteczko sesji.
+@20 import { parseEmail
+Walidacja, a potem pierwsze stałe i limity.
+@20 export const authRouter
+`15 * 60 * 1000` to 15 minut w milisekundach. Zapis mnożeniem jest czytelniejszy niż `900000`.
+@20 /*
+Komentarz wyjaśnia rachunek: 5 prób na 15 minut to ok. 480 na dobę. Dwa limity chronią przed różnymi atakami. Limit na e-mail broni jednego konta, a limit na IP utrudnia sprawdzanie wielu kont z jednego miejsca.
+@20 const limitLoginByIp
+Trzy ograniczniki z tego samego mechanizmu. `keyFn` decyduje o kluczu. Przy e-mailu `req.body?.email` zabezpiecza przed brakiem treści, a `toLowerCase` sprawia, że `OLA@` i `ola@` liczą się razem. Limit działa przed walidacją, dlatego klucz jest tu czyszczony ręcznie.
+@20 // POST /api/auth/register
+Najpierw limit, potem walidacja wszystkich pól.
+
+`ON CONFLICT (email) DO NOTHING` przy zajętym adresie nie wstawia wiersza i nie rzuca błędu. `RETURNING` zwraca dane nowego wiersza, więc pusta tablica oznacza zajęty adres i odpowiedź 409. Ta wersja jest odporna na dwie równoczesne rejestracje. „Najpierw SELECT, potem INSERT” nie byłoby.
+
+W `RETURNING` nie ma `pin_hash`, a `await hashPin(pin)` liczy skrót przed wysłaniem zapytania.
+@21 setSessionCookie(res, rows[0].id)
+W sesji 20 tego wiersza jeszcze nie ma. Po rejestracji użytkownik jest od razu zalogowany.
+@20 res.status(201).json
+Kod 201 oznacza „utworzono”.
+@20 /*
+Tu `pin_hash` jest potrzebny, więc jest w `SELECT`. Warunek `!rows[0] || !(await verifyPin(...))` łączy oba błędy w jeden komunikat. Limity są dwa i działają kolejno: najpierw IP, potem e-mail.
+
+Komunikat jest jeden, ale czas nie: dla nieznanego e-maila `scrypt` się nie liczy, więc odpowiedź przychodzi wyraźnie szybciej. Ktoś cierpliwy mógłby to zmierzyć i sprawdzać, kto ma konto. To znane ograniczenie, które utrudnia limit na IP. Rejestracja i tak zdradza zajęty adres przez kod 409, więc pełne ukrycie kont nie jest celem tego projektu.
+@21 setSessionCookie(res, rows[0].id)
+Ustawienie sesji po udanym logowaniu.
+@20 res.json({ user
+`toUser` usuwa `pin_hash` z odpowiedzi. Tu jest to szczególnie ważne, bo zapytanie go pobrało.
+@21 /*
+Aplikacja woła tę trasę przy każdym starcie, żeby sprawdzić sesję. Niezalogowany to normalny stan, więc 200 z `null`, a nie 401. `loadUser` ustawia `req.user`.
+@21 authRouter.post('/logout'
+Kod 204 oznacza „sukces, bez treści”, a `.end()` kończy odpowiedź. Trasa jest publiczna: wylogowanie bez sesji nikomu nie szkodzi.
+@24 /*
+Konto demo do pokazu i testów. `GET` mówi interfejsowi, czy pokazać przycisk. `POST` loguje wyłącznie na stały adres z `config.demoEmail`, a nie na adres z żądania, więc nikt nie wejdzie tak na cudze konto. Wyłączone logowanie demo daje 404.
+
+@@ server/src/routes/me.js
+> Ustawienia zalogowanego użytkownika.
+@29 ^
+`parseSettings` czyści dane, a `WHERE id = $3` z `req.user.id` gwarantuje zmianę tylko własnego konta. Id nie pochodzi z żądania, więc nie da się go podmienić. `RETURNING` zwraca świeże dane bez dodatkowego zapytania.
+
+@@ server/src/routes/pets.js
+> Trasy zwierząt. Wszędzie ten sam schemat: sprawdź właściciela, sprawdź dane, wykonaj SQL, zwróć przez mapper.
+@25 ^
+Importy potrzebne do listy i szczegółów.
+@27 import { parseLostMode
+W sesji 27 wystarczy `parsePet`. `parseLostMode` dopiszesz w sesji 35.
+@25 export const petsRouter
+`petsRouter.use(requireAuth)` działa na wszystkie trasy z tego pliku, więc nie można o nim zapomnieć przy dodawaniu nowej.
+@27 // Nazwy pól w JSON
+Mapa służy jako lista dozwolonych kolumn. Sama decyduje, jakie nazwy mogą trafić do SQL w `PATCH`.
+@25 petsRouter.get('/'
+Lista moich zwierząt. `WHERE p.owner_id = $1` z id z sesji, więc cudze zwierzęta nigdy się nie pojawią. `rows.map(toPet)` zamienia każdy wiersz.
+@27 petsRouter.post('/'
+`owner_id` pochodzi z sesji, a nie z żądania. `pet.breed ?? ''`: pola opcjonalne dostają wartość domyślną. `RETURNING *` zwraca wiersz z nowym id, a kod 201 oznacza utworzenie.
+@25 petsRouter.get('/:id'
+`:id` to parametr, który trafia do `req.params.id`. Całą pracę, razem ze sprawdzeniem właściciela, robi `findOwnPet`.
+@28 /*
+Edycja tylko przesłanych pól. Przykład: dla `{ name, weightKg }` powstaje `name = $2, weight_kg = $3`, a `$1` to id.
+
+- Nazwy kolumn pochodzą z mapy `COLUMNS`, a nie od użytkownika.
+- Wartości idą jako parametry, więc SQL injection nie jest możliwy mimo sklejania tekstu.
+- `parsePet` przepuszcza tylko znane pola, a `index + 2` zaczyna numerację od `$2`.
+
+Na końcu `findOwnPet` pobiera świeże dane razem z kodem zawieszki.
+@35 // Tryb zaginięcia
+Sprawdzenie właściciela, walidacja, zapis. `isLost ? message : ''` czyści komunikat przy wyłączaniu, żeby stary tekst nie wrócił przy następnym zaginięciu.
+
+@@ server/src/routes/tags.js
+> Serce pracy: jeden adres, cztery odpowiedzi. Wybór wariantu należy do serwera.
+@33 ^
+Router, baza.
+@39 import { HttpError }
+Błędy i mapper przy tworzeniu zawieszki. `toScan` dopiszesz w sesji 40.
+@33 import { loadUser
+W sesji 33 wystarczy `loadUser`, a `requireAuth` dopiszesz w sesji 39.
+@39 import { findOwnPet }
+Sprawdzanie właściciela przy tworzeniu zawieszki.
+@33 import { generateTagCode
+W sesji 33 potrzebujesz `normalizeTagCode`, a `generateTagCode` dopiszesz w sesji 39.
+@33 export const tagsRouter
+Tworzy router dla obu grup adresów.
+@40 // Ponowne wejście
+Telefon przy NFC potrafi otworzyć stronę dwa razy pod rząd. Te 5 sekund to okno, w którym taki powtórzony skan się nie zapisze.
+@33 /*
+Komentarz to definicja routingu kontekstowego. Kolejność warunków jest częścią logiki, a serwer wysyła tylko pola potrzebne w danym wariancie.
+@33 tagsRouter.get('/tags/:code'
+`loadUser` ustawia `req.user`, ale nie blokuje, bo znalazca nie jest zalogowany.
+
+Zapytanie łączy trzy tabele przez `LEFT JOIN`, więc tag bez zwierzęcia też zwraca wiersz, tylko z pustymi kolumnami zwierzęcia. Parametr `$1` to kod z adresu, oczyszczony przez `normalizeTagCode`.
+@33 // Nieznanego kodu nie da się
+Pierwszy warunek: kod nie istnieje. Nie ma czego zapisać w historii, bo `tag_scans` musi wskazywać istniejący tag.
+@37 const isOwner
+`Boolean(...)` daje prawdziwe `true` albo `false`. Niezalogowany ma `req.user = null` i warunek od razu jest fałszywy.
+@40 await recordScan
+Zapis w historii przed wyborem wariantu, więc liczy się każde otwarcie istniejącego tagu. `?? ''` obsługuje brak nagłówka. Tag nieaktywny też jest zapisany.
+@33 if (!tag.is_active
+Tag istnieje, ale jest wyłączony albo bez zwierzęcia.
+@37 if (isOwner)
+Właściciel dostaje tylko id, imię i gatunek, bo to wystarczy do szybkiego zapisu. Warunek jest **przed** `lost`: właściciel, który właśnie odnalazł zwierzę, ma zobaczyć swój widok, a nie alarm.
+@33 const publicPet
+Dane publiczne. Nie ma tu `owner_id` ani `pet_id`, więc obca osoba ich nigdy nie dostanie. Celowo wybieramy pola ręcznie, zamiast wysyłać cały wiersz.
+@34 if (tag.is_lost)
+Zaginione: dochodzą numer i komunikat od właściciela.
+@33 // D5: numer jest
+Zwykły znalazca. Numer jest w odpowiedzi, bo jest potrzebny do `tel:`. Trzeba to umieć uczciwie powiedzieć: kto zajrzy w DevTools, zobaczy numer. Interfejs po prostu go nie pokazuje jako tekstu.
+@33 })
+@40 async function recordScan
+`INSERT ... SELECT ... WHERE NOT EXISTS` to jedno zapytanie, które wstawia wiersz tylko wtedy, gdy nie ma identycznego skanu z ostatnich 5 sekund. Sprawdzenie i wstawienie dzieją się razem. `userAgent.slice(0, 500)` przycina nagłówek, którego długość kontroluje wysyłający.
+@39 // POST /api/pets/:id/tag
+Trzy warunki przed utworzeniem: moje zwierzę, nie ma jeszcze tagu, jest numer telefonu.
+
+Pętla obsługuje mało prawdopodobną kolizję. `ON CONFLICT DO NOTHING` nic nie wstawia, gdy kod jest zajęty, a `rowCount === 1` oznacza sukces. Po 5 nieudanych próbach leci zwykły `Error`, czyli odpowiedź 500, bo taka sytuacja oznacza poważny problem.
+@40 // GET /api/pets/:id/scans
+Najpierw `findOwnPet`, żeby nikt nie odczytał cudzej historii. `JOIN` szuka skanów przez tag zwierzęcia. `LIMIT 100` chroni przed bardzo dużą odpowiedzią.
+
+@@ server/src/routes/activities.js
+> Szybki zapis po skanie i lista z ostatnich dni.
+@37 ^
+Importy potrzebne do zapisu i utworzenie routera.
+@37 // POST /api/pets
+`requireAuth` podajemy przy tej trasie, a nie na całym routerze, bo jest on zamontowany pod samym `/api`. Na początku `findOwnPet`, inaczej dałoby się dopisać aktywność cudzemu zwierzęciu. Czas ustawia baza przez `DEFAULT now()`, klient go nie podaje.
+@38 // GET /api/pets/:id/activities
+`Number(req.query.days) || 7` daje 7 dla braku albo śmieci, a `Math.min(Math.max(..., 1), 365)` ogranicza wartość do zakresu 1–365. `make_interval(days => $2)` buduje przedział czasu z parametru, bez sklejania SQL.

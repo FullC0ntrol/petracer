@@ -1,9 +1,10 @@
--- Dane przykładowe: te same co w trybie mock (src/mocks/seed.js), żeby oba tryby wyglądały tak samo.
--- Daty liczone względem now(), więc demo zawsze wygląda świeżo.
+-- Dane przykładowe. Daty liczone względem now(), więc demo zawsze wygląda świeżo.
 -- Ładuje je serwer przy starcie, gdy SEED_DEMO_DATA=true i baza jest pusta, albo `npm run db:reset`.
+-- pin_hash to skrót PIN-u 123456. Ten PIN jest publiczny i służy wyłącznie kontu demo.
 
-INSERT INTO users (id, email, name, phone) VALUES
-  ('00000000-0000-4000-8000-000000000001', 'maciej@pettrace.pl', 'Maciej', '+48 600 123 456');
+INSERT INTO users (id, email, name, phone, pin_hash) VALUES
+  ('00000000-0000-4000-8000-000000000001', 'maciej@pettrace.pl', 'Maciej', '+48 600 123 456',
+   '70a6854c0170586385c982388bf5e094:184f0a6e16ea088ff3eaa9bdac8e2e9622c2cf07f28ea22f152a8527c3915605811a15dceef961e3c21def2c4bacb81405ddd1384b6bc646e757bfa3be397b78');
 
 INSERT INTO pets (id, owner_id, name, species, breed, birth_date, weight_kg, medical_notes, is_lost, lost_message) VALUES
   (
@@ -36,12 +37,12 @@ INSERT INTO tag_scans (tag_code, scanned_at, user_agent, by_owner) VALUES
   ('LUNA-7K2Q', now() - interval '12 days 6 hours',
     'Mozilla/5.0 (Linux; Android 13; Redmi Note 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Mobile Safari/537.36', false);
 
-INSERT INTO activities (pet_id, type, occurred_at, duration_min, distance_m, source) VALUES
-  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '1 day 5 hours', 41, 3240, 'quick_tap'),
-  ('00000000-0000-4000-8000-0000000000a1', 'feeding', now() - interval '1 day 4 hours', NULL, NULL, 'quick_tap'),
-  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '2 days',        52, 3780, 'manual'),
-  ('00000000-0000-4000-8000-0000000000a1', 'feeding', now() - interval '2 days 1 hour', NULL, NULL, 'quick_tap'),
-  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '3 days',        22, 1650, 'manual'),
-  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '4 days',        44, 3240, 'manual'),
-  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '6 days',        27, 1890, 'manual'),
-  ('00000000-0000-4000-8000-0000000000a2', 'feeding', now() - interval '3 days',        NULL, NULL, 'quick_tap');
+INSERT INTO activities (pet_id, type, occurred_at) VALUES
+  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '1 day 5 hours'),
+  ('00000000-0000-4000-8000-0000000000a1', 'feeding', now() - interval '1 day 4 hours'),
+  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '2 days'),
+  ('00000000-0000-4000-8000-0000000000a1', 'feeding', now() - interval '2 days 1 hour'),
+  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '3 days'),
+  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '4 days'),
+  ('00000000-0000-4000-8000-0000000000a1', 'walk',    now() - interval '6 days'),
+  ('00000000-0000-4000-8000-0000000000a2', 'feeding', now() - interval '3 days');
